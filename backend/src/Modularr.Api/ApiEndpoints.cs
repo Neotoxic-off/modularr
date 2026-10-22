@@ -71,7 +71,7 @@ public static class ApiEndpoints
         });
         api.MapPost("/series/{id:int}/rescan", (int id, DiskScanService scans, CancellationToken ct) => scans.ScanSeriesAsync(id, record: true, ct));
         api.MapPost("/movies/{id:int}/rescan", (int id, DiskScanService scans, CancellationToken ct) => scans.ScanMovieAsync(id, record: true, ct));
-        api.MapPost("/library/rescan", (DiskScanService scans, CancellationToken ct) => scans.ScanAllAsync(ct)).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapPost("/library/rescan", (DiskScanService scans, CancellationToken ct) => scans.ScanAllAsync(record: true, ct)).RequireAuthorization(AuthEndpoints.AdminPolicy);
         api.MapGet("/library/import", (string? root, LibraryImportService imports, CancellationToken ct) =>
             imports.ProposeAsync(ParseEnum(root, LibraryRoot.Movies), ct)).RequireAuthorization(AuthEndpoints.AdminPolicy);
         api.MapPost("/library/import", (ImportRequest request, LibraryImportService imports, CancellationToken ct) =>
@@ -205,6 +205,7 @@ public static class ApiEndpoints
                 quality = d.Candidate.Quality.ToString(),
                 languages = d.Candidate.Languages.Audio.Select(l => l.Name),
                 subtitles = d.Candidate.Languages.Subtitles.Select(l => l.Name),
+                version = ReleaseVersion.Best(d.Candidate.Languages, d.Candidate.OriginalLanguage)?.Name,
                 releaseGroup = d.Candidate.ReleaseGroup,
                 approved = d.Approved,
                 temporarilyRejected = d.TemporarilyRejected,

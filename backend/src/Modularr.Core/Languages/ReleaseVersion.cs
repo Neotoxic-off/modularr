@@ -68,6 +68,10 @@ public sealed record ReleaseVersion
         };
     }
 
+    // The most specific version a release satisfies (MULTi before VF, VO, then a plain language), null when none does.
+    public static ReleaseVersion? Best(ReleaseLanguages release, Language originalLanguage) =>
+        new[] { Multi, VF, VFQ, VOSTFR, VO }.Concat(All.Where(v => v.Audio is not null)).FirstOrDefault(v => v.Accepts(release, originalLanguage));
+
     public override string ToString() => Name;
 }
 

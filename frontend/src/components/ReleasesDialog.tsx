@@ -6,16 +6,6 @@ import type { Decision, LibraryItem, SearchResult } from "@/lib/api";
 import { Icon } from "@/components/icons";
 import { Alert, Badge, Button, Modal, Skeleton, Spinner } from "@/components/ui";
 
-// The scene version a release reads as, for display: an untagged or Original track is the title's original language.
-// shortcut: VFQ is shown as VF since the API sends audio names only, add a version field to each decision if that matters.
-function releaseVersion(decision: Decision, originalLanguage: string): string {
-  const audio = new Set(decision.languages.map((l) => (l === "Unknown" || l === "Original" ? originalLanguage : l)));
-  const original = audio.has(originalLanguage);
-  if (audio.has("French")) return original && audio.size > 1 ? "MULTi" : "VF";
-  if (decision.subtitles.includes("French")) return "VOSTFR";
-  return original ? "VO" : [...audio].join(", ");
-}
-
 // Interactive search: every release the indexers return, approved ones first, each one grabbable.
 export function ReleasesDialog({ item, season, onClose }: { item: LibraryItem; season?: number; onClose: () => void }) {
   const [result, setResult] = useState<SearchResult | null>(null);
@@ -77,7 +67,7 @@ export function ReleasesDialog({ item, season, onClose }: { item: LibraryItem; s
                       <p className={`truncate text-sm ${d.approved ? "" : "text-muted"}`} title={d.release.title}>{d.release.title}</p>
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                         <Badge tone={d.approved ? "accent" : "neutral"}>{d.quality}</Badge>
-                        <span title={`Audio: ${d.languages.join(", ")}`}><Badge tone={d.approved ? "green" : "neutral"} className="font-semibold">{releaseVersion(d, item.originalLanguage)}</Badge></span>
+                        <span title={`Audio: ${d.languages.join(", ")}`}><Badge tone={d.approved ? "green" : "neutral"} className="font-semibold">{d.version ?? d.languages.join(", ")}</Badge></span>
                         {d.subtitles.length > 0 && <span className="inline-flex items-center gap-1"><Icon name="subtitles" size={12} />{d.subtitles.join(", ")}</span>}
                         <span className="tabular-nums">{formatSize(d.release.size)}</span>
                         <span className="tabular-nums" title="Seeders">{d.release.seeders ?? "?"} seeders</span>

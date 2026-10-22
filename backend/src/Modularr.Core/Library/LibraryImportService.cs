@@ -128,7 +128,8 @@ public sealed class LibraryImportService(
             {
                 outcomes.Add(await ImportAsync(item, cancellationToken).ConfigureAwait(false));
             }
-            catch (Exception ex) when (ex is ArgumentException or MetadataNotFoundException or MetadataSourceException or HttpRequestException)
+            catch (Exception ex) when (ex is ArgumentException or MetadataNotFoundException or MetadataSourceException or HttpRequestException
+                or DbUpdateException or KeyNotFoundException)
             {
                 db.ChangeTracker.Clear();
                 outcomes.Add(new ImportOutcome(item?.Folder ?? "", null, null, 0, ex.Message));

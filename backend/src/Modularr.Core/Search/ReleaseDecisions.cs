@@ -30,7 +30,8 @@ public static class ReleaseDecisions
             MediaType = series?.MediaType ?? MediaType.Series,
             Profile = profile,
             Quality = parsed?.Quality ?? QualityParser.ParseQuality(release.Title),
-            Languages = LanguageParser.ParseReleaseLanguages(release.Title),
+            // Only what follows the title describes the release: a title can name a language ("The Spanish Princess").
+            Languages = LanguageParser.ParseReleaseLanguages(parsed?.ReleaseTokens ?? release.Title),
             ReleaseGroup = parsed?.ReleaseGroup ?? ReleaseGroupParser.ParseReleaseGroup(release.Title),
             Runtime = series?.Runtime ?? 0,
             OriginalLanguage = series?.OriginalLanguage ?? Language.Unknown,
@@ -92,7 +93,8 @@ public static class ReleaseDecisions
             MediaType = MediaType.Movie,
             Profile = profile,
             Quality = parsed?.Quality ?? QualityParser.ParseQuality(release.Title),
-            Languages = LanguageParser.ParseReleaseLanguages(release.Title),
+            // The title is replaced by a placeholder there: "French Kiss" names no audio track.
+            Languages = LanguageParser.ParseReleaseLanguages(parsed?.SimpleReleaseTitle ?? release.Title),
             ReleaseGroup = parsed?.ReleaseGroup ?? ReleaseGroupParser.ParseReleaseGroup(release.Title),
             Runtime = movie?.Runtime ?? 0,
             OriginalLanguage = movie?.OriginalLanguage ?? Language.Unknown,

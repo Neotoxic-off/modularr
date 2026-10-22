@@ -101,6 +101,29 @@ public sealed class ReleaseDecisionsTests
         Assert.Equal(rejection, decision.Rejections.Select(r => (DownloadRejectionReason?)r.Reason).SingleOrDefault());
     }
 
+    // A language in the title is not an audio track.
+    [Theory]
+    [InlineData("French.Kiss.1995.VOSTFR.1080p.BluRay.x264-GRP", "Unknown")]
+    [InlineData("The.French.Dispatch.2021.1080p.BluRay.x264-GRP", "Unknown")]
+    [InlineData("French.Kiss.1995.MULTi.1080p.BluRay.x264-GRP", "Original,French")]
+    public void MovieLanguagesIgnoreTheTitle(string title, string audio)
+    {
+        DownloadDecision decision = ReleaseDecisions.ForMovie(Release(title, 8000), Any, null, [], Context);
+
+        Assert.Equal(audio, string.Join(",", decision.Candidate.Languages.Audio.OrderBy(l => l.Id)));
+    }
+
+    [Theory]
+    [InlineData("The.Spanish.Princess.1x05.1080p.WEB.x264-GRP", "Unknown")]
+    [InlineData("[Grp] The French Show - 05 [1080p]", "Unknown")]
+    [InlineData("The.Spanish.Princess.S01E05.FRENCH.1080p.WEB.x264-GRP", "French")]
+    public void SeriesLanguagesIgnoreTheTitle(string title, string audio)
+    {
+        DownloadDecision decision = ReleaseDecisions.ForSeries(Release(title, 400), Any, null, Files(), Context);
+
+        Assert.Equal(audio, string.Join(",", decision.Candidate.Languages.Audio.OrderBy(l => l.Id)));
+    }
+
     [Fact]
     public void FullSeasonMapsEveryEpisodeOfTheSeason()
     {

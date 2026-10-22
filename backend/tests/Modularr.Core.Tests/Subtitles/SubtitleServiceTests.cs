@@ -118,6 +118,27 @@ public sealed class SubtitleServiceTests : IDisposable
         Assert.Equal(file.Id, db.MediaFiles.Single().Id);
     }
 
+    // A file left outside the roots (the root moved) must not block the retry of the others.
+    [Fact]
+    public async Task TheRetrySkipsAFileOutsideTheRoots()
+    {
+        Movie stray = _database.Insert(new Movie
+        {
+            TmdbId = 1, Title = "Stray", Year = 2000, Path = _library.PathOf("old/Stray (2000)"), QualityProfileId = 1, OriginalLanguage = Language.Japanese,
+        })[0];
+        MediaFile strayFile = _database.Insert(new MediaFile
+        {
+            MovieId = stray.Id, Path = _library.CreateFile("old/Stray (2000)/Stray.mkv"), Quality = new QualityModel(Quality.Bluray1080p, new Revision()), Languages = [Language.Japanese],
+        })[0];
+        Imported("Inception.2010.1080p.BluRay.x264-GRP");
+        using ModularrDbContext db = _database.NewContext();
+
+        Assert.Equal(1, await Service(db).RetryMissingAsync(DateTime.UtcNow, TestContext.Current.CancellationToken));
+
+        using ModularrDbContext check = _database.NewContext();
+        Assert.NotNull(check.MediaFiles.Single(f => f.Id == strayFile.Id).SubtitlesSearched);
+    }
+
     private sealed class FakeProvider : ISubtitleProvider
     {
         public const string ProviderName = "Fake";

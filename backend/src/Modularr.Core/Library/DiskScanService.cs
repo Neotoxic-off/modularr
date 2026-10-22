@@ -35,7 +35,8 @@ public sealed class DiskScanService(ModularrDbContext db, ActivityLog activities
         AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReparsePoint,
     };
 
-    public async Task<ScanResult> ScanAllAsync(CancellationToken cancellationToken)
+    // record: always report the total (a scan asked for by hand); otherwise only when something changed.
+    public async Task<ScanResult> ScanAllAsync(bool record, CancellationToken cancellationToken)
     {
         List<int> seriesIds = await db.Series.Select(s => s.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
         List<int> movieIds = await db.Movies.Select(m => m.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -53,6 +54,11 @@ public sealed class DiskScanService(ModularrDbContext db, ActivityLog activities
         }
 
         ScanResult total = new(results.Sum(r => r.Items), results.Sum(r => r.Added), results.Sum(r => r.Removed));
+        if (!record && total.Added + total.Removed == 0)
+        {
+            return total;
+        }
+
         await activities.RecordAsync(
             new Activity { Kind = ActivityKind.ScanCompleted, Level = ActivityLevel.Info, Title = "Library", Message = $"{total.Items} title(s) scanned, {Counts(total)}" },
             cancellationToken).ConfigureAwait(false);
@@ -158,9 +164,27 @@ public sealed class DiskScanService(ModularrDbContext db, ActivityLog activities
     // The episodes of a deleted row lose their file through the foreign key.
     private int RemoveMissing(List<MediaFile> rows)
     {
-        MediaFile[] gone = [.. rows.Where(r => !File.Exists(r.Path))];
+        MediaFile[] gone = [.. rows.Where(r => IsGone(r.Path))];
         db.MediaFiles.RemoveRange(gone);
         return gone.Length;
+    }
+
+    // Only a file known not to exist is gone: File.Exists is also false on access denied or a share hiccup.
+    private static bool IsGone(string path)
+    {
+        try
+        {
+            File.GetAttributes(path);
+            return false;
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     // Null when the folder must not be scanned: outside the roots, reached through a link, or missing (an unmounted disk must not

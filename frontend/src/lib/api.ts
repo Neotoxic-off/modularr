@@ -133,6 +133,8 @@ export interface Decision {
   quality: string;
   languages: string[];
   subtitles: string[];
+  // The most specific version the release satisfies (MULTi, VF, VFQ, VOSTFR, VO or a language), null when none.
+  version: string | null;
   releaseGroup: string | null;
   approved: boolean;
   temporarilyRejected: boolean;

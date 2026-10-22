@@ -67,6 +67,15 @@ public sealed class SettingsFileTests : IDisposable
     }
 
     [Fact]
+    public void AnUnknownLanguageIsDroppedInsteadOfStoppingTheApp()
+    {
+        File.WriteAllText(ConfigFile, """{ "Media": { "Movies": { "Language": "Klingon" } } }""");
+
+        Assert.True(SettingsFile.MigrateLanguagePolicy(_configDirectory));
+        Assert.Null(JsonNode.Parse(File.ReadAllText(ConfigFile))!["Media"]!["Movies"]!["Version"]);
+    }
+
+    [Fact]
     public void TheLanguagePolicyIsMigratedToVersionsBeforeBinding()
     {
         File.WriteAllText(ConfigFile, """
@@ -76,6 +85,7 @@ public sealed class SettingsFileTests : IDisposable
                 "DefaultLanguage": "French",
                 "Movies": { "ProfileId": 4, "Language": "Original" },
                 "anime": { "language": "German" },
+                "Series": { "Language": 2 },
                 "Exceptions": [ { "Category": "Anime", "Language": "Any" }, { "OriginalLanguage": "Japanese", "Language": "French" } ]
               }
             }
@@ -86,6 +96,7 @@ public sealed class SettingsFileTests : IDisposable
         MediaOptions media = provider.GetRequiredService<IOptions<ModularrOptions>>().Value.Media;
         Assert.Equal((ReleaseVersion.VF, ReleaseVersion.VO, 4), (media.DefaultVersion, media.Movies.Version, media.Movies.ProfileId));
         Assert.Equal(ReleaseVersion.FindByName("German"), media.Anime.Version);
+        Assert.Equal(ReleaseVersion.VF, media.Series.Version); // a numeric language id
         Assert.Equal([ReleaseVersion.Any, ReleaseVersion.VF], media.Exceptions.Select(rule => rule.Version));
         Assert.False(SettingsFile.MigrateLanguagePolicy(_configDirectory)); // once only
         Assert.Equal(51413, (int)JsonNode.Parse(File.ReadAllText(ConfigFile))!["Torrents"]!["ListenPort"]!);

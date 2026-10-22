@@ -22,6 +22,10 @@ public sealed class ReleaseLanguagesTests
     [InlineData("Movie.Title.2020.German.DL.French.Subs.1080p.WEB.x264-GRP", "German,Original", "French")]
     [InlineData("Movie.Title.2020.TRUEFRENCH.1080p.WEB.x264-GRP", "French", "")]
     [InlineData("Movie.Title.2020.1080p.WEB.x264-GRP", "Unknown", "")]
+    [InlineData("Movie.2020.TRUEFRENCH.SUBENG.1080p.WEB.x264-GRP", "French", "English")]
+    [InlineData("Movie.2020.VFF.SUBFRENCH.1080p.WEB.x264-GRP", "French", "French")]
+    [InlineData("Movie.2020.FRENCH.SUBFRENCH.1080p.WEB.x264-GRP", "French", "French")]
+    [InlineData("Movie.Title.2020.French.Subtitles.1080p.WEB.x264-GRP", "Unknown", "French")]
     public void SplitsAudioFromSubtitles(string title, string audio, string subtitles)
     {
         ReleaseLanguages parsed = LanguageParser.ParseReleaseLanguages(title);
@@ -63,6 +67,16 @@ public sealed class ReleaseLanguagesTests
     [Fact]
     public void MultiSubsIsNotMultiAudio() =>
         Assert.Equal([Language.English, Language.French], LanguageParser.ParseReleaseLanguages("Movie.Title.2020.Eng.Fre.Multi.Subs.1080p.WEB.x264-GRP").Audio.OrderBy(l => l.Id));
+
+    [Theory]
+    [InlineData("Movie.Title.2020.VFQ.1080p.WEB.x264-GRP", "VFQ")]
+    [InlineData("Movie.Title.2020.TRUEFRENCH.1080p.WEB.x264-GRP", "VF")]
+    [InlineData("Movie.Title.2020.MULTi.1080p.BluRay.x264-GRP", "MULTi")]
+    [InlineData("Movie.Title.2020.VOSTFR.1080p.WEB.x264-GRP", "VOSTFR")]
+    [InlineData("Movie.Title.2020.1080p.WEB.x264-GRP", "VO")]
+    [InlineData("Movie.Title.2020.iTA.1080p.WEB.x264-GRP", "Italian")]
+    public void BestVersionIsTheMostSpecificOneAccepted(string title, string version) =>
+        Assert.Equal(version, ReleaseVersion.Best(LanguageParser.ParseReleaseLanguages(title), Language.English)?.Name);
 
     private static IEnumerable<Language> Names(string names) =>
         names.Length == 0 ? [] : names.Split(',').Select(Language.FindByName).OrderBy(l => l.Id);

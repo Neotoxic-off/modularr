@@ -16,7 +16,7 @@ public sealed class LibraryScanner(IServiceScopeFactory scopes) : BackgroundServ
             try
             {
                 await using AsyncServiceScope scope = scopes.CreateAsyncScope();
-                await scope.ServiceProvider.GetRequiredService<DiskScanService>().ScanAllAsync(stoppingToken).ConfigureAwait(false);
+                await scope.ServiceProvider.GetRequiredService<DiskScanService>().ScanAllAsync(record: false, stoppingToken).ConfigureAwait(false);
             }
             catch (Exception) when (!stoppingToken.IsCancellationRequested)
             {

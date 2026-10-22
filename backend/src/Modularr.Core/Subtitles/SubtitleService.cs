@@ -15,6 +15,9 @@ public sealed class SubtitleService(ModularrDbContext db, ActivityLog activities
 {
     // A periodic retry asks the providers for at most this many files.
     public const int RetryBatch = 20;
+
+    // ...and looks at most at this many files to find them.
+    public const int RetryScan = 200;
     public static readonly TimeSpan RetryInterval = TimeSpan.FromHours(6);
 
     private IEnumerable<ISubtitleProvider> Enabled => providers.Where(p => p.Enabled);
@@ -108,6 +111,8 @@ public sealed class SubtitleService(ModularrDbContext db, ActivityLog activities
     }
 
     // The files searched longest ago (never first), until RetryBatch of them needed the providers.
+    // shortcut: looks at RetryScan files per run even when none of them misses a subtitle, filter in SQL on wanted languages
+    // if a library outgrows it.
     public async Task<int> RetryMissingAsync(DateTime now, CancellationToken cancellationToken)
     {
         if (!Enabled.Any())
@@ -117,7 +122,7 @@ public sealed class SubtitleService(ModularrDbContext db, ActivityLog activities
 
         DateTime due = now - RetryInterval;
         int[] ids = await db.MediaFiles.Where(f => f.SubtitlesSearched == null || f.SubtitlesSearched < due)
-            .OrderBy(f => f.SubtitlesSearched).Select(f => f.Id).ToArrayAsync(cancellationToken).ConfigureAwait(false);
+            .OrderBy(f => f.SubtitlesSearched).Select(f => f.Id).Take(RetryScan).ToArrayAsync(cancellationToken).ConfigureAwait(false);
         int searched = 0;
         foreach (int id in ids)
         {
@@ -126,7 +131,15 @@ public sealed class SubtitleService(ModularrDbContext db, ActivityLog activities
                 break;
             }
 
-            searched += await DownloadMissingAsync(id, reportMissing: false, cancellationToken).ConfigureAwait(false) ? 1 : 0;
+            try
+            {
+                searched += await DownloadMissingAsync(id, reportMissing: false, cancellationToken).ConfigureAwait(false) ? 1 : 0;
+            }
+            catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException or KeyNotFoundException)
+            {
+                // A file now outside the roots or behind a link: keep its SubtitlesSearched so it stops heading the queue.
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
         }
 
         return searched;

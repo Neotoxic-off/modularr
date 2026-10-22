@@ -81,8 +81,25 @@ public sealed class SettingsFile(string configDirectory, IConfigurationRoot conf
 
         JsonNode? value = owner[key];
         owner.Remove(key);
-        owner[to] = value is JsonValue name && name.TryGetValue(out string? language) ? ReleaseVersion.FindByName(language).Name : null;
+        owner[to] = MigratedVersion(value);
         return true;
+    }
+
+    // A language name or id; one no longer known is dropped (the default applies) rather than stopping the app at startup.
+    private static string? MigratedVersion(JsonNode? value)
+    {
+        string? name = value is not JsonValue language ? null
+            : language.TryGetValue(out string? text) ? text
+            : language.TryGetValue(out int id) && Language.All.FirstOrDefault(l => l.Id == id) is Language byId ? byId.Name
+            : null;
+        try
+        {
+            return name is null ? null : ReleaseVersion.FindByName(name).Name;
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
     }
 
     private static JsonNode? Find(JsonObject owner, string key) =>

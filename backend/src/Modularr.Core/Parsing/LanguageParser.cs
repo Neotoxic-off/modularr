@@ -20,11 +20,11 @@ public static partial class LanguageParser
         @"(?<vietnamese>\bVIE\b)|(?<telugu>\btel\b)|(?<portuguese>[_. ]por[_. ])|(?<brazilian>\b(?:dublado|pt-BR)\b)|(?<original>\b(?:orig|original)\b|(?:_|\b)VO(?:_|\b))";
 
     // A language tag followed (possibly through other language tags) by "sub" names a subtitle, not an audio track.
-    [GeneratedRegex($"(?:{LanguagesOnly})(?!(?:[-_. ](?:{LanguagesOnly}))*[-_. ]subs?)", Options)]
+    [GeneratedRegex($@"(?:{LanguagesOnly})(?!(?:[-_. ](?:{LanguagesOnly}))*[-_. ]sub(?:s|titles?)?\b)", Options)]
     private static partial Regex LanguageRegex { get; }
 
     // The same tags when they name a subtitle ("French.Subs", "ENG.FRE.SUBS").
-    [GeneratedRegex($"(?:{LanguagesOnly})(?=(?:[-_. ](?:{LanguagesOnly}))*[-_. ]subs?)", Options)]
+    [GeneratedRegex($@"(?:{LanguagesOnly})(?=(?:[-_. ](?:{LanguagesOnly}))*[-_. ]sub(?:s|titles?)?\b)", Options)]
     private static partial Regex SubtitleLanguageTagRegex { get; }
 
     // VOSTFR / SUBFRENCH: original audio with French subtitles; VOSTA / VOSTENG / SUBENG: with English subtitles.

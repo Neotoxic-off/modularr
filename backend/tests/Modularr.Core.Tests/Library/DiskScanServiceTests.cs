@@ -80,7 +80,13 @@ public sealed class DiskScanServiceTests : IDisposable
         _disk.CreateFile("elsewhere/Out/Out.2020.mkv");
         _database.Insert(new MediaFile { MovieId = missing.Id, Path = Full("movies/Gone/Gone.mkv"), Quality = new QualityModel(Quality.Hdtv720p, new Revision()) });
 
-        ScanResult result = await Scan(scans => scans.ScanAllAsync(TestContext.Current.CancellationToken));
+        ScanResult result = await Scan(scans => scans.ScanAllAsync(record: false, TestContext.Current.CancellationToken));
+        using (ModularrDbContext quiet = _database.NewContext())
+        {
+            Assert.Empty(quiet.Activities); // a periodic scan that changed nothing stays quiet
+        }
+
+        await Scan(scans => scans.ScanAllAsync(record: true, TestContext.Current.CancellationToken));
 
         Assert.Equal(new ScanResult(0, 0, 0), result);
         using ModularrDbContext db = _database.NewContext();
@@ -106,7 +112,7 @@ public sealed class DiskScanServiceTests : IDisposable
             Assert.Skip($"Symbolic links are not allowed here: {ex.Message}");
         }
 
-        ScanResult result = await Scan(scans => scans.ScanAllAsync(TestContext.Current.CancellationToken));
+        ScanResult result = await Scan(scans => scans.ScanAllAsync(record: false, TestContext.Current.CancellationToken));
 
         Assert.Equal(new ScanResult(1, 0, 0), result);
         using ModularrDbContext db = _database.NewContext();
