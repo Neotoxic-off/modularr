@@ -429,3 +429,6 @@ FodyWeavers.xsd
 
 # build output
 backend/src/Modularr.Api/wwwroot/
+
+# dev config directory (modularr.json, torrent state)
+backend/src/Modularr.Api/config/

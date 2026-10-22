@@ -15,5 +15,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=api /app ./
 COPY --from=web /web/out ./wwwroot
+# modularr.json and engine state live here; mount it as a volume.
+ENV MODULARR_CONFIG_DIR=/config
+VOLUME /config
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Modularr.Api.dll"]
