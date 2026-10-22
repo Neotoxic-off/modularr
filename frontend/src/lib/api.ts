@@ -117,6 +117,13 @@ export interface SeriesDetail {
 export interface MovieDetail {
   movie: Movie;
   hasFile: boolean;
+  file: MovieFile | null;
+}
+
+// version: the most specific version the file's languages satisfy, null when they name none.
+export interface MovieFile {
+  quality: string;
+  version: string | null;
 }
 
 export interface ItemPatch {
@@ -503,6 +510,7 @@ export const api = {
   downloads: () => request<Download[]>("/downloads"),
   pause: (id: number) => send<void>("POST", `/downloads/${id}/pause`),
   resume: (id: number) => send<void>("POST", `/downloads/${id}/resume`),
+  retryImport: (id: number) => send<void>("POST", `/downloads/${id}/retry`),
   removeDownload: (id: number, deleteData: boolean, blocklist: boolean) =>
     send<void>("DELETE", `/downloads/${id}?deleteData=${deleteData}&blocklist=${blocklist}`),
 

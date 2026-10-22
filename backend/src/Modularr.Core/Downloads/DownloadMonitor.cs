@@ -78,12 +78,16 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
         if (await db.TrackedDownloads.FirstOrDefaultAsync(d => d.Id == id && d.State != TrackedDownloadState.Failed, cancellationToken).ConfigureAwait(false) is TrackedDownload download)
         {
             download.State = TrackedDownloadState.ImportBlocked;
+            download.Message = reason;
             scope.ServiceProvider.GetRequiredService<ActivityLog>().Add(Activity.For(download, ActivityKind.ImportFailed, ActivityLevel.Error, reason));
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            // Files a failed import already moved left the downloads folder: the scan records them now rather than at the next library scan.
+            await RescanAsync(scope.ServiceProvider.GetRequiredService<DiskScanService>(), download, cancellationToken).ConfigureAwait(false);
         }
     }
 
-    // Picks up what the import replaced or left aside; the download stays imported whatever happens here.
+    // Picks up what the import replaced, left aside or moved before failing; the download keeps its state whatever happens here.
     private static async Task RescanAsync(DiskScanService scans, TrackedDownload download, CancellationToken cancellationToken)
     {
         try
@@ -120,7 +124,8 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
                 bool move = settings.PostProcessing.ImportMode == ImportMode.Move;
                 if (move)
                 {
-                    // Stopped first, so the engine holds none of the files being moved; a failed import leaves it stopped with its data.
+                    // Stopped first, so the engine holds none of the files being moved; a failed import leaves it stopped with its data, until
+                    // the user retries the import (a stopped complete torrent still reports Completed).
                     await torrents.Engine.PauseAsync(download.InfoHash).ConfigureAwait(false);
                 }
 

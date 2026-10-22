@@ -90,7 +90,10 @@ export default function TodayPage() {
     return live ? { ...d, progress: live.progress, downloadRate: live.rate, eta: live.eta } : d;
   }), [summary.data, progress]);
 
-  const newest = (feed.items ?? []).flatMap((a) => (a.kind === "Imported" || a.kind === "Added" ? library.get(titleKey(a) ?? "") ?? [] : []));
+  // The newest import; a title merely added shows only while nothing has been imported.
+  const newestOf = (kind: Activity["kind"]) => (feed.items ?? []).flatMap((a) => (a.kind === kind ? library.get(titleKey(a) ?? "") ?? [] : []));
+  const imported = newestOf("Imported");
+  const newest = imported.length > 0 ? imported : newestOf("Added");
   const justAdded = newest.find((i) => i.backdrop) ?? newest[0] ?? null;
   useChrome({ backdrop: justAdded?.backdrop });
 
@@ -119,7 +122,7 @@ export default function TodayPage() {
           {greeting()}, <span className="capitalize">{user.username}</span>.
         </h1>
         <p className="mt-3 text-[15px] text-ink-2">
-          {firstRun ? "Three steps and your library is ready." : <SummaryLine downloading={downloads.length} imported={importedToday} airing={airingToday} />}
+          {firstRun ? "Three steps and your library is ready." : <SummaryLine downloading={downloads.length} imported={importedToday} airing={airingToday} missing={counts?.missing ?? 0} />}
         </p>
       </header>
 
@@ -168,11 +171,12 @@ export default function TodayPage() {
   );
 }
 
-function SummaryLine({ downloading, imported, airing }: { downloading: number; imported: number; airing: number }) {
+function SummaryLine({ downloading, imported, airing, missing }: { downloading: number; imported: number; airing: number; missing: number }) {
   const parts: ReactNode[] = [
     downloading > 0 && <Link key="d" href="/downloads/" className="hover:text-ink hover:underline">{downloading} downloading</Link>,
     imported > 0 && <a key="i" href="#timeline" className="hover:text-ink hover:underline">{imported} imported</a>,
     airing > 0 && <Link key="a" href="/calendar/" className="hover:text-ink hover:underline">{airing} airing tonight</Link>,
+    missing > 0 && <Link key="m" href="/movies/?status=missing" className="hover:text-ink hover:underline">{missing} missing</Link>,
   ].filter(Boolean);
   if (parts.length === 0) return <>All quiet. Everything you follow is up to date.</>;
   return <>{parts.flatMap((p, i) => (i === 0 ? [p] : [<span key={`s${i}`} aria-hidden="true" className="px-2 text-ink-3">·</span>, p]))}</>;
@@ -202,7 +206,7 @@ function JustAddedTile({ item, loading, style }: { item: LibraryItem | null; loa
       <h2 className="caption relative p-5 text-ink-2">Just added</h2>
       <div className="relative flex flex-wrap items-end justify-between gap-4 p-5">
         <div className="min-w-0">
-          <p className="scrim-text truncate font-serif text-[clamp(32px,4vw,52px)] leading-none">{item.title}</p>
+          <p className="scrim-text line-clamp-2 text-balance font-serif text-[clamp(32px,4vw,52px)] leading-none">{item.title}</p>
           <p className="scrim-text mt-2 text-[13px] text-ink-2">
             {[item.year > 0 && item.year, item.genres.slice(0, 2).join(", "), isSeries(item) && `${item.episodesWithFile}/${item.episodes} episodes`].filter(Boolean).join("   ")}
           </p>
@@ -505,13 +509,17 @@ function TimelineSection({ feed, library, downloads, onChanged, limit }: {
       return <button className={rowButton} onClick={() => void run("Download", paused ? api.resume(download.id) : api.pause(download.id))}>{paused ? "Resume" : "Pause"}</button>;
     }
     if (a.kind === "Grabbed" || a.kind === "Regrabbed" || a.kind === "SearchCompleted") return <Link href="/downloads/" className={rowButton}>View</Link>;
-    if (!item || item.hasFile || a.kind === "Imported") return open;
-    if (a.kind === "NothingFound") return <button className={rowButton} onClick={() => void search(item)}>Search again</button>;
-    if (a.kind === "DownloadFailed" || a.kind === "ImportFailed" || a.kind === "SearchFailed") return <button className={rowButton} onClick={() => void search(item)}>Retry</button>;
-    if (a.kind === "SubtitlesMissing") {
+    if (a.kind === "ImportFailed" && download?.state === "ImportBlocked") {
+      return <button className={rowButton} onClick={() => void run("Retry import", api.retryImport(download.id))}>Retry import</button>;
+    }
+    // Subtitles are not a release: a title with a file still offers them.
+    if (a.kind === "SubtitlesMissing" && item) {
       return isSeries(item) ? <Link href={titleHref(kindOf(item), item.id)} className={rowButton}>Find subtitles</Link>
         : <button className={rowButton} onClick={() => setSubtitles({ movieId: item.id, title: item.title })}>Find subtitles</button>;
     }
+    if (!item || item.hasFile || a.kind === "Imported") return open;
+    if (a.kind === "NothingFound") return <button className={rowButton} onClick={() => void search(item)}>Search again</button>;
+    if (a.kind === "DownloadFailed" || a.kind === "ImportFailed" || a.kind === "SearchFailed") return <button className={rowButton} onClick={() => void search(item)}>Retry</button>;
     return open;
   }
 

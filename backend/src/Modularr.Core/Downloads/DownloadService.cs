@@ -164,6 +164,20 @@ public sealed class DownloadService(
         }
     }
 
+    // Upstream "retry import": back to Downloading, so the monitor imports it again at its next poll.
+    public async Task RetryImportAsync(int id, CancellationToken cancellationToken)
+    {
+        TrackedDownload download = await FindAsync(id, cancellationToken).ConfigureAwait(false);
+        if (download.State != TrackedDownloadState.ImportBlocked)
+        {
+            throw new ArgumentException($"The import of download {id} is not blocked.", nameof(id));
+        }
+
+        download.State = TrackedDownloadState.Downloading;
+        download.Message = null;
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     // Upstream queue removal: blocklisting goes through the failed-download path, otherwise the download is just ignored.
     public async Task RemoveAsync(int id, bool deleteData, bool blocklist, CancellationToken cancellationToken)
     {

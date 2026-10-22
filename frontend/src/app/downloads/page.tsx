@@ -85,6 +85,7 @@ export default function DownloadsPage() {
     return (
       <Row key={d.id} download={d} item={item} onRemove={() => setRemoving(d)}
         onToggle={() => void act(() => (d.status === "Paused" ? api.resume(d.id) : api.pause(d.id)))}
+        onRetryImport={d.state === "ImportBlocked" ? () => void act(() => api.retryImport(d.id), "Importing again.", d) : undefined}
         onRetry={canSearch ? () => void act(() => searchAgain(d), "Searching again.", d) : undefined}
         onBlocklist={canSearch ? () => void act(async () => { await api.removeDownload(d.id, true, true); await searchAgain(d); }, "Release blocklisted. Searching again.", d) : undefined} />
     );
@@ -139,11 +140,12 @@ function Group({ title, items, children }: { title: string; items: readonly Down
   );
 }
 
-function Row({ download: d, item, onToggle, onRemove, onRetry, onBlocklist }: {
+function Row({ download: d, item, onToggle, onRemove, onRetryImport, onRetry, onBlocklist }: {
   download: Download;
   item: LibraryItem | undefined;
   onToggle: () => void;
   onRemove: () => void;
+  onRetryImport?: () => void;
   onRetry?: () => void;
   onBlocklist?: () => void;
 }) {
@@ -194,10 +196,11 @@ function Row({ download: d, item, onToggle, onRemove, onRetry, onBlocklist }: {
         {group === "failed" && (
           <div className="space-y-2.5">
             <p className="flex items-start gap-2 text-[13px] text-bad"><Icon name="alert" size={15} className="mt-0.5 shrink-0" />{d.message ?? (d.state === "ImportBlocked" ? "The import is blocked." : "The download failed.")}</p>
-            {onRetry && onBlocklist && (
+            {(onRetryImport ?? onRetry) && (
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" icon="refresh" onClick={onRetry}>Retry</Button>
-                <Button size="sm" variant="ghost" icon="ban" onClick={onBlocklist}>Blocklist & search again</Button>
+                {onRetryImport ? <Button size="sm" icon="refresh" onClick={onRetryImport}>Retry import</Button>
+                  : onRetry && <Button size="sm" icon="refresh" onClick={onRetry}>Retry</Button>}
+                {onBlocklist && <Button size="sm" variant="ghost" icon="ban" onClick={onBlocklist}>Blocklist & search again</Button>}
               </div>
             )}
           </div>

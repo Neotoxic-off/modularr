@@ -84,11 +84,11 @@ public sealed class LibraryService(
         await db.Series.AsNoTracking().Include(s => s.Episodes).FirstOrDefaultAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"Series {id} is not in the library.");
 
-    public async Task<(Movie Movie, bool HasFile)> GetMovieAsync(int id, CancellationToken cancellationToken)
+    public async Task<(Movie Movie, MediaFile? File)> GetMovieAsync(int id, CancellationToken cancellationToken)
     {
         Movie movie = await db.Movies.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id, cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"Movie {id} is not in the library.");
-        return (movie, await db.MediaFiles.AnyAsync(f => f.MovieId == id, cancellationToken).ConfigureAwait(false));
+        return (movie, await db.MediaFiles.AsNoTracking().FirstOrDefaultAsync(f => f.MovieId == id, cancellationToken).ConfigureAwait(false));
     }
 
     // Adding an existing series returns it unchanged. No profile: the category default (series or anime) from MediaOptions.

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
 using Modularr.Core.Downloads;
+using Modularr.Core.MediaFiles;
 using Modularr.Core.Persistence;
 using Modularr.Core.PostProcessing;
 using Modularr.Core.Qualities;
@@ -169,9 +170,22 @@ public sealed class DownloadImporterTests : IDisposable
         Assert.False(await Import(tracked, file));
 
         using ModularrDbContext db = _database.NewContext();
-        Assert.Equal(TrackedDownloadState.ImportBlocked, db.TrackedDownloads.Single().State);
+        TrackedDownload blocked = db.TrackedDownloads.Single();
+        Assert.Equal((TrackedDownloadState.ImportBlocked, "No video file matches an episode of the series"), (blocked.State, blocked.Message));
         Assert.Empty(db.MediaFiles);
         Assert.Equal((ActivityKind.ImportFailed, ActivityLevel.Error), db.Activities.Select(a => new ValueTuple<ActivityKind, ActivityLevel>(a.Kind, a.Level)).Single());
+    }
+
+    [Fact]
+    public void MoveOntoAnExistingFileKeepsBothFiles()
+    {
+        string existing = _library.Write("Movie.mkv", [1, 2, 3]);
+        string file = _download.CreateFile("Movie.mkv");
+
+        Assert.ThrowsAny<IOException>(() => FileLinker.Move(file, existing));
+
+        Assert.Equal([1, 2, 3], File.ReadAllBytes(existing));
+        Assert.True(File.Exists(file));
     }
 
     public void Dispose()

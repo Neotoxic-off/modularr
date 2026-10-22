@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { api, episodeCode, errorMessage, formatEta, formatRuntime, formatSize, isSeries, isoDay, kindOf, libraryHref } from "@/lib/api";
-import type { Download, Episode, ItemPatch, Kind, LibraryItem, Season, SeriesDetail, SubtitleTarget } from "@/lib/api";
+import type { Download, Episode, ItemPatch, Kind, LibraryItem, MovieFile, Season, SeriesDetail, SubtitleTarget } from "@/lib/api";
 import { realLanguages, useOptions } from "@/lib/options";
 import { isActive, useActivity, useTitleEvents } from "@/components/Activity";
 import { ActivityTimeline } from "@/components/ActivityFeed";
@@ -19,7 +19,7 @@ import { useToast } from "@/components/Toasts";
 import { Alert, Badge, Button, Checkbox, Empty, Field, Menu, MenuItem, Modal, PickList, Progress, Rating, Segmented, Select, Skeleton, StatusBadge, Switch } from "@/components/ui";
 import type { Status } from "@/components/ui";
 
-type Detail = { item: LibraryItem; seasons?: Season[]; episodes?: Episode[] };
+type Detail = { item: LibraryItem; file?: MovieFile | null; seasons?: Season[]; episodes?: Episode[] };
 type Tab = "overview" | "content" | "history";
 
 const libraryName: Record<Kind, string> = { movie: "Movies", series: "Series", anime: "Anime" };
@@ -34,7 +34,7 @@ export function TitleView({ type, id, season }: { type: "movie" | "series"; id: 
 
   const load = useCallback(() => {
     const request = type === "movie"
-      ? api.movie(id).then((d): Detail => ({ item: d.movie }))
+      ? api.movie(id).then((d): Detail => ({ item: d.movie, file: d.file }))
       : api.seriesDetail(id).then((d): Detail => ({ item: d.series, seasons: d.seasons, episodes: d.episodes }));
     request.then(setDetail).catch((e: unknown) => setError(errorMessage(e)));
   }, [type, id]);
@@ -97,7 +97,7 @@ function Loaded({ detail, focusSeason, onDetail, reload }: { detail: Detail; foc
     : { state: "missing" };
 
   const action = (
-    <PrimaryAction item={item} download={download} live={live ?? null} nextAir={nextAir} searching={searching}
+    <PrimaryAction item={item} file={detail.file ?? null} download={download} live={live ?? null} nextAir={nextAir} searching={searching}
       onSearch={() => search()} onReleases={() => setReleases({})} onSubtitles={() => setSubtitles({ target: movieTarget, title: item.title })}
       onToggle={() => download && void (download.status === "Paused" ? api.resume(download.id) : api.pause(download.id)).then(loadDownload, fail)} />
   );
@@ -184,8 +184,9 @@ function Hero({ item, status, downloading }: { item: LibraryItem; status?: Statu
 }
 
 // The one thing to do next, by state. Nothing that has a file offers a search or a release: the server refuses those.
-function PrimaryAction({ item, download, live, nextAir, searching, onSearch, onReleases, onSubtitles, onToggle }: {
+function PrimaryAction({ item, file, download, live, nextAir, searching, onSearch, onReleases, onSubtitles, onToggle }: {
   item: LibraryItem;
+  file: MovieFile | null;
   download: Download | null;
   live: { progress: number; rate: number; eta: number | null } | null;
   nextAir: string | null;
@@ -218,7 +219,7 @@ function PrimaryAction({ item, download, live, nextAir, searching, onSearch, onR
   if (item.hasFile) {
     return (
       <div className="flex items-center gap-3">
-        <span className="flex min-w-0 flex-1 items-center gap-2 text-[13px] font-semibold text-ok"><Icon name="check" size={16} strokeWidth={2.6} />Downloaded · {item.wantedVersion}</span>
+        <span className="flex min-w-0 flex-1 items-center gap-2 text-[13px] font-semibold text-ok"><Icon name="check" size={16} strokeWidth={2.6} />{["Downloaded", file?.quality, file?.version].filter(Boolean).join(" · ")}</span>
         <Button size="sm" icon="subtitles" onClick={onSubtitles}>Subtitles</Button>
       </div>
     );

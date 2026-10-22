@@ -16,20 +16,21 @@ public static partial class FileLinker
 
     // A link that succeeds proves both paths are on one filesystem, where linking then unlinking the source is a rename. Across
     // filesystems it copies, checks the copy's size, then deletes the source. Any failure leaves the source as it was and removes
-    // a partial copy; an existing destination is never touched.
+    // a partial copy; an existing destination is never touched, even one created by another writer meanwhile.
     public static void Move(string source, string destination)
     {
-        if (File.Exists(destination))
-        {
-            throw new IOException($"'{destination}' already exists.");
-        }
-
-        bool linked = TryLink(source, destination);
+        bool created = TryLink(source, destination);
         try
         {
-            if (!linked)
+            if (!created)
             {
-                File.Copy(source, destination, overwrite: false);
+                using (FileStream target = new(destination, FileMode.CreateNew, FileAccess.Write))
+                {
+                    created = true;
+                    using FileStream origin = File.OpenRead(source);
+                    origin.CopyTo(target);
+                }
+
                 if (new FileInfo(destination).Length != new FileInfo(source).Length)
                 {
                     throw new IOException($"The copy of '{source}' to '{destination}' is incomplete.");
@@ -40,7 +41,11 @@ public static partial class FileLinker
         }
         catch
         {
-            File.Delete(destination);
+            if (created)
+            {
+                File.Delete(destination);
+            }
+
             throw;
         }
     }

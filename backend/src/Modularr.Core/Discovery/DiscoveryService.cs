@@ -144,6 +144,9 @@ public sealed partial class DiscoveryService(
         {
             entry.AbsoluteExpirationRelativeToNow = lifetime;
             entry.Size = 1;
+
+            // Explore pages, one per filter combination, are evicted first so they never push out the long-lived lists.
+            entry.Priority = lifetime == ExploreLifetime ? CacheItemPriority.Low : CacheItemPriority.Normal;
             return fetch(cancellationToken);
         }).ConfigureAwait(false))!;
 

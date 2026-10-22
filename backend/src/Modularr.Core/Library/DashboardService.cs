@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -70,11 +71,13 @@ public sealed class DashboardService(ModularrDbContext db, SubtitleService subti
     private DashboardStorage Storage(long libraryBytes)
     {
         PathOptions paths = options.CurrentValue.Paths;
-        // No device id in .NET: two folders on one volume report the same sizes, so the sizes tell volumes apart.
+        // Windows names each volume by its root. Unix has no device id in .NET, and docker bind mounts of one disk each look like
+        // their own mount, so there a volume is its total size.
+        // shortcut: two Unix disks of the exact same size count once, read st_dev through stat if that matters.
         (long Total, long Free)[] volumes =
         [
             .. new[] { paths.Movies, paths.Series, paths.Anime, paths.Downloads }
-                .Select(VolumeOf).OfType<(long, long)>().Distinct(),
+                .Select(VolumeOf).OfType<(string, long, long)>().DistinctBy(v => v.Item1).Select(v => (v.Item2, v.Item3)),
         ];
         long total = volumes.Sum(v => v.Total);
         long free = volumes.Sum(v => v.Free);
@@ -82,7 +85,7 @@ public sealed class DashboardService(ModularrDbContext db, SubtitleService subti
     }
 
     // Statistics of the volume holding the folder (its nearest existing parent until it is created); null when unreadable.
-    private static (long Total, long Free)? VolumeOf(string folder)
+    private static (string Key, long Total, long Free)? VolumeOf(string folder)
     {
         try
         {
@@ -98,7 +101,8 @@ public sealed class DashboardService(ModularrDbContext db, SubtitleService subti
             }
 
             DriveInfo drive = new(OperatingSystem.IsWindows() ? existing.Root.FullName : existing.FullName);
-            return (drive.TotalSize, drive.AvailableFreeSpace);
+            long total = drive.TotalSize;
+            return (OperatingSystem.IsWindows() ? drive.RootDirectory.FullName.ToUpperInvariant() : total.ToString(CultureInfo.InvariantCulture), total, drive.AvailableFreeSpace);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {

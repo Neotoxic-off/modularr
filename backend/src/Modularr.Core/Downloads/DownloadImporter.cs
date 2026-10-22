@@ -74,6 +74,7 @@ public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activitie
     private void Block(TrackedDownload download, string reason)
     {
         download.State = TrackedDownloadState.ImportBlocked;
+        download.Message = reason;
         activities.Add(Activity.For(download, ActivityKind.ImportFailed, ActivityLevel.Error, reason));
     }
 

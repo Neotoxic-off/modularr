@@ -86,7 +86,7 @@ export function PosterCard({ className = "", ...props }: CardProps & { className
         )}
         {item && !item.inLibrary && (
           <button onClick={quickAdd} disabled={busy} aria-label={`Add ${title} with your defaults`} title="Add with your defaults"
-            className="absolute right-2 bottom-2 grid size-10 cursor-pointer place-items-center rounded-full bg-white text-canvas shadow-lg shadow-black/50 transition hover:scale-105 sm:pointer-fine:opacity-0 sm:pointer-fine:group-focus-within:opacity-100 sm:pointer-fine:group-hover:opacity-100">
+            className="absolute right-2 bottom-2 grid size-10 cursor-pointer pointer-coarse:size-11 place-items-center rounded-full bg-white text-canvas shadow-lg shadow-black/50 transition hover:scale-105 sm:pointer-fine:opacity-0 sm:pointer-fine:group-focus-within:opacity-100 sm:pointer-fine:group-hover:opacity-100">
             {busy ? <Spinner /> : <Icon name="plus" size={20} strokeWidth={2.4} />}
           </button>
         )}

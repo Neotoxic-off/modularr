@@ -74,8 +74,17 @@ public static class ApiEndpoints
         api.MapGet("/movies", async (LibraryService library, ItemDtos dtos, CancellationToken ct) => (await library.ListMoviesAsync(ct)).Select(m => dtos.Of(m.Movie, m.HasFile)));
         api.MapGet("/movies/{id:int}", async (int id, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
         {
-            (Movie movie, bool hasFile) = await library.GetMovieAsync(id, ct);
-            return new { movie = dtos.Of(movie, hasFile), hasFile };
+            (Movie movie, MediaFile? file) = await library.GetMovieAsync(id, ct);
+            return new
+            {
+                movie = dtos.Of(movie, file is not null),
+                hasFile = file is not null,
+                file = file is null ? null : new
+                {
+                    quality = file.Quality.Quality.Name,
+                    version = ReleaseVersion.Best(new ReleaseLanguages(file.Languages), movie.OriginalLanguage)?.Name,
+                },
+            };
         });
         api.MapPost("/movies", async (AddMovieRequest request, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
             await MovieAsync((await library.AddMovieAsync(request.TmdbId, request.QualityProfileId, request.Version, request.SearchNow, ct)).Id, library, dtos, ct));
@@ -151,6 +160,11 @@ public static class ApiEndpoints
         api.MapPost("/downloads/{id:int}/resume", async (int id, DownloadService downloads, CancellationToken ct) =>
         {
             await downloads.SetPausedAsync(id, paused: false, ct);
+            return Results.NoContent();
+        });
+        api.MapPost("/downloads/{id:int}/retry", async (int id, DownloadService downloads, CancellationToken ct) =>
+        {
+            await downloads.RetryImportAsync(id, ct);
             return Results.NoContent();
         });
         api.MapDelete("/downloads/{id:int}", async (int id, bool? deleteData, bool? blocklist, DownloadService downloads, CancellationToken ct) =>
@@ -292,8 +306,8 @@ public static class ApiEndpoints
 
     private static async Task<object> MovieAsync(int id, LibraryService library, ItemDtos dtos, CancellationToken ct)
     {
-        (Movie movie, bool hasFile) = await library.GetMovieAsync(id, ct);
-        return dtos.Of(movie, hasFile);
+        (Movie movie, MediaFile? file) = await library.GetMovieAsync(id, ct);
+        return dtos.Of(movie, file is not null);
     }
 
     private static MediaType ExploreKind(string kind) => kind.ToUpperInvariant() switch

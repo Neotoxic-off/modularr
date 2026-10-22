@@ -6,7 +6,7 @@ import { api, currentWeek, episodeCode, errorMessage, isoDay, kindOf, titleHref 
 import type { AiringEpisode, Kind } from "@/lib/api";
 import { useActivity } from "@/components/Activity";
 import { useToast } from "@/components/Toasts";
-import { Alert, Button, Chip, Modal, PageHeader, Skeleton, Switch } from "@/components/ui";
+import { Alert, Button, Chip, Empty, Modal, PageHeader, Skeleton, Switch } from "@/components/ui";
 
 type Category = "all" | Exclude<Kind, "movie">;
 
@@ -51,49 +51,54 @@ export default function CalendarPage() {
         </div>
       </PageHeader>
       {error && <div className="mb-4"><Alert>{error}</Alert></div>}
-      <ol className="grid gap-3 md:grid-cols-7">
-        {week.map((d) => {
-          const day = isoDay(d);
-          const episodes = shown.filter((e) => e.airDate === day);
-          return (
-            <li key={day} aria-label={d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
-              className={`glass flex min-w-0 flex-col gap-2 rounded-tile p-3 md:min-h-[360px] ${day === today ? "ring-1 ring-white/40" : ""} ${airing && episodes.length === 0 ? "max-md:hidden" : ""}`}>
-              <p className="flex items-baseline justify-between gap-2 px-1 pt-1">
-                <span className="caption">{d.toLocaleDateString(undefined, { weekday: "short" })}</span>
-                <span className={`font-serif text-[28px] leading-none ${day === today ? "" : "text-ink-2"}`}>{d.getDate()}</span>
-              </p>
-              {!airing ? <Skeleton className="h-16 rounded-card" /> : episodes.length === 0 ? (
-                <p className="px-1 text-[13px] text-ink-3">Nothing airing.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {episodes.map((e) => {
-                    const state = stateOf(e, today);
-                    return (
-                      <li key={e.id}>
-                        <button onClick={() => setOpen(e)} aria-label={`${e.seriesTitle} ${episodeCode(e)}, ${state.label}`}
-                          className="well flex w-full cursor-pointer items-center gap-2.5 rounded-card p-2 text-left transition hover:bg-fill md:flex-col md:items-stretch">
-                          {e.poster && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={e.poster} alt="" loading="lazy" className="h-14 w-10 shrink-0 rounded-[8px] object-cover md:aspect-[2/3] md:h-auto md:w-full" />
-                          )}
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[13px] font-semibold">{e.seriesTitle}</span>
-                            <span className="flex items-center gap-1.5 text-[12px] text-ink-3 tabular-nums">
-                              {episodeCode(e)}
-                              <span className={`font-bold ${state.tone}`} aria-hidden="true">{state.mark}</span>
+      {airing && shown.length === 0 ? (
+        <Empty icon="calendar" title="Nothing airing this week">
+          New episodes of the series you follow show up here. <Link href="/explore/" className="font-semibold text-ink hover:underline">Explore</Link>
+        </Empty>
+      ) : (
+        <ol className="grid gap-3 md:grid-cols-7">
+          {week.map((d) => {
+            const day = isoDay(d);
+            const episodes = shown.filter((e) => e.airDate === day);
+            return (
+              <li key={day} aria-label={d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
+                className={`glass flex min-w-0 flex-col gap-2 rounded-tile p-3 md:min-h-[360px] ${day === today ? "ring-1 ring-white/40" : ""} ${airing && episodes.length === 0 ? "max-md:hidden" : ""}`}>
+                <p className="flex items-baseline justify-between gap-2 px-1 pt-1">
+                  <span className="caption">{d.toLocaleDateString(undefined, { weekday: "short" })}</span>
+                  <span className={`font-serif text-[28px] leading-none ${day === today ? "" : "text-ink-2"}`}>{d.getDate()}</span>
+                </p>
+                {!airing ? <Skeleton className="h-16 rounded-card" /> : episodes.length === 0 ? (
+                  <p className="px-1 text-[13px] text-ink-3">Nothing airing.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {episodes.map((e) => {
+                      const state = stateOf(e, today);
+                      return (
+                        <li key={e.id}>
+                          <button onClick={() => setOpen(e)} aria-label={`${e.seriesTitle} ${episodeCode(e)}, ${state.label}`}
+                            className="well flex w-full cursor-pointer items-center gap-2.5 rounded-card p-2 text-left transition hover:bg-fill md:flex-col md:items-stretch">
+                            {e.poster && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={e.poster} alt="" loading="lazy" className="h-14 w-10 shrink-0 rounded-[8px] object-cover md:aspect-[2/3] md:h-auto md:w-full" />
+                            )}
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[13px] font-semibold">{e.seriesTitle}</span>
+                              <span className="flex items-center gap-1.5 text-[12px] text-ink-3 tabular-nums">
+                                {episodeCode(e)}
+                                <span className={`font-bold ${state.tone}`} aria-hidden="true">{state.mark}</span>
+                              </span>
                             </span>
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-      {airing && shown.length === 0 && <p className="mt-4 text-center text-[13px] text-ink-2 md:hidden">Nothing airing this week.</p>}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      )}
       {open && <EpisodeSheet episode={open} today={today} onClose={() => setOpen(null)}
         onChange={(e) => { setOpen(e); setAiring((all) => all && all.map((x) => (x.id === e.id ? e : x))); }} />}
     </>

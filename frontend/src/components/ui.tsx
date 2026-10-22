@@ -15,7 +15,7 @@ const variants = {
   danger: "bg-bad/15 text-bad ring-1 ring-bad/30 hover:bg-bad/25",
 } as const;
 
-const sizes = { sm: "h-9 px-4 text-[13px]", md: "h-11 px-5 text-sm" } as const;
+const sizes = { sm: "h-9 px-4 text-[13px] pointer-coarse:h-11", md: "h-11 px-5 text-sm" } as const;
 
 // A spinner takes the icon's place while loading, so the label and the width stay put.
 export function Button({ variant = "glass", size = "md", icon, loading = false, className = "", children, disabled, ...props }:
