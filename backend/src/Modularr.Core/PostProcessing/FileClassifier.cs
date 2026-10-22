@@ -5,10 +5,10 @@ namespace Modularr.Core.PostProcessing;
 
 public static partial class FileClassifier
 {
-    // Sonarr/Radarr FileExtensions (identical); .tar.gz/.tar.bz2 dropped, Path.GetExtension only returns the last part.
+    // Sonarr/Radarr FileExtensions (identical) plus xz; .tar.gz/.tar.bz2 dropped, Path.GetExtension only returns the last part.
     public static FrozenSet<string> ArchiveExtensions { get; } = new[]
     {
-        ".7z", ".bz2", ".gz", ".r00", ".rar", ".tar", ".tb2", ".tbz2", ".tgz", ".zip",
+        ".7z", ".bz2", ".gz", ".r00", ".rar", ".tar", ".tb2", ".tbz2", ".tgz", ".txz", ".xz", ".zip",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     public static FrozenSet<string> DangerousExtensions { get; } = new[]

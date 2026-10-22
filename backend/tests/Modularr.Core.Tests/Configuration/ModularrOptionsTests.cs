@@ -46,6 +46,7 @@ public sealed class ModularrOptionsTests : IDisposable
         Assert.Same(PostProcessingOptions.DefaultSubtitleExtensions, options.PostProcessing.SubtitleExtensions);
         Assert.Equal(ProperDownloadType.PreferAndUpgrade, options.Decisions.DownloadPropersAndRepacks);
         Assert.Equal(1, options.Decisions.MinimumSeeders);
+        Assert.Equal(2, options.PostProcessing.MaxArchiveDepth);
     }
 
     [Fact]
@@ -55,7 +56,8 @@ public sealed class ModularrOptionsTests : IDisposable
         ModularrOptions options = Load($$"""
             {
               "Paths": { "Movies": {{JsonSerializer.Serialize(movies)}}, "Anime": "media/anime" },
-              "Torrents": { "ListenPort": 51413, "SeedRatioLimit": 2.5, "SeedTimeLimit": "2.00:00:00" }
+              "Torrents": { "ListenPort": 51413, "SeedRatioLimit": 2.5, "SeedTimeLimit": "2.00:00:00" },
+              "PostProcessing": { "MaxArchiveDepth": 3 }
             }
             """);
 
@@ -66,6 +68,7 @@ public sealed class ModularrOptionsTests : IDisposable
         Assert.Equal(2.5, options.Torrents.SeedRatioLimit);
         Assert.Equal(TimeSpan.FromDays(2), options.Torrents.SeedTimeLimit);
         Assert.Equal(150, options.Torrents.MaxConnections);
+        Assert.Equal(3, options.PostProcessing.MaxArchiveDepth);
     }
 
     [Fact]
@@ -89,6 +92,7 @@ public sealed class ModularrOptionsTests : IDisposable
     [InlineData("""{ "Torrents": { "MaxAutomaticRegrabs": -1 } }""")]
     [InlineData("""{ "Paths": { "Series": "" } }""")]
     [InlineData("""{ "PostProcessing": { "SubtitleExtensions": ["srt"] } }""")]
+    [InlineData("""{ "PostProcessing": { "MaxArchiveDepth": 0 } }""")]
     [InlineData("""{ "Indexers": { "RequestTimeout": "00:00:00" } }""")]
     [InlineData("""{ "Indexers": { "SearchTimeout": "00:00:00" } }""")]
     [InlineData("""{ "Metadata": { "SkyHookUrl": "not a url" } }""")]

@@ -29,7 +29,7 @@ public static class TorrentContentCheck
         bool hasPayload = Enumerable.Range(0, files.Count).Any(i => wanted[i] && kinds[i] is FileKind.Video or FileKind.Archive);
 
         return new TorrentContentVerdict(
-            CompletedDownloadProcessor.RejectionReason(Of(FileKind.Dangerous), Of(FileKind.Executable), Of(FileKind.Disallowed), hasPayload),
+            CompletedDownloadProcessor.RejectionReason(Of(FileKind.Dangerous), Of(FileKind.Executable), [], Of(FileKind.Disallowed), hasPayload),
             wanted);
     }
 }
