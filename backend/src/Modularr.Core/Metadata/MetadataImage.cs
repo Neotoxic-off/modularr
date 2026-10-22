@@ -26,4 +26,9 @@ public sealed record MetadataImage(MediaCoverType CoverType, string Url)
     }, url);
 }
 
+public static class MetadataImages
+{
+    public static string? UrlOf(this IReadOnlyList<MetadataImage> images, MediaCoverType type) => images.FirstOrDefault(i => i.CoverType == type)?.Url;
+}
+
 public readonly record struct MetadataRating(int Votes, decimal Value);

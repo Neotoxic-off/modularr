@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export function Poster({ title, year, src, subtitle, badge, onClick, action }: {
   title: string;
-  year: number;
+  year: number | null;
   src?: string | null;
   subtitle?: string;
   badge?: ReactNode;

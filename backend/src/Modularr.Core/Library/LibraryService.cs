@@ -19,6 +19,17 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
     public async Task<IReadOnlyList<Movie>> ListMoviesAsync(CancellationToken cancellationToken) =>
         await db.Movies.AsNoTracking().OrderBy(m => m.Title).ToListAsync(cancellationToken).ConfigureAwait(false);
 
+    public async Task<Series> GetSeriesAsync(int id, CancellationToken cancellationToken) =>
+        await db.Series.AsNoTracking().Include(s => s.Episodes).FirstOrDefaultAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false)
+            ?? throw new KeyNotFoundException($"Series {id} is not in the library.");
+
+    public async Task<(Movie Movie, bool HasFile)> GetMovieAsync(int id, CancellationToken cancellationToken)
+    {
+        Movie movie = await db.Movies.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id, cancellationToken).ConfigureAwait(false)
+            ?? throw new KeyNotFoundException($"Movie {id} is not in the library.");
+        return (movie, await db.MediaFiles.AnyAsync(f => f.MovieId == id, cancellationToken).ConfigureAwait(false));
+    }
+
     // Adding an existing series returns it unchanged.
     public async Task<Series> AddSeriesAsync(int tvdbId, int qualityProfileId, CancellationToken cancellationToken)
     {
@@ -79,11 +90,10 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
                 string.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)), folder, StringComparison.OrdinalIgnoreCase));
     }
 
-    // Upstream has no anime flag in the metadata (the Sonarr user picks the type); the Anime genre is the closest signal.
     public static Series ToSeries(SeriesInfo info, int qualityProfileId, PathOptions paths, DateTime added)
     {
         SeriesType type = info.IsDaily ? SeriesType.Daily
-            : info.Genres.Contains("Anime", StringComparer.OrdinalIgnoreCase) ? SeriesType.Anime
+            : info.IsAnime ? SeriesType.Anime
             : SeriesType.Standard;
         int year = info.Year ?? 0;
 
@@ -100,7 +110,11 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
             QualityProfileId = qualityProfileId,
             Added = added,
             Overview = info.Overview,
-            Poster = PosterOf(info.Images),
+            Poster = info.Images.UrlOf(MediaCoverType.Poster),
+            Backdrop = info.Images.UrlOf(MediaCoverType.Fanart),
+            Rating = info.Rating,
+            Genres = info.Genres,
+            Certification = info.Certification,
         };
 
         // Specials (season 0) are not monitored, like Sonarr's default.
@@ -136,7 +150,11 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
         Path = Path.Combine(paths.Movies, FolderName(info.Title, info.Year)),
         QualityProfileId = qualityProfileId,
         Overview = info.Overview,
-        Poster = PosterOf(info.Images),
+        Poster = info.Images.UrlOf(MediaCoverType.Poster),
+        Backdrop = info.Images.UrlOf(MediaCoverType.Fanart),
+        Rating = info.Ratings.Rating,
+        Genres = info.Genres,
+        Certification = info.Certification,
     };
 
     // "Title (Year)" like the Sonarr/Radarr default folder format, invalid characters dropped.
@@ -145,8 +163,6 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
         string name = year > 0 ? $"{title} ({year})" : title;
         return string.Concat(name.Split(InvalidNameChars)).Trim().TrimEnd('.');
     }
-
-    private static string? PosterOf(IReadOnlyList<MetadataImage> images) => images.FirstOrDefault(i => i.CoverType == MediaCoverType.Poster)?.Url;
 
     // Files go before the rows, so a failed delete leaves the item in the library to retry.
     private void DeleteFolder(bool deleteFiles, string path)

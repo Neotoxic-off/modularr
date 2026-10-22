@@ -14,20 +14,22 @@ export interface AuthState {
   user: User | null;
 }
 
-export interface Image {
-  coverType: string;
-  url: string;
-}
-
+// A movie (tmdbId) or show (tvdbId) from /lookup and /discover.
 export interface LookupItem {
-  tvdbId?: number;
-  tmdbId?: number;
+  kind: "Movie" | "Series" | "Anime";
+  tmdbId: number | null;
+  tvdbId: number | null;
+  imdbId: string | null;
   title: string;
-  year: number;
-  overview?: string | null;
-  status: string;
+  year: number | null;
+  overview: string | null;
+  status: string | null;
   genres: string[];
-  images: Image[];
+  poster: string | null;
+  backdrop: string | null;
+  rating: number | null;
+  libraryId: number | null;
+  inLibrary: boolean;
 }
 
 export interface LibraryItem {
@@ -178,8 +180,6 @@ export const api = {
 };
 
 export const isAnime = (genres: readonly string[] | undefined) => genres?.some((g) => g.toLowerCase() === "anime") ?? false;
-
-export const poster = (images: readonly Image[]) => images.find((i) => i.coverType === "Poster")?.url ?? null;
 
 const units = ["o", "Ko", "Mo", "Go", "To"];
 

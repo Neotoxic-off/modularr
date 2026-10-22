@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Configuration;
 using Modularr.Core.Decisions;
+using Modularr.Core.Discovery;
 using Modularr.Core.Downloads;
 using Modularr.Core.Indexers;
 using Modularr.Core.Indexers.Catalog;
@@ -26,10 +27,22 @@ public static class ApiEndpoints
         api.MapGet("/indexers", Indexers);
         api.MapGet("/search", Search);
         api.MapGet("/lookup", Lookup);
+        api.MapGet("/discover/movies", (string? list, DiscoveryService discovery, CancellationToken ct) =>
+            discovery.DiscoverMoviesAsync(ParseList(list, MovieList.Popular), ct));
+        api.MapGet("/discover/series", (string? list, DiscoveryService discovery, CancellationToken ct) =>
+            discovery.DiscoverSeriesAsync(ParseList(list, SeriesList.Popular), ct));
+        api.MapGet("/discover/anime", (string? list, DiscoveryService discovery, CancellationToken ct) =>
+            discovery.DiscoverAnimeAsync(ParseList(list, AnimeList.Trending), ct));
         api.MapGet("/series", async (LibraryService library, CancellationToken ct) => (await library.ListSeriesAsync(ct)).Select(ToDto));
+        api.MapGet("/series/{id:int}", async (int id, LibraryService library, CancellationToken ct) => ToDetailDto(await library.GetSeriesAsync(id, ct)));
         api.MapPost("/series", async (AddSeriesRequest request, LibraryService library, CancellationToken ct) =>
             ToDto(await library.AddSeriesAsync(request.TvdbId, request.QualityProfileId, ct)));
         api.MapGet("/movies", async (LibraryService library, CancellationToken ct) => (await library.ListMoviesAsync(ct)).Select(ToDto));
+        api.MapGet("/movies/{id:int}", async (int id, LibraryService library, CancellationToken ct) =>
+        {
+            (Movie movie, bool hasFile) = await library.GetMovieAsync(id, ct);
+            return new { movie = ToDto(movie), hasFile };
+        });
         api.MapPost("/movies", async (AddMovieRequest request, LibraryService library, CancellationToken ct) =>
             ToDto(await library.AddMovieAsync(request.TmdbId, request.QualityProfileId, ct)));
         api.MapPost("/releases/grab", async (GrabRequest request, DownloadService downloads, CancellationToken ct) =>
@@ -142,23 +155,50 @@ public static class ApiEndpoints
         };
     }
 
-    private static async Task<object> Lookup(SeriesMetadataClient series, MovieMetadataClient movies, string term, string? type, CancellationToken ct) =>
+    private static Task<IReadOnlyList<DiscoveryItem>> Lookup(DiscoveryService discovery, string term, string? type, CancellationToken ct) =>
         type?.ToUpperInvariant() switch
         {
-            null or "SERIES" => (await series.SearchSeriesAsync(term, cancellationToken: ct)).Select(s => new { s.TvdbId, s.ImdbId, s.Title, s.Year, s.Overview, s.Status, s.Genres, s.Images }),
-            "MOVIE" => (await movies.SearchMoviesAsync(term, ct)).Select(m => new { m.TmdbId, m.ImdbId, m.Title, m.Year, m.Overview, m.Status, m.Genres, m.Images }),
-            _ => throw new ArgumentException($"Unknown type '{type}', expected series or movie."),
+            null or "ALL" => discovery.LookupAsync(term, includeMovies: true, includeSeries: true, ct),
+            "SERIES" => discovery.LookupAsync(term, includeMovies: false, includeSeries: true, ct),
+            "MOVIE" => discovery.LookupAsync(term, includeMovies: true, includeSeries: false, ct),
+            _ => throw new ArgumentException($"Unknown type '{type}', expected movie, series or all."),
         };
+
+    private static T ParseList<T>(string? list, T fallback)
+        where T : struct, Enum =>
+        list is null ? fallback
+        : Enum.TryParse(list, ignoreCase: true, out T parsed) && Enum.IsDefined(parsed) ? parsed
+        : throw new ArgumentException($"Unknown list '{list}', expected {string.Join(", ", Enum.GetNames<T>()).ToLowerInvariant()}.");
 
     private static object ToDto(Series s) => new
     {
-        s.Id, s.TvdbId, s.Title, s.Year, s.SeriesType, s.Runtime, s.Monitored, s.Path, s.QualityProfileId, s.Added, s.Poster, s.Overview,
+        s.Id, s.TvdbId, s.Title, s.Year, s.SeriesType, s.Runtime, s.Monitored, s.Path, s.QualityProfileId, s.Added, s.Poster, s.Backdrop, s.Overview,
+        s.Rating, s.Genres, s.Certification,
         seasons = s.Seasons,
         episodes = s.Episodes.Count,
         episodesWithFile = s.Episodes.Count(e => e.MediaFileId is not null),
     };
 
-    private static object ToDto(Movie m) => new { m.Id, m.TmdbId, m.ImdbId, m.Title, m.Year, m.Runtime, m.Monitored, m.Path, m.QualityProfileId, m.Poster, m.Overview };
+    private static object ToDetailDto(Series s) => new
+    {
+        series = ToDto(s),
+        seasons = s.Seasons.OrderBy(season => season.Number).Select(season => new
+        {
+            season.Number, season.Monitored,
+            episodes = s.Episodes.Count(e => e.SeasonNumber == season.Number),
+            episodesWithFile = s.Episodes.Count(e => e.SeasonNumber == season.Number && e.MediaFileId is not null),
+        }),
+        episodes = s.Episodes.OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber).Select(e => new
+        {
+            e.Id, e.SeasonNumber, e.EpisodeNumber, e.AbsoluteEpisodeNumber, e.AirDate, e.Title, e.Monitored, hasFile = e.MediaFileId is not null,
+        }),
+    };
+
+    private static object ToDto(Movie m) => new
+    {
+        m.Id, m.TmdbId, m.ImdbId, m.Title, m.Year, m.Runtime, m.Monitored, m.Path, m.QualityProfileId, m.Poster, m.Backdrop, m.Overview,
+        m.Rating, m.Genres, m.Certification,
+    };
 
     private static object ToDto(TrackedDownload d) => new { d.Id, d.InfoHash, d.ReleaseTitle, d.Indexer, d.State, d.Message, d.SeriesId, d.MovieId, d.EpisodeIds, d.Regrabs };
 

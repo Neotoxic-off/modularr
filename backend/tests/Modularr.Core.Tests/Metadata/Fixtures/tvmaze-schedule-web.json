@@ -1,0 +1,176 @@
+[
+ {
+  "id": 3761892,
+  "url": "https://www.tvmaze.com/episodes/3761892/against-the-gods-2x30-episode-60",
+  "name": "Episode 60",
+  "season": 2,
+  "number": 30,
+  "type": "regular",
+  "airdate": "2026-10-22",
+  "airtime": "",
+  "airstamp": "2026-10-22T12:00:00+00:00",
+  "runtime": null,
+  "rating": {
+   "average": null
+  },
+  "image": null,
+  "summary": null,
+  "_links": {
+   "self": {
+    "href": "https://api.tvmaze.com/episodes/3761892"
+   },
+   "show": {
+    "href": "https://api.tvmaze.com/shows/71442",
+    "name": "Against the Gods"
+   }
+  },
+  "_embedded": {
+   "show": {
+    "id": 71442,
+    "url": "https://www.tvmaze.com/shows/71442/against-the-gods",
+    "name": "Against the Gods",
+    "type": "Animation",
+    "language": "Chinese",
+    "genres": [
+     "Action",
+     "Adventure",
+     "Anime",
+     "Fantasy"
+    ],
+    "status": "Running",
+    "runtime": null,
+    "averageRuntime": 21,
+    "premiered": "2023-09-23",
+    "ended": null,
+    "officialSite": "https://www.iqiyi.com/v_18fedzeko84.html?ht=0&ischarge=false&tvname=%E9%80%86%E5%A4%A9%E9%82%AA%E7%A5%9E%E5%B9%B4%E7%95%AA+%E7%AC%AC31%E9%9B%86&vid=ad35c39812498656a99231362f907b30&fid=8837962497879001&vtype=0&f_block=selector_bk&s2=pcw_playpage&s3=w",
+    "schedule": {
+     "time": "",
+     "days": [
+      "Thursday"
+     ]
+    },
+    "rating": {
+     "average": 6.3
+    },
+    "weight": 81,
+    "network": null,
+    "webChannel": {
+     "id": 67,
+     "name": "iQIYI",
+     "country": null,
+     "officialSite": "https://www.iq.com/"
+    },
+    "dvdCountry": null,
+    "externals": {
+     "tvrage": null,
+     "thetvdb": 434200,
+     "imdb": "tt27517921"
+    },
+    "image": {
+     "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/631/1578930.jpg",
+     "original": "https://static.tvmaze.com/uploads/images/original_untouched/631/1578930.jpg"
+    },
+    "summary": "<p>Mythical Abode Mountain, Cloud's End Cliff, the most dangerous of Azure Cloud Continent's four deadly areas. Cloud's End Cliff's base is known as the Grim Reaper's Cemetery. Over countless years, the number of people that have fallen off this cliff is too high to count. None of them, even three stronger than god masters, whose power could pierce the heavens, have been able to return alive. However, a boy that's being chased by various people because he alone holds a priceless treasure jumps off the cliff, but instead of dying he wakes up in the body of a boy with the same name in another world. This is the story of a boy wielding the Sky Poison Pearl, cultivating the strength to oppose heaven and earth, a lord overlooking the world. —Novel Updates</p><p> </p>",
+    "updated": 1789303332,
+    "_links": {
+     "self": {
+      "href": "https://api.tvmaze.com/shows/71442"
+     },
+     "previousepisode": {
+      "href": "https://api.tvmaze.com/episodes/3761892",
+      "name": "Episode 60"
+     }
+    }
+   }
+  }
+ },
+ {
+  "id": 3781327,
+  "url": "https://www.tvmaze.com/episodes/3781327/rule-101-1x08-episode-8",
+  "name": "Episode 8",
+  "season": 1,
+  "number": 8,
+  "type": "regular",
+  "airdate": "2026-10-22",
+  "airtime": "",
+  "airstamp": "2026-10-22T03:00:00+00:00",
+  "runtime": 18,
+  "rating": {
+   "average": null
+  },
+  "image": null,
+  "summary": null,
+  "_links": {
+   "self": {
+    "href": "https://api.tvmaze.com/episodes/3781327"
+   },
+   "show": {
+    "href": "https://api.tvmaze.com/shows/94876",
+    "name": "Rule 101"
+   }
+  },
+  "_embedded": {
+   "show": {
+    "id": 94876,
+    "url": "https://www.tvmaze.com/shows/94876/rule-101",
+    "name": "Rule 101",
+    "type": "Scripted",
+    "language": "Korean",
+    "genres": [
+     "Drama",
+     "Romance"
+    ],
+    "status": "Running",
+    "runtime": null,
+    "averageRuntime": 22,
+    "premiered": "2026-09-30",
+    "ended": null,
+    "officialSite": null,
+    "schedule": {
+     "time": "",
+     "days": []
+    },
+    "rating": {
+     "average": null
+    },
+    "weight": 64,
+    "network": null,
+    "webChannel": {
+     "id": 650,
+     "name": "Shortime",
+     "country": {
+      "name": "Korea, Republic of",
+      "code": "KR",
+      "timezone": "Asia/Seoul"
+     },
+     "officialSite": "https://shortime.app/"
+    },
+    "dvdCountry": null,
+    "externals": {
+     "tvrage": null,
+     "thetvdb": 482784,
+     "imdb": null
+    },
+    "image": {
+     "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/644/1610725.jpg",
+     "original": "https://static.tvmaze.com/uploads/images/original_untouched/644/1610725.jpg"
+    },
+    "summary": "<p>A wealthy professor consumed by sex addiction. A group of students drawn into a forbidden ethical abyss. When a dangerous game of temptation and taboo takes an unexpected turn — a student mysteriously disappears, and everyone believes their secrets will be buried forever. But the arrival of a new face becomes the first domino to fall. The carefully constructed lies, hidden desires, and painful truths of the past begin to unravel, exposing a world of deception and obsession one layer at a time.</p>",
+    "updated": 1791146168,
+    "_links": {
+     "self": {
+      "href": "https://api.tvmaze.com/shows/94876"
+     },
+     "previousepisode": {
+      "href": "https://api.tvmaze.com/episodes/3781327",
+      "name": "Episode 8"
+     },
+     "nextepisode": {
+      "href": "https://api.tvmaze.com/episodes/3781328",
+      "name": "Episode 9"
+     }
+    }
+   }
+  }
+ }
+]

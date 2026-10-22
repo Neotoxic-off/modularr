@@ -51,6 +51,9 @@ public sealed record MovieRatings
     public MetadataRating? Metacritic { get; init; }
     public MetadataRating? RottenTomatoes { get; init; }
     public MetadataRating? Trakt { get; init; }
+
+    // The one 0-10 score shown to users: IMDb's, else TMDB's (the others are percentages).
+    public decimal? Rating => (Imdb ?? Tmdb)?.Value;
 }
 
 // Language is null when RadarrAPI sends a code modularr does not know.

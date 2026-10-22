@@ -32,6 +32,8 @@ public sealed class ModularrDbContext(DbContextOptions<ModularrDbContext> option
         configurationBuilder.Properties<Language>().HaveConversion<LanguageIdConverter>();
         configurationBuilder.Properties<IReadOnlyList<QualityProfileQualityItem>>()
             .HaveConversion<JsonValueConverter<IReadOnlyList<QualityProfileQualityItem>>, JsonValueComparer<IReadOnlyList<QualityProfileQualityItem>>>();
+        configurationBuilder.Properties<IReadOnlyList<string>>()
+            .HaveConversion<JsonValueConverter<IReadOnlyList<string>>, JsonValueComparer<IReadOnlyList<string>>>();
         configurationBuilder.Properties<Dictionary<string, string>>()
             .HaveConversion<JsonValueConverter<Dictionary<string, string>>, JsonValueComparer<Dictionary<string, string>>>();
     }

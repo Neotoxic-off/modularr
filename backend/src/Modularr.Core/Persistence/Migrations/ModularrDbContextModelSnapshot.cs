@@ -312,6 +312,16 @@ namespace Modularr.Core.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Backdrop")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Certification")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Genres")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ImdbId")
                         .HasColumnType("TEXT");
 
@@ -330,6 +340,9 @@ namespace Modularr.Core.Persistence.Migrations
 
                     b.Property<int>("QualityProfileId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("Rating")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Runtime")
                         .HasColumnType("INTEGER");
@@ -363,6 +376,16 @@ namespace Modularr.Core.Persistence.Migrations
                     b.Property<DateTime>("Added")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Backdrop")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Certification")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Genres")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("Monitored")
                         .HasColumnType("INTEGER");
 
@@ -378,6 +401,9 @@ namespace Modularr.Core.Persistence.Migrations
 
                     b.Property<int>("QualityProfileId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("Rating")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Runtime")
                         .HasColumnType("INTEGER");

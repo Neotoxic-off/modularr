@@ -18,6 +18,10 @@ public sealed class Movie
     public QualityProfile QualityProfile { get; set; } = null!;
     public string? Overview { get; set; }
 
-    // URL of the metadata poster at add time.
+    // Metadata at add time: poster and fanart URLs, a 0-10 rating, genres and the (US) certification.
     public string? Poster { get; set; }
+    public string? Backdrop { get; set; }
+    public decimal? Rating { get; set; }
+    public IReadOnlyList<string> Genres { get; set; } = [];
+    public string? Certification { get; set; }
 }

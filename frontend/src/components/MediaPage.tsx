@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { api, errorMessage, isAnime, poster } from "@/lib/api";
+import { api, errorMessage, isAnime } from "@/lib/api";
 import type { Kind, LibraryItem, LookupItem } from "@/lib/api";
 import { Icon } from "@/components/icons";
 import { MediaDetail } from "@/components/MediaDetail";
@@ -11,7 +11,7 @@ import { Alert, Badge, Button, Empty, Input, PageHeader, Spinner } from "@/compo
 
 const titles: Record<Kind, string> = { movie: "Films", series: "Séries", anime: "Anime" };
 
-const tmdbOrTvdb = (kind: Kind, item: { tmdbId?: number; tvdbId?: number }) => (kind === "movie" ? item.tmdbId : item.tvdbId);
+const tmdbOrTvdb = (kind: Kind, item: { tmdbId?: number | null; tvdbId?: number | null }) => (kind === "movie" ? item.tmdbId : item.tvdbId);
 
 const belongsTo = (kind: Kind, item: LibraryItem) => kind === "movie" || (kind === "anime") === (item.seriesType === "Anime");
 
@@ -50,7 +50,7 @@ export function MediaPage({ kind }: { kind: Kind }) {
     setError(null);
     try {
       const added = await api.add(kind, item);
-      setLibrary((items) => [...(items ?? []).filter((i) => i.id !== added.id), { ...added, poster: added.poster ?? poster(item.images) }]);
+      setLibrary((items) => [...(items ?? []).filter((i) => i.id !== added.id), { ...added, poster: added.poster ?? item.poster }]);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -89,7 +89,7 @@ export function MediaPage({ kind }: { kind: Kind }) {
                   const key = tmdbOrTvdb(kind, item);
                   const has = owned.has(key);
                   return (
-                    <Poster key={key} title={item.title} year={item.year} src={poster(item.images)}
+                    <Poster key={key} title={item.title} year={item.year} src={item.poster}
                       badge={has ? <Badge tone="green">Ajouté</Badge> : kind !== "anime" && isAnime(item.genres) ? <Badge tone="accent">Anime</Badge> : undefined}
                       action={!has && (
                         <Button variant="primary" className="w-full" onClick={() => add(item)} disabled={adding === key}>

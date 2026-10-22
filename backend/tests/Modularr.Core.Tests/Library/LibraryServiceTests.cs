@@ -36,6 +36,8 @@ public sealed class LibraryServiceTests
         Assert.Equal((SeriesType.Anime, 1998, 25, 4), (series.SeriesType, series.Year, series.Runtime, series.QualityProfileId));
         Assert.Equal(Path.Combine("/anime", "Cowboy Bebop (1998)"), series.Path);
         Assert.Equal(("https://img/poster.jpg", "Bounty hunters in space."), (series.Poster, series.Overview));
+        Assert.Equal(("https://img/fanart.jpg", null), (series.Backdrop, series.Rating));
+        Assert.Equal(["Animation", "Anime"], series.Genres);
         Assert.Equal([false, true], series.Seasons.Select(s => s.Monitored));
         Episode first = series.Episodes.Single(e => e.SeasonNumber == 1);
         Assert.Equal((1, "Asteroid Blues", true), (first.AbsoluteEpisodeNumber!.Value, first.Title, first.Monitored));
