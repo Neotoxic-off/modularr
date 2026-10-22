@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Downloads.Torrents;
+using Modularr.Core.Indexers.Catalog;
 using Modularr.Core.PostProcessing;
 
 namespace Modularr.Core.Configuration;
@@ -27,6 +28,11 @@ public static class ModularrServiceCollectionExtensions
 
         services.AddSingleton<TorrentEngineHost>();
         services.AddHostedService(provider => provider.GetRequiredService<TorrentEngineHost>());
+
+        services.AddHttpClient();
+        services.AddSingleton<IndexerCatalogHost>();
+        services.AddHostedService(provider => provider.GetRequiredService<IndexerCatalogHost>());
+        services.AddSingleton<IndexerDomainHealth>();
 
         return services;
     }
