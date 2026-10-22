@@ -4,6 +4,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Accounts;
 using Modularr.Core.Activities;
@@ -29,6 +30,13 @@ public static class ModularrServiceCollectionExtensions
 
     // Subtitle provider answers: a search page or one subtitle (archive), far below this.
     private const long MaxSubtitleResponseBytes = 4 * 1024 * 1024;
+
+    // Discovery answers: the anime mapping file is the largest (a few MB), a TVmaze index page about 1 MB.
+    private const long MaxDiscoveryResponseBytes = 32 * 1024 * 1024;
+    private static readonly TimeSpan DiscoveryTimeout = TimeSpan.FromSeconds(30);
+
+    // TVmaze allows 20 requests per 10 s.
+    private static readonly TimeSpan ShowIndexPageDelay = TimeSpan.FromMilliseconds(600);
 
     // Binds <configDirectory>/modularr.json to ModularrOptions (validated at startup) and registers the module services.
     public static IServiceCollection AddModularrCore(this IServiceCollection services, string configDirectory)
@@ -80,7 +88,20 @@ public static class ModularrServiceCollectionExtensions
 
         services.AddHttpClient<SeriesMetadataClient>();
         services.AddHttpClient<MovieMetadataClient>();
-        services.AddHttpClient<ShowDiscoveryClient>();
+        services.AddHttpClient<ShowDiscoveryClient>(client =>
+        {
+            client.Timeout = DiscoveryTimeout;
+            client.MaxResponseContentBufferSize = MaxDiscoveryResponseBytes;
+        });
+        services.AddHttpClient<TmdbClient>(client =>
+        {
+            client.Timeout = DiscoveryTimeout;
+            client.MaxResponseContentBufferSize = MaxDiscoveryResponseBytes;
+        });
+        services.AddSingleton(provider => new ShowIndex(
+            (page, ct) => provider.GetRequiredService<ShowDiscoveryClient>().GetShowIndexPageAsync(page, ct),
+            ShowIndexPageDelay,
+            provider.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
         services.AddMemoryCache(cache => cache.SizeLimit = 1000);
 
         // The end-to-end flow: library, search, grab, then the monitor imports finished torrents.
@@ -88,6 +109,7 @@ public static class ModularrServiceCollectionExtensions
         services.AddScoped<AccountService>();
         services.AddScoped<LibraryService>();
         services.AddScoped<DiscoveryService>();
+        services.AddScoped<DashboardService>();
         services.AddScoped<ReleaseSearch>();
         services.AddScoped<DownloadService>();
         services.AddScoped<DownloadImporter>();

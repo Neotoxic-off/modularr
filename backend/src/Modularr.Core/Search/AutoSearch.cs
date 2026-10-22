@@ -22,8 +22,8 @@ public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, Downl
             return [];
         }
 
-        if (await db.MediaFiles.AsNoTracking().FirstOrDefaultAsync(f => f.MovieId == movieId, cancellationToken).ConfigureAwait(false) is MediaFile file
-            && !UpgradableSpecification.QualityCutoffNotMet(movie.QualityProfile, file.Quality))
+        if (!PresentFiles.IsWanted(
+            await db.MediaFiles.AsNoTracking().FirstOrDefaultAsync(f => f.MovieId == movieId, cancellationToken).ConfigureAwait(false), movie.QualityProfile, upgrade: true))
         {
             await activities.RecordAsync(
                 new Activity { Kind = ActivityKind.SearchCompleted, Level = ActivityLevel.Info, Title = movie.Title, Message = "Its file meets the quality cutoff", MovieId = movieId },
@@ -54,7 +54,7 @@ public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, Downl
         List<IReadOnlyList<int>> running = await db.TrackedDownloads.Where(TrackedDownload.InProgress).Where(d => d.SeriesId == seriesId)
             .Select(d => d.EpisodeIds).ToListAsync(cancellationToken).ConfigureAwait(false);
         List<MediaFile> files = await db.MediaFiles.AsNoTracking().Where(f => f.SeriesId == seriesId).ToListAsync(cancellationToken).ConfigureAwait(false);
-        HashSet<int> belowCutoff = [.. files.Where(f => UpgradableSpecification.QualityCutoffNotMet(series.QualityProfile, f.Quality)).Select(f => f.Id)];
+        HashSet<int> belowCutoff = [.. files.Where(f => PresentFiles.IsWanted(f, series.QualityProfile, upgrade: true)).Select(f => f.Id)];
 
         IReadOnlyList<(ReleaseSearchRequest Request, IReadOnlySet<(int Season, int Episode)> Wanted)> plan =
             Plan(series, running.SelectMany(ids => ids).ToHashSet(), season, today, belowCutoff);
@@ -127,18 +127,18 @@ public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, Downl
         ArgumentNullException.ThrowIfNull(series);
         ArgumentNullException.ThrowIfNull(downloading);
         HashSet<int> monitoredSeasons = [.. series.Seasons.Where(s => s.Monitored).Select(s => s.Number)];
+        bool Missing(Episode e) => e.Monitored && monitoredSeasons.Contains(e.SeasonNumber) && !downloading.Contains(e.Id)
+            && (e.MediaFileId is not int fileId || belowCutoff?.Contains(fileId) == true);
         Episode[] aired = [.. series.Episodes.Where(e => e.AirDate <= today && (season is null || e.SeasonNumber == season))];
-        Episode[] missing =
-        [
-            .. aired.Where(e => e.Monitored && monitoredSeasons.Contains(e.SeasonNumber) && !downloading.Contains(e.Id)
-                && (e.MediaFileId is not int fileId || belowCutoff?.Contains(fileId) == true)),
-        ];
+        Episode[] missing = [.. aired.Where(Missing)];
 
         return
         [
             .. missing.GroupBy(e => e.SeasonNumber).SelectMany(seasonEpisodes =>
             {
-                IReadOnlySet<(int, int)> wanted = seasonEpisodes.Select(e => (e.SeasonNumber, e.EpisodeNumber)).ToHashSet();
+                // Not yet aired ones too: a pack may carry them, and it is refused when it holds any episode not wanted.
+                IReadOnlySet<(int, int)> wanted = series.Episodes.Where(e => e.SeasonNumber == seasonEpisodes.Key && Missing(e))
+                    .Select(e => (e.SeasonNumber, e.EpisodeNumber)).ToHashSet();
                 ReleaseSearchRequest[] requests = seasonEpisodes.Count() == aired.Count(e => e.SeasonNumber == seasonEpisodes.Key)
                     ? [ReleaseSearchRequest.ForSeason(series.TvdbId, seasonEpisodes.Key)]
                     : [.. seasonEpisodes.Select(e => ReleaseSearchRequest.ForEpisode(series.TvdbId, e))];
@@ -147,9 +147,9 @@ public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, Downl
         ];
     }
 
-    // Approved releases, the ones covering the most episodes first then best first: one for a movie; for a series each release that
-    // covers a wanted episode (any, when wanted is null) and none already grabbed, so a season pack wins over its episodes and two
-    // packs never overlap.
+    // Approved releases, the ones covering the most episodes first then best first: one for a movie; for a series each release whose
+    // episodes are all wanted (any, when wanted is null) and none already grabbed, so a season pack is taken only when its whole season
+    // is wanted, wins over its episodes then, and two packs never overlap.
     public async Task<GrabResult> GrabBestAsync(
         ReleaseSearchRequest request, int? seriesId, int? movieId, IReadOnlySet<(int Season, int Episode)>? wanted, CancellationToken cancellationToken)
     {
@@ -159,13 +159,22 @@ public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, Downl
         foreach (DownloadDecision decision in result.Decisions.Where(d => d.Approved).OrderByDescending(d => d.Candidate.Episodes.Count))
         {
             (int, int)[] episodes = [.. decision.Candidate.Episodes.Select(e => (e.SeasonNumber, e.EpisodeNumber))];
-            if (seriesId is not null && (episodes.Any(covered.Contains) || (wanted is not null && !episodes.Any(wanted.Contains))))
+            if (seriesId is not null && (episodes.Any(covered.Contains) || (wanted is not null && !episodes.All(wanted.Contains))))
             {
                 continue;
             }
 
-            TrackedDownload next = await downloads.GrabAsync(
-                new GrabRequest { Release = decision.Candidate.Release, SeriesId = seriesId, MovieId = movieId }, cancellationToken).ConfigureAwait(false);
+            TrackedDownload next;
+            try
+            {
+                next = await downloads.GrabAsync(
+                    new GrabRequest { Release = decision.Candidate.Release, SeriesId = seriesId, MovieId = movieId, Upgrade = true }, cancellationToken).ConfigureAwait(false);
+            }
+            catch (AlreadyPresentException)
+            {
+                // A re-grab (wanted is null) for episodes imported meanwhile.
+                continue;
+            }
 
             // A failed release again under another title (no infohash from the indexer, so the blocklist missed it): try the next one.
             if (next.State == TrackedDownloadState.Failed)

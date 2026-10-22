@@ -2,11 +2,11 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
-using Modularr.Core.Discovery;
 using Modularr.Core.Library;
 using Modularr.Core.Metadata;
 using Modularr.Core.Persistence;
 using Modularr.Core.Search;
+using Modularr.Core.Tests.Discovery;
 using Modularr.Core.Tests.Metadata;
 using Modularr.Core.Tests.Persistence;
 using Modularr.Core.Tests.PostProcessing;
@@ -112,7 +112,7 @@ public sealed class LibraryImportServiceTests : IDisposable
         SeriesMetadataClient series = new(client, metadataOptions);
         return new LibraryImportService(
             db,
-            new DiscoveryService(movies, series, new ShowDiscoveryClient(client, metadataOptions), _cache, db),
+            DiscoveryServiceTests.Create(client, _cache, db),
             new LibraryService(db, series, movies, settings, new SearchRunner(null!), activities),
             new DiskScanService(db, activities, settings),
             activities,

@@ -33,10 +33,22 @@ public sealed class MediaOptionsTests
             Policy.WantedVersion(category, Language.FindByName(original), itemVersion is null ? null : ReleaseVersion.FindByName(itemVersion)));
 
     [Fact]
-    public void DefaultsAcceptEveryVersionAndWantNoSubtitles()
+    public void DefaultsWantTheOriginalVersionAndNoSubtitles()
     {
-        Assert.Equal(ReleaseVersion.Any, new MediaOptions().WantedVersion(MediaType.Anime, Language.Japanese, null));
+        Assert.Equal(ReleaseVersion.VO, new MediaOptions().WantedVersion(MediaType.Anime, Language.Japanese, null));
         Assert.Empty(new MediaOptions().WantedSubtitles(MediaType.Anime, null));
+    }
+
+    // Subtitles follow their own item and category settings whatever the audio version.
+    [Fact]
+    public void WantedSubtitlesIgnoreTheVersion()
+    {
+        MediaOptions policy = Policy with { Movies = new MediaDefaults { Version = ReleaseVersion.VF, Subtitles = [Language.English] } };
+
+        Assert.Equal([Language.English], policy.WantedSubtitles(MediaType.Movie, null));
+        Assert.Equal([Language.English], (policy with { DefaultVersion = ReleaseVersion.VOSTFR }).WantedSubtitles(MediaType.Movie, null));
+        Assert.Equal([Language.German], policy.WantedSubtitles(MediaType.Movie, [Language.German]));
+        Assert.Equal([Language.French], policy.WantedSubtitles(MediaType.Series, null));
     }
 
     [Fact]

@@ -56,7 +56,7 @@ public sealed class LibraryServiceAddTests : IDisposable
     {
         using ModularrDbContext db = _database.NewContext();
 
-        Series series = await Library(db).AddSeriesAsync(76885, qualityProfileId: null, version: null, SeriesMonitor.All, search: false, TestContext.Current.CancellationToken);
+        Series series = await Library(db).AddSeriesAsync(76885, qualityProfileId: null, version: null, SeriesMonitor.All, seasons: null, search: false, TestContext.Current.CancellationToken);
 
         Assert.Equal((MediaType.Anime, 2, Language.Japanese), (series.MediaType, series.QualityProfileId, series.OriginalLanguage));
         Assert.Equal(ReleaseVersion.VOSTFR, Settings.Media.WantedVersion(series));
@@ -146,6 +146,66 @@ public sealed class LibraryServiceAddTests : IDisposable
         Assert.Equal(episodesMonitored, series.Episodes.OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber).Select(e => e.Monitored));
     }
 
+    [Theory]
+    [InlineData(SeriesMonitor.Latest, null, new[] { 3 })]
+    [InlineData(SeriesMonitor.First, null, new[] { 1 })]
+    [InlineData(SeriesMonitor.Custom, new[] { 0, 2 }, new[] { 0, 2 })]
+    [InlineData(SeriesMonitor.Custom, new int[0], new int[0])]
+    public void MonitorPicksTheSeasons(SeriesMonitor monitor, int[]? seasons, int[] expected)
+    {
+        Series series = LibraryService.ToSeries(FourSeasons(), 1, Settings.Paths, DateTime.UnixEpoch, monitor, seasons);
+
+        Assert.Equal(expected, series.Seasons.Where(s => s.Monitored).Select(s => s.Number).Order());
+        Assert.Equal(expected, series.Episodes.Where(e => e.Monitored).Select(e => e.SeasonNumber).Order());
+    }
+
+    [Fact]
+    public void CustomMonitoringNeedsTheSeasons() =>
+        Assert.Throws<ArgumentException>(() => LibraryService.ToSeries(FourSeasons(), 1, Settings.Paths, DateTime.UnixEpoch, SeriesMonitor.Custom));
+
+    [Fact]
+    public async Task SeasonMonitoringAppliesToItsEpisodes()
+    {
+        Series added = _database.Insert(LibraryService.ToSeries(FourSeasons(), 1, Settings.Paths, DateTime.UnixEpoch, SeriesMonitor.None))[0];
+        using ModularrDbContext db = _database.NewContext();
+
+        Series series = await Library(db).SetSeasonMonitoredAsync(added.Id, 2, monitored: true, TestContext.Current.CancellationToken);
+
+        Assert.Equal([2], series.Seasons.Where(s => s.Monitored).Select(s => s.Number));
+        using ModularrDbContext check = _database.NewContext();
+        Assert.Equal([2], check.Episodes.Where(e => e.Monitored).Select(e => e.SeasonNumber));
+        Assert.True(check.Series.Single().Seasons.Single(s => s.Number == 2).Monitored);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Library(db).SetSeasonMonitoredAsync(added.Id, 9, monitored: true, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task MonitoringEpisodesMonitorsTheirSeason()
+    {
+        Series added = _database.Insert(LibraryService.ToSeries(FourSeasons(), 1, Settings.Paths, DateTime.UnixEpoch, SeriesMonitor.None))[0];
+        int[] ids = [.. added.Episodes.Where(e => e.SeasonNumber is 1 or 3).Select(e => e.Id)];
+        using ModularrDbContext db = _database.NewContext();
+
+        IReadOnlyList<Episode> episodes = await Library(db).SetEpisodesMonitoredAsync(ids, monitored: true, TestContext.Current.CancellationToken);
+
+        Assert.All(episodes, e => Assert.True(e.Monitored));
+        using ModularrDbContext check = _database.NewContext();
+        Assert.Equal([1, 3], check.Series.Single().Seasons.Where(s => s.Monitored).Select(s => s.Number).Order());
+        await Library(check).SetEpisodesMonitoredAsync([ids[0]], monitored: false, TestContext.Current.CancellationToken);
+        Assert.Equal([3], check.Episodes.Where(e => e.Monitored).Select(e => e.SeasonNumber));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Library(check).SetEpisodesMonitoredAsync([ids[0], 999], monitored: true, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => Library(check).SetEpisodesMonitoredAsync([], monitored: true, TestContext.Current.CancellationToken));
+    }
+
+    // Specials and three seasons of one aired episode each.
+    private static SeriesInfo FourSeasons() => new()
+    {
+        TvdbId = 7,
+        Title = "Four Seasons",
+        OriginalLanguage = Language.English,
+        Seasons = [.. Enumerable.Range(0, 4).Select(n => new SeasonInfo(n, null, []))],
+        Episodes = [.. Enumerable.Range(0, 4).Select(n => new EpisodeInfo { TvdbId = 100 + n, SeasonNumber = n, EpisodeNumber = 1, AirDate = new DateOnly(2020, 1, 1) })],
+    };
+
     private static ItemUpdate Patch(string json) => JsonSerializer.Deserialize<ItemUpdate>(json, JsonSerializerOptions.Web)!;
 
     [Fact]
@@ -163,7 +223,7 @@ public sealed class LibraryServiceAddTests : IDisposable
 
         // Jobs run in order: had the movie been queued, it would be searched before the series.
         Movie movie = await Library(db, searches).AddMovieAsync(70981, qualityProfileId: null, version: null, search: false, ct);
-        Series series = await Library(db, searches).AddSeriesAsync(76885, qualityProfileId: null, version: null, SeriesMonitor.All, search: true, ct);
+        Series series = await Library(db, searches).AddSeriesAsync(76885, qualityProfileId: null, version: null, SeriesMonitor.All, seasons: null, search: true, ct);
 
         Assert.True(await subscribed);
         while (events.Current?.Data is not Activity { Kind: ActivityKind.NothingFound })

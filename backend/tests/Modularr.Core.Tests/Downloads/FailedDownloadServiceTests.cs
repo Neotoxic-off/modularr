@@ -8,6 +8,7 @@ using Modularr.Core.Downloads;
 using Modularr.Core.Persistence;
 using Modularr.Core.Search;
 using Modularr.Core.Subtitles;
+using Modularr.Core.Tests.Library;
 using Modularr.Core.Tests.Persistence;
 
 namespace Modularr.Core.Tests.Downloads;
@@ -33,7 +34,7 @@ public sealed class FailedDownloadServiceTests : IDisposable
         using (ModularrDbContext db = _database.NewContext())
         {
             TrackedDownload download = await db.TrackedDownloads.SingleAsync(TestContext.Current.CancellationToken);
-            await new DownloadImporter(db, new ActivityLog(db, new ActivityFeed()), Options.Create(new ModularrOptions()), Subtitles).FailAsync(download, "No seeds or peers for 01:00:00", TestContext.Current.CancellationToken);
+            await new DownloadImporter(db, new ActivityLog(db, new ActivityFeed()), new FixedOptionsMonitor(new ModularrOptions()), Subtitles).FailAsync(download, "No seeds or peers for 01:00:00", TestContext.Current.CancellationToken);
         }
 
         using ModularrDbContext check = _database.NewContext();

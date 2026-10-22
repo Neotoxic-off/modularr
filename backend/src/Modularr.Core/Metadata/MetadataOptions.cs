@@ -30,4 +30,10 @@ public sealed record MetadataOptions
     [Required]
     [Url]
     public string AnimeMappingUrl { get; init; } = "https://raw.githubusercontent.com/Fribb/anime-lists/master/anime-list-mini.json";
+
+    // A TMDB v3 API key or v4 read access token: movie exploration with real filters. Without it, the keyless lists.
+    public string? TmdbApiKey { get; init; }
+
+    // What a non-admin may see.
+    public MetadataOptions Redacted() => this with { TmdbApiKey = null };
 }

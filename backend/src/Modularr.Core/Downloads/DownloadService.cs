@@ -22,6 +22,9 @@ public sealed record GrabRequest
     public required ReleaseInfo Release { get; init; }
     public int? SeriesId { get; init; }
     public int? MovieId { get; init; }
+
+    // Replace a file below the quality cutoff; without it a release for what already has a file is refused (PresentFiles).
+    public bool Upgrade { get; init; }
 }
 
 public sealed record DownloadItem(TrackedDownload Download, TorrentStatus? Torrent);
@@ -41,9 +44,12 @@ public sealed class DownloadService(
     public const string SeriesCategory = "series";
     public const string MoviesCategory = "movies";
 
-    public async Task<IReadOnlyList<DownloadItem>> ListAsync(CancellationToken cancellationToken)
+    // Newest first; inProgressOnly keeps the ones grabbed and not finished either way.
+    public async Task<IReadOnlyList<DownloadItem>> ListAsync(bool inProgressOnly, CancellationToken cancellationToken)
     {
-        List<TrackedDownload> downloads = await db.TrackedDownloads.AsNoTracking().OrderByDescending(d => d.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
+        IQueryable<TrackedDownload> query = db.TrackedDownloads.AsNoTracking();
+        List<TrackedDownload> downloads = await (inProgressOnly ? query.Where(TrackedDownload.InProgress) : query)
+            .OrderByDescending(d => d.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
         return [.. downloads.Select(d => new DownloadItem(d, torrents.Engine.Get(d.InfoHash)))];
     }
 
@@ -62,10 +68,17 @@ public sealed class DownloadService(
             Series series = await db.Series.Include(s => s.Episodes).FirstOrDefaultAsync(s => s.Id == seriesId, cancellationToken).ConfigureAwait(false)
                 ?? throw new ArgumentException($"Series {seriesId} is not in the library.", nameof(request));
             episodes = EpisodeParser.ParseTitle(release.Title) is ParsedEpisodeInfo parsed ? ReleaseDecisions.MapEpisodes(parsed, series.Episodes) : [];
+            int[] episodeIds = [.. episodes.Select(e => e.Id)];
+            await PresentFiles.EnsureEpisodesWantedAsync(
+                db, seriesId, e => episodeIds.Contains(e.Id), $"Every episode of {release.Title}", request.Upgrade, cancellationToken).ConfigureAwait(false);
         }
         else if (!await db.Movies.AnyAsync(m => m.Id == request.MovieId, cancellationToken).ConfigureAwait(false))
         {
             throw new ArgumentException($"Movie {request.MovieId} is not in the library.", nameof(request));
+        }
+        else
+        {
+            await PresentFiles.EnsureMovieWantedAsync(db, request.MovieId!.Value, request.Upgrade, cancellationToken).ConfigureAwait(false);
         }
 
         string category = request.SeriesId is null ? MoviesCategory : SeriesCategory;

@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Configuration;
 using Modularr.Core.Decisions;
@@ -11,6 +10,7 @@ using Modularr.Core.Languages;
 using Modularr.Core.Library;
 using Modularr.Core.Metadata;
 using Modularr.Core.Persistence;
+using Modularr.Core.PostProcessing;
 using Modularr.Core.Qualities;
 using Modularr.Core.Search;
 using Modularr.Core.Subtitles;
@@ -21,11 +21,19 @@ namespace Modularr.Api;
 public static class ApiEndpoints
 {
     // No profile: the category default; no version: the version policy; the search runs in the background unless SearchNow is false.
-    public sealed record AddSeriesRequest(int TvdbId, int? QualityProfileId = null, ReleaseVersion? Version = null, bool SearchNow = true, SeriesMonitor Monitor = SeriesMonitor.All);
+    public sealed record AddSeriesRequest(int TvdbId, int? QualityProfileId = null, ReleaseVersion? Version = null, bool SearchNow = true, SeriesMonitor Monitor = SeriesMonitor.All, IReadOnlyList<int>? Seasons = null);
 
     public sealed record AddMovieRequest(int TmdbId, int? QualityProfileId = null, ReleaseVersion? Version = null, bool SearchNow = true);
 
     public sealed record ImportRequest(IReadOnlyList<ImportItem> Items);
+
+    public sealed record MonitoredRequest(bool Monitored);
+
+    public sealed record EpisodesMonitoredRequest(IReadOnlyList<int> EpisodeIds, bool Monitored);
+
+    public sealed record ImportModeRequest(ImportMode ImportMode);
+
+    public sealed record MetadataRequest(string? TmdbApiKey);
 
     public static RouteGroupBuilder MapModularrApi(this RouteGroupBuilder api)
     {
@@ -44,12 +52,22 @@ public static class ApiEndpoints
         api.MapGet("/series", async (LibraryService library, ItemDtos dtos, CancellationToken ct) => (await library.ListSeriesAsync(ct)).Select(dtos.Of));
         api.MapGet("/series/{id:int}", async (int id, LibraryService library, ItemDtos dtos, CancellationToken ct) => dtos.Detail(await library.GetSeriesAsync(id, ct)));
         api.MapPost("/series", async (AddSeriesRequest request, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
-            dtos.Of(await library.AddSeriesAsync(request.TvdbId, request.QualityProfileId, request.Version, request.Monitor, request.SearchNow, ct)));
+            dtos.Of(await library.AddSeriesAsync(request.TvdbId, request.QualityProfileId, request.Version, request.Monitor, request.Seasons, request.SearchNow, ct)));
         api.MapPatch("/series/{id:int}", async (int id, ItemUpdate update, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
             dtos.Of(await library.UpdateSeriesAsync(id, update, ct)));
-        api.MapPost("/series/{id:int}/search", async (int id, int? season, ModularrDbContext db, SearchRunner searches, CancellationToken ct) =>
+        api.MapPatch("/series/{id:int}/seasons/{number:int}", async (int id, int number, MonitoredRequest request, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
+            dtos.Detail(await library.SetSeasonMonitoredAsync(id, number, request.Monitored, ct)));
+        api.MapPatch("/episodes/{id:int}", async (int id, MonitoredRequest request, LibraryService library, CancellationToken ct) =>
+            ItemDtos.Of((await library.SetEpisodesMonitoredAsync([id], request.Monitored, ct))[0]));
+        api.MapPatch("/episodes", async (EpisodesMonitoredRequest request, LibraryService library, CancellationToken ct) =>
+            (await library.SetEpisodesMonitoredAsync(request.EpisodeIds ?? [], request.Monitored, ct)).Select(ItemDtos.Of));
+
+        // 409 when every monitored episode (of the season) has a file, unless upgrade is asked and one is below the cutoff.
+        api.MapPost("/series/{id:int}/search", async (int id, int? season, bool? upgrade, ModularrDbContext db, SearchRunner searches, CancellationToken ct) =>
         {
-            await EnsureExistsAsync(db.Series.AnyAsync(s => s.Id == id, ct), $"Series {id} is not in the library.");
+            await PresentFiles.EnsureEpisodesWantedAsync(
+                db, id, e => e.Monitored && (season == null || e.SeasonNumber == season),
+                season is null ? "Every monitored episode" : $"Every monitored episode of season {season}", upgrade ?? false, ct);
             searches.Enqueue(new SearchJob(id, MovieId: null, season));
             return Results.Accepted();
         });
@@ -57,17 +75,50 @@ public static class ApiEndpoints
         api.MapGet("/movies/{id:int}", async (int id, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
         {
             (Movie movie, bool hasFile) = await library.GetMovieAsync(id, ct);
-            return new { movie = dtos.Of(movie), hasFile };
+            return new { movie = dtos.Of(movie, hasFile), hasFile };
         });
         api.MapPost("/movies", async (AddMovieRequest request, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
-            dtos.Of(await library.AddMovieAsync(request.TmdbId, request.QualityProfileId, request.Version, request.SearchNow, ct)));
+            await MovieAsync((await library.AddMovieAsync(request.TmdbId, request.QualityProfileId, request.Version, request.SearchNow, ct)).Id, library, dtos, ct));
         api.MapPatch("/movies/{id:int}", async (int id, ItemUpdate update, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
-            dtos.Of(await library.UpdateMovieAsync(id, update, ct)));
-        api.MapPost("/movies/{id:int}/search", async (int id, ModularrDbContext db, SearchRunner searches, CancellationToken ct) =>
         {
-            await EnsureExistsAsync(db.Movies.AnyAsync(m => m.Id == id, ct), $"Movie {id} is not in the library.");
+            await library.UpdateMovieAsync(id, update, ct);
+            return await MovieAsync(id, library, dtos, ct);
+        });
+
+        // 409 when the movie has a file, unless upgrade is asked and the file is below the cutoff.
+        api.MapPost("/movies/{id:int}/search", async (int id, bool? upgrade, ModularrDbContext db, SearchRunner searches, CancellationToken ct) =>
+        {
+            await PresentFiles.EnsureMovieWantedAsync(db, id, upgrade ?? false, ct);
             searches.Enqueue(new SearchJob(SeriesId: null, id));
             return Results.Accepted();
+        });
+        api.MapGet("/explore/{kind}", (string kind, int? page, string? genre, int? year, int? yearFrom, int? yearTo, decimal? minRating, string? language,
+            string? status, string? sort, DiscoveryService discovery, CancellationToken ct) =>
+            discovery.ExploreAsync(ExploreKind(kind), new ExploreQuery
+            {
+                Page = page ?? 1,
+                Genre = string.IsNullOrWhiteSpace(genre) ? null : genre.Trim(),
+                Year = year,
+                YearFrom = yearFrom,
+                YearTo = yearTo,
+                MinRating = minRating,
+                Language = string.IsNullOrWhiteSpace(language) ? null : Language.FindByName(language),
+                Status = status is null ? null : ParseEnum(status, ExploreStatus.Released),
+                Sort = ParseEnum(sort, ExploreSort.Popularity),
+            }, ct));
+        api.MapGet("/explore/{kind}/genres", (string kind, DiscoveryService discovery, CancellationToken ct) => discovery.ExploreGenresAsync(ExploreKind(kind), ct));
+        api.MapGet("/dashboard", async (DashboardService dashboard, DownloadService downloads, CancellationToken ct) =>
+        {
+            DashboardSummary summary = await dashboard.GetAsync(DateOnly.FromDateTime(DateTime.Now), ct);
+            return new
+            {
+                summary.Counts,
+                summary.Storage,
+                summary.Subtitles,
+                inProgress = (await downloads.ListAsync(inProgressOnly: true, ct)).Select(ToDto),
+                summary.Airing,
+                summary.Recent,
+            };
         });
         api.MapPost("/series/{id:int}/rescan", (int id, DiskScanService scans, CancellationToken ct) => scans.ScanSeriesAsync(id, record: true, ct));
         api.MapPost("/movies/{id:int}/rescan", (int id, DiskScanService scans, CancellationToken ct) => scans.ScanMovieAsync(id, record: true, ct));
@@ -91,7 +142,7 @@ public static class ApiEndpoints
         }).RequireAuthorization(AuthEndpoints.AdminPolicy);
         api.MapPost("/releases/grab", async (GrabRequest request, DownloadService downloads, CancellationToken ct) =>
             ToDto(await downloads.GrabAsync(request, ct)));
-        api.MapGet("/downloads", async (DownloadService downloads, CancellationToken ct) => (await downloads.ListAsync(ct)).Select(ToDto));
+        api.MapGet("/downloads", async (DownloadService downloads, CancellationToken ct) => (await downloads.ListAsync(inProgressOnly: false, ct)).Select(ToDto));
         api.MapPost("/downloads/{id:int}/pause", async (int id, DownloadService downloads, CancellationToken ct) =>
         {
             await downloads.SetPausedAsync(id, paused: true, ct);
@@ -136,6 +187,19 @@ public static class ApiEndpoints
             await settings.SaveSubtitlesAsync(subtitles, ct);
             return options.CurrentValue.Subtitles;
         }).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapGet("/settings/import", (IOptionsMonitor<ModularrOptions> options) => new { options.CurrentValue.PostProcessing.ImportMode });
+        api.MapPut("/settings/import", async (ImportModeRequest request, SettingsFile settings, IOptionsMonitor<ModularrOptions> options, CancellationToken ct) =>
+        {
+            await settings.SaveImportModeAsync(request.ImportMode, ct);
+            return new { options.CurrentValue.PostProcessing.ImportMode };
+        }).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapGet("/settings/metadata", (IOptionsMonitor<ModularrOptions> options) => new { options.CurrentValue.Metadata.TmdbApiKey })
+            .RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapPut("/settings/metadata", async (MetadataRequest request, SettingsFile settings, IOptionsMonitor<ModularrOptions> options, CancellationToken ct) =>
+        {
+            await settings.SaveTmdbApiKeyAsync(request.TmdbApiKey, ct);
+            return new { options.CurrentValue.Metadata.TmdbApiKey };
+        }).RequireAuthorization(AuthEndpoints.AdminPolicy);
         api.MapGet("/filesystem", (string? path) => DirectoryBrowser.Browse(path)).RequireAuthorization(AuthEndpoints.AdminPolicy);
         return api;
     }
@@ -150,6 +214,7 @@ public static class ApiEndpoints
             ArgumentException argument => (StatusCodes.Status400BadRequest, argument.ParamName is null ? argument.Message : argument.Message.Replace($" (Parameter '{argument.ParamName}')", "", StringComparison.Ordinal)),
             FormatException or InvalidSearchTermException => (StatusCodes.Status400BadRequest, error.Message),
             MetadataNotFoundException or KeyNotFoundException => (StatusCodes.Status404NotFound, error.Message),
+            AlreadyPresentException => (StatusCodes.Status409Conflict, error.Message),
             MetadataSourceException or InvalidOperationException or HttpRequestException => (StatusCodes.Status502BadGateway, error.Message),
             _ => (StatusCodes.Status500InternalServerError, "Internal error"),
         };
@@ -225,17 +290,24 @@ public static class ApiEndpoints
 
     private static bool IsAdmin(HttpContext context) => context.User.IsInRole(nameof(UserRole.Admin));
 
-    private static async Task EnsureExistsAsync(Task<bool> exists, string message)
+    private static async Task<object> MovieAsync(int id, LibraryService library, ItemDtos dtos, CancellationToken ct)
     {
-        if (!await exists)
-        {
-            throw new KeyNotFoundException(message);
-        }
+        (Movie movie, bool hasFile) = await library.GetMovieAsync(id, ct);
+        return dtos.Of(movie, hasFile);
     }
+
+    private static MediaType ExploreKind(string kind) => kind.ToUpperInvariant() switch
+    {
+        "MOVIES" => MediaType.Movie,
+        "SERIES" => MediaType.Series,
+        "ANIME" => MediaType.Anime,
+        _ => throw new ArgumentException($"Unknown kind '{kind}', expected movies, series or anime."),
+    };
 
     // Library items as the UI sees them: version and subtitles are the item's own overrides (null follows the policy),
     // wantedVersion/wantedSubtitles the effective ones, policyVersion what the policy alone picks, lastSearch the latest
-    // background search since startup.
+    // background search since startup. For a series and its seasons, hasFile means every monitored episode has a file (what a
+    // search without upgrade refuses) and missing counts the monitored episodes aired without one.
     public sealed class ItemDtos(IOptionsMonitor<ModularrOptions> options, SearchRunner searches)
     {
         public object Of(Series s) => new
@@ -246,13 +318,14 @@ public static class ApiEndpoints
             policyVersion = options.CurrentValue.Media.WantedVersion(s.MediaType, s.OriginalLanguage, itemVersion: null),
             wantedSubtitles = options.CurrentValue.Media.WantedSubtitles(s),
             lastSearch = searches.LastSearch(s.Id, movieId: null),
-            seasons = s.Seasons,
+            seasons = Seasons(s),
             episodes = s.Episodes.Count,
             episodesWithFile = s.Episodes.Count(e => e.MediaFileId is not null),
+            missing = Missing(s.Episodes),
+            hasFile = Complete(s.Episodes),
         };
 
-        // HasFile only where the caller knows it (the movie list); null elsewhere.
-        public object Of(Movie m, bool? hasFile = null) => new
+        public object Of(Movie m, bool hasFile) => new
         {
             m.Id, m.TmdbId, m.ImdbId, m.Title, m.Year, m.Runtime, m.Monitored, m.Path, m.QualityProfileId, m.Poster, m.Backdrop, m.Overview,
             m.Rating, m.Genres, m.Certification, m.OriginalLanguage, m.Version, m.Subtitles,
@@ -266,17 +339,36 @@ public static class ApiEndpoints
         public object Detail(Series s) => new
         {
             series = Of(s),
-            seasons = s.Seasons.OrderBy(season => season.Number).Select(season => new
+            seasons = Seasons(s),
+            episodes = s.Episodes.OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber).Select(Of),
+        };
+
+        public static object Of(Episode e) => new
+        {
+            e.Id, e.SeriesId, e.SeasonNumber, e.EpisodeNumber, e.AbsoluteEpisodeNumber, e.AirDate, e.Title, e.Monitored, hasFile = e.MediaFileId is not null,
+        };
+
+        private static IEnumerable<object> Seasons(Series s) => s.Seasons.OrderBy(season => season.Number).Select(season =>
+        {
+            Episode[] episodes = [.. s.Episodes.Where(e => e.SeasonNumber == season.Number)];
+            return new
             {
                 season.Number, season.Monitored,
-                episodes = s.Episodes.Count(e => e.SeasonNumber == season.Number),
-                episodesWithFile = s.Episodes.Count(e => e.SeasonNumber == season.Number && e.MediaFileId is not null),
-            }),
-            episodes = s.Episodes.OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber).Select(e => new
-            {
-                e.Id, e.SeasonNumber, e.EpisodeNumber, e.AbsoluteEpisodeNumber, e.AirDate, e.Title, e.Monitored, hasFile = e.MediaFileId is not null,
-            }),
-        };
+                episodes = episodes.Length,
+                episodesWithFile = episodes.Count(e => e.MediaFileId is not null),
+                missing = Missing(episodes),
+                hasFile = Complete(episodes),
+            };
+        });
+
+        private static int Missing(IEnumerable<Episode> episodes)
+        {
+            DateOnly today = DateOnly.FromDateTime(DateTime.Now);
+            return episodes.Count(e => e.Monitored && e.MediaFileId is null && e.AirDate <= today);
+        }
+
+        private static bool Complete(IEnumerable<Episode> episodes) =>
+            episodes.Where(e => e.Monitored).ToArray() is { Length: > 0 } monitored && monitored.All(e => e.MediaFileId is not null);
     }
 
     private static T ParseEnum<T>(string? value, T fallback)

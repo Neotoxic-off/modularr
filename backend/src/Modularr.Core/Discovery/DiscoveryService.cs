@@ -28,8 +28,8 @@ public enum AnimeList
 }
 
 // Discover lists and the add-box lookup. Source answers are cached in memory; library membership is applied per request, so it is always current.
-public sealed class DiscoveryService(
-    MovieMetadataClient movies, SeriesMetadataClient series, ShowDiscoveryClient shows, IMemoryCache cache, ModularrDbContext db)
+public sealed partial class DiscoveryService(
+    MovieMetadataClient movies, SeriesMetadataClient series, ShowDiscoveryClient shows, TmdbClient tmdb, ShowIndex showIndex, IMemoryCache cache, ModularrDbContext db)
 {
     private static readonly TimeSpan ListLifetime = TimeSpan.FromHours(6);
     private static readonly TimeSpan LookupLifetime = TimeSpan.FromMinutes(5);
@@ -151,11 +151,22 @@ public sealed class DiscoveryService(
     {
         int[] tmdbIds = [.. items.Select(i => i.TmdbId).OfType<int>()];
         int[] tvdbIds = [.. items.Select(i => i.TvdbId).OfType<int>()];
-        Dictionary<int, int> movieIds = await db.Movies.Where(m => tmdbIds.Contains(m.TmdbId)).ToDictionaryAsync(m => m.TmdbId, m => m.Id, cancellationToken).ConfigureAwait(false);
-        Dictionary<int, int> seriesIds = await db.Series.Where(s => tvdbIds.Contains(s.TvdbId)).ToDictionaryAsync(s => s.TvdbId, s => s.Id, cancellationToken).ConfigureAwait(false);
+        Dictionary<int, LibraryEntry> movieIds = await db.Movies.Where(m => tmdbIds.Contains(m.TmdbId))
+            .Select(m => new { m.TmdbId, Entry = new LibraryEntry(m.Id, db.MediaFiles.Any(f => f.MovieId == m.Id)) })
+            .ToDictionaryAsync(m => m.TmdbId, m => m.Entry, cancellationToken).ConfigureAwait(false);
+        Dictionary<int, LibraryEntry> seriesIds = await db.Series.Where(s => tvdbIds.Contains(s.TvdbId))
+            .Select(s => new { s.TvdbId, Entry = new LibraryEntry(s.Id, s.Episodes.Any(e => e.MediaFileId != null)) })
+            .ToDictionaryAsync(s => s.TvdbId, s => s.Entry, cancellationToken).ConfigureAwait(false);
 
-        return [.. items.Select(i => i with { LibraryId = i.Kind == MediaType.Movie ? Find(movieIds, i.TmdbId) : Find(seriesIds, i.TvdbId) })];
+        return
+        [
+            .. items.Select(i => (i.Kind == MediaType.Movie ? Find(movieIds, i.TmdbId) : Find(seriesIds, i.TvdbId)) is LibraryEntry entry
+                ? i with { LibraryId = entry.Id, HasFile = entry.HasFile }
+                : i),
+        ];
     }
 
-    private static int? Find(Dictionary<int, int> ids, int? key) => key is int k && ids.TryGetValue(k, out int id) ? id : null;
+    private static LibraryEntry? Find(Dictionary<int, LibraryEntry> ids, int? key) => key is int k && ids.TryGetValue(k, out LibraryEntry? entry) ? entry : null;
+
+    private sealed record LibraryEntry(int Id, bool HasFile);
 }

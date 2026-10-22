@@ -4,6 +4,16 @@ using Modularr.Core.MediaFiles;
 
 namespace Modularr.Core.PostProcessing;
 
+// How a finished download reaches the library.
+public enum ImportMode
+{
+    // The files leave the downloads folder and the torrent is removed: no seeding, no space used twice.
+    Move,
+
+    // The files are linked (copied across volumes) and the torrent keeps seeding.
+    Hardlink,
+}
+
 // Overrides must use a case-insensitive set, like the defaults.
 public sealed record PostProcessingOptions : IValidatableObject
 {
@@ -20,6 +30,8 @@ public sealed record PostProcessingOptions : IValidatableObject
         // External audio tracks are not imported, but they belong to a legit release: delete without blacklisting.
         ".mka", ".ac3", ".dts", ".flac",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
+    public ImportMode ImportMode { get; init; } = ImportMode.Move;
 
     public IReadOnlySet<string> VideoExtensions { get; init; } = MediaFileExtensions.VideoExtensions;
 

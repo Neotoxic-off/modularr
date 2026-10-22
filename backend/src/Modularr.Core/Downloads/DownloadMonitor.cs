@@ -7,6 +7,7 @@ using Modularr.Core.Configuration;
 using Modularr.Core.Downloads.Torrents;
 using Modularr.Core.Library;
 using Modularr.Core.Persistence;
+using Modularr.Core.PostProcessing;
 
 namespace Modularr.Core.Downloads;
 
@@ -115,12 +116,27 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
                 break;
 
             case { Status: DownloadItemStatus.Completed }:
+                ModularrOptions settings = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<ModularrOptions>>().CurrentValue;
+                bool move = settings.PostProcessing.ImportMode == ImportMode.Move;
+                if (move)
+                {
+                    // Stopped first, so the engine holds none of the files being moved; a failed import leaves it stopped with its data.
+                    await torrents.Engine.PauseAsync(download.InfoHash).ConfigureAwait(false);
+                }
+
                 if (await scope.ServiceProvider.GetRequiredService<DownloadImporter>().ImportAsync(download, torrent.OutputPath, cancellationToken).ConfigureAwait(false))
                 {
                     await failed.RemoveAndRegrabAsync(download, cancellationToken).ConfigureAwait(false);
                 }
                 else if (download.State == TrackedDownloadState.Imported)
                 {
+                    if (move)
+                    {
+                        // The files left with the move, so the data is not deleted with the torrent: only what is left empty goes.
+                        await torrents.Engine.RemoveAsync(download.InfoHash, deleteData: false).ConfigureAwait(false);
+                        DownloadImporter.DeleteEmptyFolders(torrent.OutputPath, settings.Paths.Downloads);
+                    }
+
                     await RescanAsync(scope.ServiceProvider.GetRequiredService<DiskScanService>(), download, cancellationToken).ConfigureAwait(false);
                 }
 

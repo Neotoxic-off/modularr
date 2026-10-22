@@ -50,7 +50,7 @@ public sealed class ModularrOptions
         PostProcessing = PostProcessing,
         Indexers = Indexers,
         Database = Database,
-        Metadata = Metadata,
+        Metadata = Metadata.Redacted(),
         Decisions = Decisions,
         Media = Media,
         Subtitles = Subtitles.Redacted(),

@@ -59,6 +59,9 @@ public sealed class ModularrDbContext(DbContextOptions<ModularrDbContext> option
         modelBuilder.Entity<Episode>(episode =>
         {
             episode.HasIndex(e => new { e.SeriesId, e.SeasonNumber, e.EpisodeNumber }).IsUnique();
+
+            // The dashboard's airing-this-week query.
+            episode.HasIndex(e => e.AirDate);
             episode.HasOne(e => e.Series).WithMany(s => s.Episodes).OnDelete(DeleteBehavior.Cascade);
             episode.HasOne<MediaFile>().WithMany().HasForeignKey(e => e.MediaFileId).OnDelete(DeleteBehavior.SetNull);
         });

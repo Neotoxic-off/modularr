@@ -184,7 +184,7 @@ public sealed class LibraryImportService(
             throw new ArgumentException($"Series {tvdbId} is already in the library.");
         }
 
-        Series series = await library.AddSeriesAsync(tvdbId, qualityProfileId, version: null, SeriesMonitor.All, search: false, cancellationToken).ConfigureAwait(false);
+        Series series = await library.AddSeriesAsync(tvdbId, qualityProfileId, version: null, SeriesMonitor.All, seasons: null, search: false, cancellationToken).ConfigureAwait(false);
         series.Path = folder;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return (series.Title, series.Id, null);

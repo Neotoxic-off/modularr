@@ -16,7 +16,7 @@ using Modularr.Core.Subtitles;
 namespace Modularr.Core.Downloads;
 
 // Upstream CompletedDownloadService + ImportApprovedEpisodes/Movies + FailedDownloadService for one finished torrent.
-public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activities, IOptions<ModularrOptions> options, SubtitleRunner subtitles)
+public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activities, IOptionsMonitor<ModularrOptions> options, SubtitleRunner subtitles)
 {
     // Files of this import, handed to the subtitle runner once their episodes are saved.
     private readonly List<MediaFile> _imported = [];
@@ -26,7 +26,7 @@ public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activitie
     {
         ArgumentNullException.ThrowIfNull(download);
         download.State = TrackedDownloadState.Importing;
-        PostProcessingVerdict verdict = CompletedDownloadProcessor.Process(outputPath, options.Value.PostProcessing);
+        PostProcessingVerdict verdict = CompletedDownloadProcessor.Process(outputPath, options.CurrentValue.PostProcessing);
 
         switch (verdict)
         {
@@ -77,10 +77,29 @@ public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activitie
         activities.Add(Activity.For(download, ActivityKind.ImportFailed, ActivityLevel.Error, reason));
     }
 
-    // What was imported ("Imported to <file>" or "<n> files imported to <folder>"), null when nothing was.
+    // What was imported ("Imported to <file>" or "<n> files imported to <folder>", "(moved)" after imported in Move mode), null when
+    // nothing was. A file already at the destination is kept, and so is its source.
     // shortcut: files keep their release file name and replaced files stay on disk, add renaming and the recycle bin later.
     private async Task<string?> ImportFilesAsync(TrackedDownload download, PostProcessingVerdict.Accepted accepted, CancellationToken cancellationToken)
     {
+        bool move = options.CurrentValue.PostProcessing.ImportMode == ImportMode.Move;
+        void Transfer(string source, string destination)
+        {
+            if (File.Exists(destination))
+            {
+                return;
+            }
+
+            if (move)
+            {
+                FileLinker.Move(source, destination);
+            }
+            else
+            {
+                FileLinker.LinkOrCopy(source, destination);
+            }
+        }
+
         Series? series = download.SeriesId is int seriesId
             ? await db.Series.Include(s => s.Episodes).SingleAsync(s => s.Id == seriesId, cancellationToken).ConfigureAwait(false)
             : null;
@@ -104,11 +123,7 @@ public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activitie
             string destination = Path.Combine(directory, fileName);
             firstDirectory ??= directory;
 
-            if (!File.Exists(destination))
-            {
-                FileLinker.LinkOrCopy(video, destination);
-            }
-
+            Transfer(video, destination);
             imported++;
             lastFile = destination;
 
@@ -147,19 +162,39 @@ public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activitie
         // shortcut: subtitles go next to the first imported video, match them per video when packs carry several.
         foreach (string subtitle in accepted.SubtitleFiles.Where(_ => firstDirectory is not null))
         {
-            string destination = Path.Combine(firstDirectory!, Path.GetFileName(subtitle));
-            if (!File.Exists(destination))
-            {
-                FileLinker.LinkOrCopy(subtitle, destination);
-            }
+            Transfer(subtitle, Path.Combine(firstDirectory!, Path.GetFileName(subtitle)));
         }
 
+        string how = move ? " (moved)" : "";
         return imported switch
         {
             0 => null,
-            1 => $"Imported to {lastFile}",
-            _ => $"{imported} files imported to {firstDirectory}",
+            1 => $"Imported{how} to {lastFile}",
+            _ => $"{imported} files imported{how} to {firstDirectory}",
         };
+    }
+
+    // After a move: the download's folder and its subfolders once empty, only strictly inside the downloads root and never through a
+    // link. A single-file download has no folder of its own and leaves nothing.
+    public static void DeleteEmptyFolders(string outputPath, string downloadsRoot)
+    {
+        string folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(outputPath));
+        string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(downloadsRoot)) + Path.DirectorySeparatorChar;
+        if (!folder.StartsWith(root, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
+            || !Directory.Exists(folder) || new DirectoryInfo(folder).LinkTarget is not null)
+        {
+            return;
+        }
+
+        foreach (string child in Directory.GetDirectories(folder).Where(child => new DirectoryInfo(child).LinkTarget is null))
+        {
+            DeleteEmptyFolders(child, downloadsRoot);
+        }
+
+        if (!Directory.EnumerateFileSystemEntries(folder).Any())
+        {
+            Directory.Delete(folder);
+        }
     }
 
     // The file's own name first (season packs); a single-video download falls back to the episodes it was grabbed for.

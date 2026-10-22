@@ -5,6 +5,7 @@ using Modularr.Core.Configuration;
 using Modularr.Core.Decisions;
 using Modularr.Core.Languages;
 using Modularr.Core.Library;
+using Modularr.Core.PostProcessing;
 using Modularr.Core.Subtitles;
 
 namespace Modularr.Core.Tests.Configuration;
@@ -41,6 +42,31 @@ public sealed class SettingsFileTests : IDisposable
         JsonObject file = JsonNode.Parse(File.ReadAllText(ConfigFile))!.AsObject();
         Assert.Equal(["paths", "Torrents"], file.Select(p => p.Key));
         Assert.Equal(51413, (int)file["Torrents"]!["ListenPort"]!);
+    }
+
+    [Fact]
+    public async Task SingleSettingsKeepTheRestOfTheirSection()
+    {
+        File.WriteAllText(ConfigFile, """{ "postProcessing": { "MaxArchiveDepth": 3 } }""");
+        using ServiceProvider provider = new ServiceCollection().AddModularrCore(_configDirectory).BuildServiceProvider();
+        IOptionsMonitor<ModularrOptions> options = provider.GetRequiredService<IOptionsMonitor<ModularrOptions>>();
+        SettingsFile settings = provider.GetRequiredService<SettingsFile>();
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        Assert.Equal(ImportMode.Move, options.CurrentValue.PostProcessing.ImportMode);
+
+        await settings.SaveImportModeAsync(ImportMode.Hardlink, ct);
+        await settings.SaveTmdbApiKeyAsync(" abc123 ", ct);
+
+        Assert.Equal((ImportMode.Hardlink, 3), (options.CurrentValue.PostProcessing.ImportMode, options.CurrentValue.PostProcessing.MaxArchiveDepth));
+        Assert.Equal("abc123", options.CurrentValue.Metadata.TmdbApiKey);
+        Assert.Null(options.CurrentValue.Redacted().Metadata.TmdbApiKey);
+        Assert.Equal("Hardlink", (string?)JsonNode.Parse(File.ReadAllText(ConfigFile))!["postProcessing"]!["ImportMode"]);
+
+        await settings.SaveTmdbApiKeyAsync(null, ct);
+
+        Assert.Null(options.CurrentValue.Metadata.TmdbApiKey);
+        await Assert.ThrowsAsync<ArgumentException>(() => settings.SaveTmdbApiKeyAsync("bad key!", ct));
+        await Assert.ThrowsAsync<ArgumentException>(() => settings.SaveImportModeAsync((ImportMode)7, ct));
     }
 
     [Fact]

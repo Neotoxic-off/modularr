@@ -20,7 +20,9 @@ public sealed class AutoSearchTests
 
         (ReleaseSearchRequest request, IReadOnlySet<(int, int)> wanted) = Assert.Single(plan);
         Assert.Equal(ReleaseSearchRequest.ForSeason(42, 1), request);
-        Assert.Equal([(1, 1), (1, 2)], wanted.Order());
+
+        // The episode not aired yet is wanted too, so a pack carrying it is not refused.
+        Assert.Equal([(1, 1), (1, 2), (1, 3)], wanted.Order());
     }
 
     [Fact]
@@ -35,6 +37,9 @@ public sealed class AutoSearchTests
         IReadOnlyList<(ReleaseSearchRequest Request, IReadOnlySet<(int Season, int Episode)> Wanted)> plan = AutoSearch.Plan(series, downloading, season: null, Today);
 
         Assert.Equal([new ReleaseSearchRequest { TvdbId = 42, Season = 1, Episode = "3" }], plan.Select(p => p.Request));
+
+        // A season pack holds the unwanted episodes too, so GrabBestAsync refuses it.
+        Assert.Equal([(1, 3)], plan.Single().Wanted);
     }
 
     [Fact]

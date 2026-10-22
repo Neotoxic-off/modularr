@@ -209,6 +209,47 @@ public sealed class SubtitleService(ModularrDbContext db, ActivityLog activities
     private static IReadOnlyList<Language> Missing(Target target, IReadOnlyList<SubtitleFile> present) =>
         [.. target.Wanted.Where(l => !present.Any(p => p.Language == l && !p.Forced))];
 
+    // The files whose item wants subtitles, and how many of them have every wanted language on disk. One query per table; the disk
+    // is read once per file.
+    public async Task<(int Covered, int Total)> CoverageAsync(CancellationToken cancellationToken)
+    {
+        ModularrOptions settings = options.CurrentValue;
+        Dictionary<int, Movie> movies = await db.Movies.AsNoTracking().ToDictionaryAsync(m => m.Id, cancellationToken).ConfigureAwait(false);
+        Dictionary<int, Series> series = await db.Series.AsNoTracking().ToDictionaryAsync(s => s.Id, cancellationToken).ConfigureAwait(false);
+        int covered = 0;
+        int total = 0;
+        foreach (MediaFile file in await db.MediaFiles.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false))
+        {
+            Movie? movie = file.MovieId is int movieId ? movies.GetValueOrDefault(movieId) : null;
+            Series? show = file.SeriesId is int seriesId ? series.GetValueOrDefault(seriesId) : null;
+            if ((movie is null && show is null) || Wanted(settings, file, movie, show) is not { Count: > 0 } wanted)
+            {
+                continue;
+            }
+
+            total++;
+            try
+            {
+                covered += Missing(new Target(file, movie, show, null, wanted), SubtitleFiles.Present(file.Path, Roots)).Count == 0 ? 1 : 0;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                // Unreadable or outside the library: not covered.
+            }
+        }
+
+        return (covered, total);
+    }
+
+    // The item's wanted languages, less the audio's own when OnlyWhenAudioDiffers.
+    private static IReadOnlyList<Language> Wanted(ModularrOptions settings, MediaFile file, Movie? movie, Series? series)
+    {
+        Language original = movie?.OriginalLanguage ?? series!.OriginalLanguage;
+        IReadOnlyList<Language> wanted = movie is not null ? settings.Media.WantedSubtitles(movie) : settings.Media.WantedSubtitles(series!);
+        ReleaseLanguages audio = new(file.Languages);
+        return [.. wanted.Where(l => !settings.Subtitles.OnlyWhenAudioDiffers || !audio.HasAudio(l, original))];
+    }
+
     private static Language EnsureReal(Language language) =>
         language.Id > 0 ? language : throw new ArgumentException($"{language} is not a subtitle language.", nameof(language));
 
@@ -258,16 +299,7 @@ public sealed class SubtitleService(ModularrDbContext db, ActivityLog activities
         Series? series = file.SeriesId is int seriesId ? await db.Series.AsNoTracking().SingleAsync(s => s.Id == seriesId, cancellationToken).ConfigureAwait(false) : null;
         Episode? episode = series is null ? null
             : await db.Episodes.AsNoTracking().Where(e => e.MediaFileId == file.Id).OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-        Language original = movie?.OriginalLanguage ?? series!.OriginalLanguage;
-        IReadOnlyList<Language> wanted = movie is not null ? settings.Media.WantedSubtitles(movie) : settings.Media.WantedSubtitles(series!);
-        ReleaseLanguages audio = new(file.Languages);
-
-        return new Target(
-            file,
-            movie,
-            series,
-            episode,
-            [.. wanted.Where(l => !settings.Subtitles.OnlyWhenAudioDiffers || !audio.HasAudio(l, original))]);
+        return new Target(file, movie, series, episode, Wanted(settings, file, movie, series));
     }
 
     private static Activity Activity(Target target, ActivityKind kind, ActivityLevel level, string message) => new()

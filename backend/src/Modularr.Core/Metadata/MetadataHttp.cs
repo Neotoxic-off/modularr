@@ -11,19 +11,21 @@ internal static class MetadataHttp
     private static readonly ProductInfoHeaderValue UserAgent = new("Modularr", typeof(MetadataHttp).Assembly.GetName().Version?.ToString() ?? "1.0");
 
     // Null on 404; every other failure becomes a MetadataSourceException. Caller cancellation propagates untouched.
-    public static Task<T?> GetJsonAsync<T>(HttpClient httpClient, string url, CancellationToken cancellationToken)
-        where T : class => SendJsonAsync<T>(httpClient, HttpMethod.Get, url, null, cancellationToken);
+    public static Task<T?> GetJsonAsync<T>(HttpClient httpClient, string url, CancellationToken cancellationToken, AuthenticationHeaderValue? authorization = null)
+        where T : class => SendJsonAsync<T>(httpClient, HttpMethod.Get, url, null, cancellationToken, authorization);
 
     public static Task<T?> PostJsonAsync<T>(HttpClient httpClient, string url, object body, CancellationToken cancellationToken)
         where T : class => SendJsonAsync<T>(httpClient, HttpMethod.Post, url, JsonContent.Create(body, options: JsonSerializerOptions.Web), cancellationToken);
 
-    private static async Task<T?> SendJsonAsync<T>(HttpClient httpClient, HttpMethod method, string url, HttpContent? content, CancellationToken cancellationToken)
+    private static async Task<T?> SendJsonAsync<T>(
+        HttpClient httpClient, HttpMethod method, string url, HttpContent? content, CancellationToken cancellationToken, AuthenticationHeaderValue? authorization = null)
         where T : class
     {
         try
         {
             using HttpRequestMessage request = new(method, new Uri(url)) { Content = content };
             request.Headers.UserAgent.Add(UserAgent);
+            request.Headers.Authorization = authorization;
             using HttpResponseMessage response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
             if (response.StatusCode == HttpStatusCode.NotFound)

@@ -7,6 +7,7 @@ using Modularr.Core.Discovery;
 using Modularr.Core.Languages;
 using Modularr.Core.Metadata;
 using Modularr.Core.Persistence;
+using Modularr.Core.Tests.Library;
 using Modularr.Core.Tests.Metadata;
 using Modularr.Core.Tests.Persistence;
 
@@ -122,12 +123,21 @@ public sealed class DiscoveryServiceTests : IDisposable
         Assert.Empty(http.Requests);
     }
 
-    private DiscoveryService Service(StubHttpHandler http)
+    private DiscoveryService Service(StubHttpHandler http) => Create(new HttpClient(http), _cache, _database.NewContext());
+
+    // The services on one client; the TVmaze index reads without pausing.
+    internal static DiscoveryService Create(HttpClient client, IMemoryCache cache, ModularrDbContext db, string? tmdbKey = null, ShowIndex? index = null)
     {
         IOptions<ModularrOptions> options = Options.Create(new ModularrOptions());
-        HttpClient client = new(http);
-        return new DiscoveryService(new MovieMetadataClient(client, options), new SeriesMetadataClient(client, options),
-            new ShowDiscoveryClient(client, options), _cache, _database.NewContext());
+        ShowDiscoveryClient shows = new(client, options);
+        return new DiscoveryService(
+            new MovieMetadataClient(client, options),
+            new SeriesMetadataClient(client, options),
+            shows,
+            new TmdbClient(client, new FixedOptionsMonitor(new ModularrOptions { Metadata = new MetadataOptions { TmdbApiKey = tmdbKey } })),
+            index ?? new ShowIndex(shows.GetShowIndexPageAsync, TimeSpan.Zero, CancellationToken.None),
+            cache,
+            db);
     }
 
     private static MovieInfo Movie(int tmdbId, DateTime? inCinemas = null, DateTime? digital = null) => new()

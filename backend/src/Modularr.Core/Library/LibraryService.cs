@@ -12,12 +12,17 @@ using Modularr.Core.Search;
 
 namespace Modularr.Core.Library;
 
-// Sonarr's add-series monitor choices that matter here. Specials are never monitored.
+// Sonarr's add-series monitor choices that matter here. Specials are monitored only when Custom names season 0.
 public enum SeriesMonitor
 {
     All,
     Future,
     None,
+    Latest,
+    First,
+
+    // The seasons given with it.
+    Custom,
 }
 
 // PATCH body: an absent field is left unchanged; Version or Subtitles present as null clears the item's override.
@@ -87,11 +92,12 @@ public sealed class LibraryService(
     }
 
     // Adding an existing series returns it unchanged. No profile: the category default (series or anime) from MediaOptions.
-    // A monitored series is searched in the background unless search is false.
-    public async Task<Series> AddSeriesAsync(int tvdbId, int? qualityProfileId, ReleaseVersion? version, SeriesMonitor monitor, bool search, CancellationToken cancellationToken)
+    // A monitored series is searched in the background unless search is false. Seasons are read for SeriesMonitor.Custom only.
+    public async Task<Series> AddSeriesAsync(
+        int tvdbId, int? qualityProfileId, ReleaseVersion? version, SeriesMonitor monitor, IReadOnlyCollection<int>? seasons, bool search, CancellationToken cancellationToken)
     {
         Series series = await db.Series.Include(s => s.Episodes).FirstOrDefaultAsync(s => s.TvdbId == tvdbId, cancellationToken).ConfigureAwait(false)
-            ?? await CreateSeriesAsync(tvdbId, qualityProfileId, version, monitor, cancellationToken).ConfigureAwait(false);
+            ?? await CreateSeriesAsync(tvdbId, qualityProfileId, version, monitor, seasons, cancellationToken).ConfigureAwait(false);
         if (search && series.Monitored)
         {
             searches.Enqueue(new SearchJob(series.Id, MovieId: null));
@@ -112,13 +118,14 @@ public sealed class LibraryService(
         return movie;
     }
 
-    private async Task<Series> CreateSeriesAsync(int tvdbId, int? qualityProfileId, ReleaseVersion? version, SeriesMonitor monitor, CancellationToken cancellationToken)
+    private async Task<Series> CreateSeriesAsync(
+        int tvdbId, int? qualityProfileId, ReleaseVersion? version, SeriesMonitor monitor, IReadOnlyCollection<int>? seasons, CancellationToken cancellationToken)
     {
         SeriesInfo info = await seriesMetadata.GetSeriesAsync(tvdbId, cancellationToken: cancellationToken).ConfigureAwait(false);
         MediaType category = TypeOf(info) == SeriesType.Anime ? MediaType.Anime : MediaType.Series;
         int profileId = qualityProfileId ?? options.CurrentValue.Media.For(category).ProfileId;
         await EnsureProfileAsync(profileId, cancellationToken).ConfigureAwait(false);
-        Series series = ToSeries(info, profileId, options.CurrentValue.Paths, DateTime.UtcNow, monitor);
+        Series series = ToSeries(info, profileId, options.CurrentValue.Paths, DateTime.UtcNow, monitor, seasons);
         series.Version = version;
         db.Series.Add(series);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -198,6 +205,52 @@ public sealed class LibraryService(
         return series;
     }
 
+    // Monitors or unmonitors a season and every episode in it.
+    public async Task<Series> SetSeasonMonitoredAsync(int seriesId, int seasonNumber, bool monitored, CancellationToken cancellationToken)
+    {
+        Series series = await db.Series.Include(s => s.Episodes).FirstOrDefaultAsync(s => s.Id == seriesId, cancellationToken).ConfigureAwait(false)
+            ?? throw new KeyNotFoundException($"Series {seriesId} is not in the library.");
+        Season season = series.Seasons.FirstOrDefault(s => s.Number == seasonNumber)
+            ?? throw new KeyNotFoundException($"{series.Title} has no season {seasonNumber}.");
+        season.Monitored = monitored;
+        foreach (Episode episode in series.Episodes.Where(e => e.SeasonNumber == seasonNumber))
+        {
+            episode.Monitored = monitored;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return series;
+    }
+
+    // A monitored episode's season is monitored too, as searches skip unmonitored seasons.
+    public async Task<IReadOnlyList<Episode>> SetEpisodesMonitoredAsync(IReadOnlyCollection<int> episodeIds, bool monitored, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(episodeIds);
+        if (episodeIds.Count == 0)
+        {
+            throw new ArgumentException("No episode given.", nameof(episodeIds));
+        }
+
+        List<Episode> episodes = await db.Episodes.Include(e => e.Series).Where(e => episodeIds.Contains(e.Id)).ToListAsync(cancellationToken).ConfigureAwait(false);
+        int[] unknown = [.. episodeIds.Except(episodes.Select(e => e.Id))];
+        if (unknown.Length > 0)
+        {
+            throw new KeyNotFoundException($"Episode {unknown[0]} is not in the library.");
+        }
+
+        foreach (Episode episode in episodes)
+        {
+            episode.Monitored = monitored;
+            if (monitored && episode.Series.Seasons.FirstOrDefault(s => s.Number == episode.SeasonNumber) is Season season)
+            {
+                season.Monitored = true;
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return episodes;
+    }
+
     public async Task<Movie> UpdateMovieAsync(int id, ItemUpdate update, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(update);
@@ -258,12 +311,23 @@ public sealed class LibraryService(
             : SeriesType.Standard;
     }
 
-    // Future monitors the episodes airing on or after the add day (or not dated yet); None leaves everything unmonitored.
-    public static Series ToSeries(SeriesInfo info, int qualityProfileId, PathOptions paths, DateTime added, SeriesMonitor monitor = SeriesMonitor.All)
+    // The monitored seasons: every regular one (All, Future), the last or first one, the given ones (Custom) or none. Future then
+    // monitors only the episodes airing on or after the add day (or not dated yet).
+    public static Series ToSeries(
+        SeriesInfo info, int qualityProfileId, PathOptions paths, DateTime added, SeriesMonitor monitor = SeriesMonitor.All, IReadOnlyCollection<int>? seasons = null)
     {
         SeriesType type = TypeOf(info);
         DateOnly today = DateOnly.FromDateTime(added);
         int year = info.Year ?? 0;
+        int[] regular = [.. info.Seasons.Select(s => s.SeasonNumber).Where(n => n > 0).Order()];
+        HashSet<int> monitoredSeasons = monitor switch
+        {
+            SeriesMonitor.All or SeriesMonitor.Future => [.. regular],
+            SeriesMonitor.Latest => [.. regular.TakeLast(1)],
+            SeriesMonitor.First => [.. regular.Take(1)],
+            SeriesMonitor.Custom => seasons is null ? throw new ArgumentException("Custom monitoring needs the seasons to monitor.", nameof(seasons)) : [.. seasons],
+            _ => [],
+        };
 
         Series series = new()
         {
@@ -283,7 +347,7 @@ public sealed class LibraryService(
         // Specials (season 0) are not monitored, like Sonarr's default.
         foreach (SeasonInfo season in info.Seasons)
         {
-            series.Seasons.Add(new Season { Number = season.SeasonNumber, Monitored = season.SeasonNumber > 0 && monitor != SeriesMonitor.None });
+            series.Seasons.Add(new Season { Number = season.SeasonNumber, Monitored = monitoredSeasons.Contains(season.SeasonNumber) });
         }
 
         foreach (EpisodeInfo episode in info.Episodes.DistinctBy(e => (e.SeasonNumber, e.EpisodeNumber)))
@@ -295,12 +359,8 @@ public sealed class LibraryService(
                 AbsoluteEpisodeNumber = episode.AbsoluteEpisodeNumber,
                 AirDate = episode.AirDate,
                 Title = episode.Title,
-                Monitored = episode.SeasonNumber > 0 && monitor switch
-                {
-                    SeriesMonitor.All => true,
-                    SeriesMonitor.Future => episode.AirDate is not DateOnly aired || aired >= today,
-                    _ => false,
-                },
+                Monitored = monitoredSeasons.Contains(episode.SeasonNumber)
+                    && (monitor != SeriesMonitor.Future || episode.AirDate is not DateOnly aired || aired >= today),
             });
         }
 

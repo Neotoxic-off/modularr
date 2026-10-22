@@ -1,8 +1,5 @@
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
-using Modularr.Core.Configuration;
 using Modularr.Core.Discovery;
-using Modularr.Core.Metadata;
 using Modularr.Core.Tests.Persistence;
 
 namespace Modularr.Core.Tests.Discovery;
@@ -53,9 +50,6 @@ public sealed class DiscoveryLiveTests : IDisposable
     private DiscoveryService Service()
     {
         Assert.SkipUnless(Environment.GetEnvironmentVariable("MODULARR_LIVE_METADATA") == "1", "Set MODULARR_LIVE_METADATA=1 to query the live metadata sources.");
-        IOptions<ModularrOptions> options = Options.Create(new ModularrOptions());
-        HttpClient client = new();
-        return new DiscoveryService(new MovieMetadataClient(client, options), new SeriesMetadataClient(client, options),
-            new ShowDiscoveryClient(client, options), _cache, _database.NewContext());
+        return DiscoveryServiceTests.Create(new HttpClient(), _cache, _database.NewContext());
     }
 }

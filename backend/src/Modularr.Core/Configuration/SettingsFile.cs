@@ -4,6 +4,8 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
 using Modularr.Core.Languages;
 using Modularr.Core.Library;
+using Modularr.Core.Metadata;
+using Modularr.Core.PostProcessing;
 using Modularr.Core.Subtitles;
 
 namespace Modularr.Core.Configuration;
@@ -44,6 +46,23 @@ public sealed class SettingsFile(string configDirectory, IConfigurationRoot conf
     {
         ArgumentNullException.ThrowIfNull(subtitles);
         return SaveSectionAsync(nameof(ModularrOptions.Subtitles), subtitles, cancellationToken);
+    }
+
+    public Task SaveImportModeAsync(ImportMode mode, CancellationToken cancellationToken) =>
+        Enum.IsDefined(mode)
+            ? SaveValueAsync(nameof(ModularrOptions.PostProcessing), nameof(PostProcessingOptions.ImportMode), mode, cancellationToken)
+            : throw new ArgumentException($"Unknown import mode '{mode}'.", nameof(mode));
+
+    // Null or blank removes the key: movie discovery falls back to the keyless lists.
+    public Task SaveTmdbApiKeyAsync(string? apiKey, CancellationToken cancellationToken)
+    {
+        string? key = string.IsNullOrWhiteSpace(apiKey) ? null : apiKey.Trim();
+        if (key is not null && (key.Length > 512 || !key.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '-' or '_')))
+        {
+            throw new ArgumentException("The TMDB key is a v3 API key or a v4 read access token.", nameof(apiKey));
+        }
+
+        return SaveValueAsync(nameof(ModularrOptions.Metadata), nameof(MetadataOptions.TmdbApiKey), key, cancellationToken);
     }
 
     // The language policy became the version policy: its keys are renamed and its values mapped once, before the file is bound
@@ -106,18 +125,41 @@ public sealed class SettingsFile(string configDirectory, IConfigurationRoot conf
         owner.FirstOrDefault(p => p.Key.Equals(key, StringComparison.OrdinalIgnoreCase)).Value;
 
     // Only that section is replaced; comments in the file are lost, the other sections are kept as they are.
-    private async Task SaveSectionAsync<T>(string section, T value, CancellationToken cancellationToken)
+    private Task SaveSectionAsync<T>(string section, T value, CancellationToken cancellationToken) =>
+        UpdateFileAsync(root => root[KeyIn(root, section)] = JsonSerializer.SerializeToNode(value, WriteOptions), cancellationToken);
+
+    // One key of a section, so the section's other keys (and the defaults they leave out) stay as they are; null removes it.
+    private Task SaveValueAsync<T>(string section, string key, T? value, CancellationToken cancellationToken) =>
+        UpdateFileAsync(root =>
+        {
+            string sectionKey = KeyIn(root, section);
+            JsonObject owner = root[sectionKey] as JsonObject ?? [];
+            root[sectionKey] = owner;
+            if (value is null)
+            {
+                owner.Remove(KeyIn(owner, key));
+            }
+            else
+            {
+                owner[KeyIn(owner, key)] = JsonSerializer.SerializeToNode(value, WriteOptions);
+            }
+        }, cancellationToken);
+
+    private async Task UpdateFileAsync(Action<JsonObject> change, CancellationToken cancellationToken)
     {
         string file = Path.Combine(configDirectory, ModularrOptions.FileName);
         JsonObject root = File.Exists(file)
             ? JsonNode.Parse(await File.ReadAllTextAsync(file, cancellationToken).ConfigureAwait(false), documentOptions: ReadOptions) as JsonObject ?? []
             : [];
-        string key = root.Select(p => p.Key).FirstOrDefault(k => k.Equals(section, StringComparison.OrdinalIgnoreCase)) ?? section;
-        root[key] = JsonSerializer.SerializeToNode(value, WriteOptions);
+        change(root);
 
         WriteAtomically(file, root.ToJsonString(WriteOptions));
         configuration.Reload();
     }
+
+    // The existing spelling of a key (the binder is case-insensitive), or the key itself.
+    private static string KeyIn(JsonObject owner, string key) =>
+        owner.Select(p => p.Key).FirstOrDefault(k => k.Equals(key, StringComparison.OrdinalIgnoreCase)) ?? key;
 
     private static void WriteAtomically(string file, string json)
     {

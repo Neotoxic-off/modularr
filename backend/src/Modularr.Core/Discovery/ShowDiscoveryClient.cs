@@ -5,9 +5,13 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Configuration;
 using Modularr.Core.Decisions;
+using Modularr.Core.Languages;
 using Modularr.Core.Metadata;
 
 namespace Modularr.Core.Discovery;
+
+// A show of the TVmaze index with what explore sorts it by: TVmaze's follower weight and the premiere date.
+public sealed record IndexedShow(DiscoveryItem Item, int Weight, DateOnly? Premiered);
 
 // Keyless show lists: TVmaze for series, AniList for anime (mapped to TVDB through Fribb's anime-lists). Sonarr has no discovery of its own.
 public sealed partial class ShowDiscoveryClient(HttpClient httpClient, IOptions<ModularrOptions> options)
@@ -19,15 +23,37 @@ public sealed partial class ShowDiscoveryClient(HttpClient httpClient, IOptions<
 
     private static readonly string[] Seasons = ["WINTER", "SPRING", "SUMMER", "FALL"];
 
-    private const string AnimeQuery = """
+    // AniList's countryOfOrigin for the languages anime come in.
+    private static readonly FrozenDictionary<string, string> AnimeCountries = new Dictionary<string, string>
+    {
+        [Language.Japanese.Name] = "JP",
+        [Language.Korean.Name] = "KR",
+        [Language.Chinese.Name] = "CN",
+    }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+
+    private const string MediaFields = """
+        id status seasonYear description genres averageScore bannerImage
+        title { romaji english }
+        coverImage { extraLarge }
+        relations { edges { relationType node { id } } }
+        """;
+
+    private const string AnimeQuery = $$"""
         query ($sort: [MediaSort], $season: MediaSeason, $year: Int) {
           Page(perPage: 50) {
-            media(type: ANIME, sort: $sort, season: $season, seasonYear: $year, isAdult: false, format_not_in: [MOVIE, MUSIC]) {
-              id status seasonYear description genres averageScore bannerImage
-              title { romaji english }
-              coverImage { extraLarge }
-              relations { edges { relationType node { id } } }
-            }
+            media(type: ANIME, sort: $sort, season: $season, seasonYear: $year, isAdult: false, format_not_in: [MOVIE, MUSIC]) { {{MediaFields}} }
+          }
+        }
+        """;
+
+    // Variables left out are not filters.
+    private const string ExploreAnimeQuery = $$"""
+        query ($page: Int, $sort: [MediaSort], $genre: String, $year: Int, $from: FuzzyDateInt, $to: FuzzyDateInt, $score: Int,
+               $status: MediaStatus, $country: CountryCode) {
+          Page(page: $page, perPage: 50) {
+            pageInfo { hasNextPage }
+            media(type: ANIME, sort: $sort, genre: $genre, seasonYear: $year, startDate_greater: $from, startDate_lesser: $to,
+                  averageScore_greater: $score, status: $status, countryOfOrigin: $country, isAdult: false, format_not_in: [MOVIE, MUSIC]) { {{MediaFields}} }
           }
         }
         """;
@@ -68,31 +94,98 @@ public sealed partial class ShowDiscoveryClient(HttpClient httpClient, IOptions<
             .ToFrozenDictionary(m => m.AniListId!.Value, m => m.TvdbId!.Value);
     }
 
+    // One page of TVmaze's whole show index (by TVmaze id), null past the last one. The overview is left out: the index holds tens
+    // of thousands of shows in memory.
+    public async Task<IReadOnlyList<IndexedShow>?> GetShowIndexPageAsync(int page, CancellationToken cancellationToken) =>
+        await MetadataHttp.GetJsonAsync<List<TvMazeShow>>(httpClient, MetadataHttp.Combine(_options.TvMazeUrl, $"shows?page={page}"), cancellationToken).ConfigureAwait(false)
+            is List<TvMazeShow> shows
+            ? [.. Collectable(shows).Select(s => new IndexedShow(ToItem(s) with { Overview = null }, s.Weight, s.Premiered))]
+            : null;
+
+    // A page of anime matching the filters (sorted by AniList), and whether AniList has more.
+    public async Task<(IReadOnlyList<DiscoveryItem> Items, bool HasMore)> ExploreAnimeAsync(
+        ExploreQuery query, IReadOnlyDictionary<int, int> tvdbByAniList, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        Dictionary<string, object> variables = new()
+        {
+            ["page"] = query.Page,
+            ["sort"] = query.Sort switch
+            {
+                ExploreSort.Rating => "SCORE_DESC",
+                ExploreSort.Date => "START_DATE_DESC",
+                ExploreSort.Title => "TITLE_ROMAJI",
+                _ => "POPULARITY_DESC",
+            },
+        };
+        void Set(string name, object? value)
+        {
+            if (value is not null)
+            {
+                variables[name] = value;
+            }
+        }
+
+        Set("genre", query.Genre);
+        Set("year", query.Year);
+
+        // FuzzyDateInt is yyyymmdd and both bounds are exclusive.
+        Set("from", query.YearFrom is int from ? (from * 10000) - 1 : null);
+        Set("to", query.YearTo is int to ? (to + 1) * 10000 : null);
+        Set("score", query.MinRating is decimal rating ? (int)(rating * 10) - 1 : null);
+        Set("status", query.Status switch
+        {
+            ExploreStatus.Continuing => "RELEASING",
+            ExploreStatus.Ended => "FINISHED",
+            ExploreStatus.Upcoming => "NOT_YET_RELEASED",
+            _ => null,
+        });
+        Set("country", query.Language is null ? null : AnimeCountries.GetValueOrDefault(query.Language.Name)
+            ?? throw new ArgumentException("Anime languages are Japanese, Korean and Chinese."));
+
+        AniListResponse response = await MetadataHttp.PostJsonAsync<AniListResponse>(httpClient, _options.AniListUrl, new { query = ExploreAnimeQuery, variables }, cancellationToken).ConfigureAwait(false)
+            ?? throw new MetadataSourceException("AniList answered 404.");
+        return (MapAnime(response.Data?.Page?.Media ?? [], tvdbByAniList), response.Data?.Page?.PageInfo?.HasNextPage ?? false);
+    }
+
+    // AniList's genres, adult ones aside.
+    public async Task<IReadOnlyList<string>> GetAnimeGenresAsync(CancellationToken cancellationToken)
+    {
+        AniListResponse response = await MetadataHttp.PostJsonAsync<AniListResponse>(httpClient, _options.AniListUrl, new { query = "query { GenreCollection }" }, cancellationToken).ConfigureAwait(false)
+            ?? throw new MetadataSourceException("AniList answered 404.");
+        return [.. (response.Data?.GenreCollection ?? []).Where(g => !g.Equals("Hentai", StringComparison.OrdinalIgnoreCase))];
+    }
+
     private static IReadOnlyList<DiscoveryItem> MapShows(IEnumerable<TvMazeShow> shows) =>
-        [.. shows
-            .Where(s => s.Externals?.TheTvdb is not null && !IgnoredShowTypes.Contains(s.Type ?? ""))
-            .DistinctBy(s => s.Externals!.TheTvdb)
+        [.. Collectable(shows)
             .OrderByDescending(s => s.Weight)
             .ThenByDescending(s => s.Rating?.Average ?? 0)
             .Take(ListSize)
-            .Select(s => new DiscoveryItem
-            {
-                Kind = s.Genres.Contains("Anime", StringComparer.OrdinalIgnoreCase) ? MediaType.Anime : MediaType.Series,
-                TvdbId = s.Externals!.TheTvdb,
-                ImdbId = s.Externals.Imdb,
-                Title = s.Name,
-                Year = s.Premiered?.Year,
-                Overview = PlainText(s.Summary),
-                Status = (s.Status switch
-                {
-                    "Ended" => SeriesStatus.Ended,
-                    "In Development" => SeriesStatus.Upcoming,
-                    _ => SeriesStatus.Continuing,
-                }).ToString(),
-                Genres = s.Genres,
-                Poster = s.Image?.Original,
-                Rating = s.Rating?.Average,
-            })];
+            .Select(ToItem)];
+
+    // A library collects shows TVDB knows, once each.
+    private static IEnumerable<TvMazeShow> Collectable(IEnumerable<TvMazeShow> shows) =>
+        shows.Where(s => s.Externals?.TheTvdb is not null && !IgnoredShowTypes.Contains(s.Type ?? "")).DistinctBy(s => s.Externals!.TheTvdb);
+
+    private static DiscoveryItem ToItem(TvMazeShow s) => new()
+    {
+        Kind = s.Genres.Contains("Anime", StringComparer.OrdinalIgnoreCase) ? MediaType.Anime : MediaType.Series,
+        TvdbId = s.Externals!.TheTvdb,
+        ImdbId = s.Externals.Imdb,
+        Title = s.Name,
+        Year = s.Premiered?.Year,
+        Overview = PlainText(s.Summary),
+        Status = (s.Status switch
+        {
+            "Ended" => SeriesStatus.Ended,
+            "In Development" => SeriesStatus.Upcoming,
+            _ => SeriesStatus.Continuing,
+        }).ToString(),
+        Genres = s.Genres,
+        Language = s.Language,
+        Poster = s.Image?.Original,
+        Rating = s.Rating?.Average,
+    };
 
     // A sequel season is often missing from the mapping while its prequel (the same TVDB series) is there.
     private static IReadOnlyList<DiscoveryItem> MapAnime(IEnumerable<AniListMedia> media, IReadOnlyDictionary<int, int> tvdbByAniList) =>
@@ -102,7 +195,6 @@ public sealed partial class ShowDiscoveryClient(HttpClient httpClient, IOptions<
                     .Select(e => tvdbByAniList.GetValueOrDefault(e.Node.Id)).FirstOrDefault(id => id > 0) ?? 0))
             .Where(m => m.TvdbId > 0)
             .DistinctBy(m => m.TvdbId)
-            .Take(ListSize)
             .Select(m => new DiscoveryItem
             {
                 Kind = MediaType.Anime,
@@ -126,7 +218,7 @@ public sealed partial class ShowDiscoveryClient(HttpClient httpClient, IOptions<
     {
         AniListResponse response = await MetadataHttp.PostJsonAsync<AniListResponse>(httpClient, _options.AniListUrl, new { query = AnimeQuery, variables }, cancellationToken).ConfigureAwait(false)
             ?? throw new MetadataSourceException("AniList answered 404.");
-        return MapAnime(response.Data?.Page?.Media ?? [], tvdbByAniList);
+        return [.. MapAnime(response.Data?.Page?.Media ?? [], tvdbByAniList).Take(ListSize)];
     }
 
     private async Task<T> GetAsync<T>(string url, CancellationToken cancellationToken)
@@ -148,6 +240,7 @@ public sealed partial class ShowDiscoveryClient(HttpClient httpClient, IOptions<
     {
         public required string Name { get; init; }
         public string? Type { get; init; }
+        public string? Language { get; init; }
         public List<string> Genres { get; init; } = [];
         public string? Status { get; init; }
         public DateOnly? Premiered { get; init; }
@@ -170,9 +263,11 @@ public sealed partial class ShowDiscoveryClient(HttpClient httpClient, IOptions<
 
     private sealed record AniListResponse(AniListData? Data);
 
-    private sealed record AniListData(AniListPage? Page);
+    private sealed record AniListData(AniListPage? Page, List<string>? GenreCollection);
 
-    private sealed record AniListPage(List<AniListMedia> Media);
+    private sealed record AniListPage(List<AniListMedia> Media, AniListPageInfo? PageInfo);
+
+    private sealed record AniListPageInfo(bool HasNextPage);
 
     private sealed record AniListMedia
     {

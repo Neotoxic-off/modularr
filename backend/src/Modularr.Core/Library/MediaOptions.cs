@@ -34,8 +34,8 @@ public sealed record MediaOptions : IValidatableObject
     public MediaDefaults Series { get; init; } = new();
     public MediaDefaults Anime { get; init; } = new();
 
-    // Any disables the version check.
-    public ReleaseVersion DefaultVersion { get; init; } = ReleaseVersion.Any;
+    // VO: each title in its original language unless the user says otherwise. Any disables the version check.
+    public ReleaseVersion DefaultVersion { get; init; } = ReleaseVersion.VO;
     public IReadOnlyList<VersionRule> Exceptions { get; init; } = [];
 
     public MediaDefaults For(MediaType category) => category switch

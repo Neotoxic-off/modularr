@@ -223,6 +223,8 @@ namespace Modularr.Core.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AirDate");
+
                     b.HasIndex("MediaFileId");
 
                     b.HasIndex("SeriesId", "SeasonNumber", "EpisodeNumber")
