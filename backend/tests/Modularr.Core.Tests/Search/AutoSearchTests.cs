@@ -1,5 +1,7 @@
 using Modularr.Core.Activities;
+using Modularr.Core.Decisions;
 using Modularr.Core.Persistence;
+using Modularr.Core.Qualities;
 using Modularr.Core.Search;
 using Modularr.Core.Tests.Persistence;
 
@@ -58,6 +60,36 @@ public sealed class AutoSearchTests
 
         // No indexer search or grab is reachable: the in-progress check returns first.
         Assert.Empty(await new AutoSearch(db, null!, null!, new ActivityLog(db, new ActivityFeed())).SearchMovieAsync(movie.Id, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public void AnEpisodeWithAFileBelowTheCutoffIsSearchedAgain()
+    {
+        Series series = Show((1, 1, 10, Today), (1, 2, 11, Today), (1, 3, 12, Today));
+
+        IReadOnlyList<(ReleaseSearchRequest Request, IReadOnlySet<(int Season, int Episode)> Wanted)> plan =
+            AutoSearch.Plan(series, new HashSet<int>(), season: null, Today, belowCutoff: new HashSet<int> { 11 });
+
+        Assert.Equal([new ReleaseSearchRequest { TvdbId = 42, Season = 1, Episode = "2" }], plan.Select(p => p.Request));
+    }
+
+    [Fact]
+    public async Task AMovieWhoseFileMeetsTheCutoffIsNotSearchedAgain()
+    {
+        using TestDatabase database = new();
+        Movie movie = database.AddMovie(603);
+        using (ModularrDbContext setup = database.NewContext())
+        {
+            QualityProfile profile = setup.QualityProfiles.Single(p => p.Id == movie.QualityProfileId);
+            Quality cutoff = profile.Items.Select(i => i.Quality ?? i.Items[0].Quality!).First(q => profile.Compare(q.Id, profile.Cutoff) >= 0);
+            database.Insert(new MediaFile { MovieId = movie.Id, Path = "/movies/603/m.mkv", Quality = new QualityModel(cutoff, new Revision()) });
+        }
+
+        using ModularrDbContext db = database.NewContext();
+
+        // No indexer search is reachable: the cutoff check returns first.
+        Assert.Empty(await new AutoSearch(db, null!, null!, new ActivityLog(db, new ActivityFeed())).SearchMovieAsync(movie.Id, TestContext.Current.CancellationToken));
+        Assert.Equal(ActivityKind.SearchCompleted, db.Activities.Single().Kind);
     }
 
     private static Series Show(params (int Season, int Episode, int? FileId, DateOnly AirDate)[] episodes)

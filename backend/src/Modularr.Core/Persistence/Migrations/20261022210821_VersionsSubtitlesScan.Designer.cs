@@ -11,8 +11,8 @@ using Modularr.Core.Persistence;
 namespace Modularr.Core.Persistence.Migrations
 {
     [DbContext(typeof(ModularrDbContext))]
-    [Migration("20261022204737_VersionsAndSubtitles")]
-    partial class VersionsAndSubtitles
+    [Migration("20261022210821_VersionsSubtitlesScan")]
+    partial class VersionsSubtitlesScan
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

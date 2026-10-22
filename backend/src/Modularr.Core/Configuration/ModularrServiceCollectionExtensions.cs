@@ -94,6 +94,9 @@ public static class ModularrServiceCollectionExtensions
         services.AddScoped<FailedDownloadService>();
         services.AddScoped<QualityProfileService>();
         services.AddScoped<AutoSearch>();
+        services.AddScoped<DiskScanService>();
+        services.AddScoped<LibraryImportService>();
+        services.AddHostedService<LibraryScanner>();
         services.AddSingleton<ActivityFeed>();
         services.AddScoped<ActivityLog>();
         services.AddHostedService<ActivityPruner>();

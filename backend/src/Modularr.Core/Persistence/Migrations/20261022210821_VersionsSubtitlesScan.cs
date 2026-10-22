@@ -12,7 +12,7 @@ namespace Modularr.Core.Persistence.Migrations
     // keep their name (an audio language version). Going down, the French scene versions without a language (VFQ, VOSTFR,
     // MULTi) are lost.
     /// <inheritdoc />
-    public partial class VersionsAndSubtitles : Migration
+    public partial class VersionsSubtitlesScan : Migration
     {
         private static readonly Language[] Wantable = [.. Language.All.Where(l => l != Language.Unknown)];
 

@@ -20,6 +20,7 @@ public enum ActivityKind
     Removed,
     SubtitleDownloaded,
     SubtitlesMissing,
+    ScanCompleted,
 }
 
 public enum ActivityLevel
