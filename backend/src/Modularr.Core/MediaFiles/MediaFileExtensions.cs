@@ -65,4 +65,6 @@ public static class MediaFileExtensions
 
     public static Quality GetQualityForExtension(string extension) =>
         QualityByExtension.GetValueOrDefault(extension, Quality.Unknown);
+
+    public static bool IsMediaExtension(string extension) => QualityByExtension.ContainsKey(extension);
 }
