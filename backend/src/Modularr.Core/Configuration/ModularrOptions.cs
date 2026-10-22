@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using Modularr.Core.Downloads.Torrents;
 using Modularr.Core.Indexers;
+using Modularr.Core.Persistence;
 using Modularr.Core.PostProcessing;
 
 namespace Modularr.Core.Configuration;
@@ -22,4 +23,7 @@ public sealed class ModularrOptions
 
     [ValidateObjectMembers]
     public IndexerOptions Indexers { get; set; } = new();
+
+    [ValidateObjectMembers]
+    public DatabaseOptions Database { get; set; } = new();
 }
