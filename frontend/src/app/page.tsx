@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { api, errorMessage, kindOfDiscovery, titleHref } from "@/lib/api";
 import type { DiscoveryItem, Kind } from "@/lib/api";
-import { markAdded, useAddDialog } from "@/components/AddDialog";
+import { markAdded, useAddDialog, useAddTitle } from "@/components/AddDialog";
 import { Icon } from "@/components/icons";
 import { DiscoveryCard, kindLabel, PosterSkeleton } from "@/components/Poster";
 import { Button, Rating, Skeleton, Spinner } from "@/components/ui";
@@ -55,6 +55,7 @@ function Hero({ items, loading, onAdd, onAdded }: {
   onAdd: (item: DiscoveryItem) => void;
   onAdded: (item: DiscoveryItem, id: number) => void;
 }) {
+  const addTitle = useAddTitle();
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
   const item = items[Math.min(index, items.length - 1)];
@@ -70,7 +71,7 @@ function Hero({ items, loading, onAdd, onAdded }: {
   const quickAdd = async () => {
     setBusy(true);
     try {
-      onAdded(item, (await api.add(item)).id);
+      onAdded(item, (await addTitle(item)).id);
     } catch {
       onAdd(item);
     } finally {

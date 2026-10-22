@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api, errorMessage, formatEta, formatSize, titleHref } from "@/lib/api";
 import type { Download, DownloadState } from "@/lib/api";
+import { useActivity } from "@/components/Activity";
 import { Icon } from "@/components/icons";
 import { Alert, Badge, Button, Empty, Modal, PageHeader, Skeleton, Spinner, Switch, Tabs } from "@/components/ui";
 import type { Tone } from "@/components/ui";
@@ -30,18 +31,26 @@ export default function DownloadsPage() {
   const [group, setGroup] = useState<Group>("active");
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<Download | null>(null);
+  const { connected, epoch, progress, subscribe } = useActivity();
 
   const refresh = useCallback(() => {
     api.downloads().then((d) => { setDownloads(d); setError(null); }).catch((e: unknown) => setError(errorMessage(e)));
   }, []);
 
+  useEffect(refresh, [refresh, epoch]);
+  useEffect(() => subscribe((a) => { if (a.downloadId !== null) refresh(); }), [subscribe, refresh]);
+
+  // Polls only while the live stream is down.
   useEffect(() => {
-    refresh();
+    if (connected) return;
     const timer = setInterval(refresh, POLL_MS);
     return () => clearInterval(timer);
-  }, [refresh]);
+  }, [connected, refresh]);
 
-  const visible = (downloads ?? []).filter((d) => groupOf[d.state] !== null);
+  const visible = (downloads ?? []).filter((d) => groupOf[d.state] !== null).map((d) => {
+    const live = progress.get(d.id);
+    return live ? { ...d, progress: live.progress, downloadRate: live.rate, eta: live.eta } : d;
+  });
   const inGroup = (d: Download, g: Group) => g === "all" || groupOf[d.state] === g;
   const count = (g: Group) => visible.filter((d) => inGroup(d, g)).length;
   const shown = visible.filter((d) => inGroup(d, group)).sort((a, b) => b.added.localeCompare(a.added));

@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { api, errorMessage, kindOfDiscovery, titleHref } from "@/lib/api";
+import { errorMessage, kindOfDiscovery, titleHref } from "@/lib/api";
 import type { DiscoveryItem } from "@/lib/api";
+import { useAddTitle } from "@/components/AddDialog";
 import { Icon } from "@/components/icons";
 import { Rating, Skeleton, Spinner } from "@/components/ui";
 
@@ -47,6 +48,7 @@ export function DiscoveryCard({ item, onAddOptions, onAdded, className = "" }: {
   onAdded: (item: DiscoveryItem, libraryId: number) => void;
   className?: string;
 }) {
+  const addTitle = useAddTitle();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +56,7 @@ export function DiscoveryCard({ item, onAddOptions, onAdded, className = "" }: {
     setBusy(true);
     setError(null);
     try {
-      onAdded(item, (await api.add(item)).id);
+      onAdded(item, (await addTitle(item)).id);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
