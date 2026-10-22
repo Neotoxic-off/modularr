@@ -139,7 +139,7 @@ public sealed class DownloadImporter(ModularrDbContext db, IOptions<ModularrOpti
         return parsed.Count > 0 || videoCount > 1 ? parsed : [.. series.Episodes.Where(e => download.EpisodeIds.Contains(e.Id))];
     }
 
-    private async Task BlocklistAsync(TrackedDownload download, string reason, CancellationToken cancellationToken)
+    public async Task BlocklistAsync(TrackedDownload download, string reason, CancellationToken cancellationToken)
     {
         QualityModel quality = QualityParser.ParseQuality(download.ReleaseTitle);
         IReadOnlyList<Language> languages = LanguageParser.ParseLanguages(download.ReleaseTitle);
@@ -167,7 +167,7 @@ public sealed class DownloadImporter(ModularrDbContext db, IOptions<ModularrOpti
         }
     }
 
-    private HistoryItem AddHistory(TrackedDownload download, HistoryEventType type, int? episodeId, QualityModel quality, IReadOnlyList<Language> languages)
+    public HistoryItem AddHistory(TrackedDownload download, HistoryEventType type, int? episodeId, QualityModel quality, IReadOnlyList<Language> languages)
     {
         HistoryItem history = new()
         {

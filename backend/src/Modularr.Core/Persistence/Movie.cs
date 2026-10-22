@@ -16,4 +16,8 @@ public sealed class Movie
     public required string Path { get; set; }
     public int QualityProfileId { get; set; }
     public QualityProfile QualityProfile { get; set; } = null!;
+    public string? Overview { get; set; }
+
+    // URL of the metadata poster at add time.
+    public string? Poster { get; set; }
 }

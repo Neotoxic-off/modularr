@@ -14,10 +14,10 @@ const nextConfig: NextConfig = {
       },
     },
   },
-  // In dev the API runs separately; rewrites are unsupported with output: "export".
+  // In dev the API is the running container; rewrites are unsupported with output: "export".
   ...(isDev && {
     rewrites: async () => [
-      { source: "/api/:path*", destination: "http://localhost:5000/api/:path*" },
+      { source: "/api/:path*", destination: "http://localhost:8080/api/:path*" },
     ],
   }),
 };

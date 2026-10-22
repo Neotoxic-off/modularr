@@ -32,4 +32,6 @@ public sealed class TrackedDownload
 
     // Automatic re-grabs in a row that led to this download, capped by torrents.maxAutomaticRegrabs.
     public int Regrabs { get; set; }
+
+    public DateTime Added { get; set; }
 }

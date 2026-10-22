@@ -1,25 +1,27 @@
 @import "tailwindcss";
 
+/* Dark only: posters and artwork read best on a dark canvas. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: #09090b;
+  --color-surface: #131316;
+  --color-raised: #1c1c21;
+  --color-line: #27272d;
+  --color-muted: #8b8b96;
+  --color-foreground: #ededf0;
+  --color-accent: #8b7cff;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 40%, transparent);
 }

@@ -318,8 +318,14 @@ namespace Modularr.Core.Persistence.Migrations
                     b.Property<bool>("Monitored")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Overview")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Path")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Poster")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("QualityProfileId")
@@ -360,8 +366,14 @@ namespace Modularr.Core.Persistence.Migrations
                     b.Property<bool>("Monitored")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Overview")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Path")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Poster")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("QualityProfileId")
@@ -402,6 +414,9 @@ namespace Modularr.Core.Persistence.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Added")
+                        .HasColumnType("TEXT");
 
                     b.PrimitiveCollection<string>("EpisodeIds")
                         .IsRequired()
@@ -447,6 +462,35 @@ namespace Modularr.Core.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_TrackedDownload_SeriesOrMovie", "(SeriesId IS NULL) <> (MovieId IS NULL)");
                         });
+                });
+
+            modelBuilder.Entity("Modularr.Core.Persistence.User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Username")
+                        .IsUnique();
+
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("Modularr.Core.Persistence.BlocklistItem", b =>

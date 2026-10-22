@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Modularr.Core.Accounts;
 using Modularr.Core.Downloads;
 using Modularr.Core.Downloads.Torrents;
 using Modularr.Core.Indexers;
@@ -29,7 +30,7 @@ public static class ModularrServiceCollectionExtensions
         configDirectory = Path.GetFullPath(configDirectory);
         Directory.CreateDirectory(configDirectory);
 
-        IConfiguration file = new ConfigurationBuilder()
+        IConfigurationRoot file = new ConfigurationBuilder()
             .AddJsonFile(Path.Combine(configDirectory, ModularrOptions.FileName), optional: true, reloadOnChange: false)
             .Build();
 
@@ -38,6 +39,7 @@ public static class ModularrServiceCollectionExtensions
             .PostConfigure(options => Resolve(options, file, configDirectory))
             .ValidateDataAnnotations()
             .ValidateOnStart();
+        services.AddSingleton(new PathSettings(configDirectory, file));
 
         services.AddDbContext<ModularrDbContext>((provider, builder) => builder.UseSqlite(
             new SqliteConnectionStringBuilder { DataSource = provider.GetRequiredService<IOptions<ModularrOptions>>().Value.Database.Path }.ToString()));
@@ -65,6 +67,7 @@ public static class ModularrServiceCollectionExtensions
 
         // The end-to-end flow: library, search, grab, then the monitor imports finished torrents.
         services.AddTransient<IndexerSearch>();
+        services.AddScoped<AccountService>();
         services.AddScoped<LibraryService>();
         services.AddScoped<ReleaseSearch>();
         services.AddScoped<DownloadService>();
