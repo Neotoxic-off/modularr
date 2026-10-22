@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+
 namespace Modularr.Core.Persistence;
 
 // Same values as Sonarr/Radarr TrackedDownloadState.
@@ -34,4 +36,8 @@ public sealed class TrackedDownload
     public int Regrabs { get; set; }
 
     public DateTime Added { get; set; }
+
+    // Grabbed and not finished either way: no file yet, but searching again would grab the same title twice.
+    public static readonly Expression<Func<TrackedDownload, bool>> InProgress =
+        d => d.State != TrackedDownloadState.Imported && d.State != TrackedDownloadState.Failed && d.State != TrackedDownloadState.Ignored;
 }

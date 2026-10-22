@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Modularr.Core.Decisions;
 using Modularr.Core.Languages;
 using Modularr.Core.Library;
@@ -42,5 +43,26 @@ public sealed class MediaOptionsTests
 
         Assert.Single(media.Validate(new ValidationContext(media)));
         Assert.Empty(Policy.Validate(new ValidationContext(Policy)));
+    }
+
+    [Theory]
+    [InlineData("""{ "movies": null }""")]
+    [InlineData("""{ "exceptions": null }""")]
+    [InlineData("""{ "exceptions": [{ "originalLanguage": "Japanese", "language": null }] }""")]
+    [InlineData("""{ "defaultLanguage": "Unknown" }""")]
+    [InlineData("""{ "anime": { "profileId": 1, "language": "Unknown" } }""")]
+    public void ANullSectionOrAnUnknownLanguageIsABadRequest(string json)
+    {
+        MediaOptions media = JsonSerializer.Deserialize<MediaOptions>(json, JsonSerializerOptions.Web)!;
+
+        Assert.Throws<ArgumentException>(media.EnsureValid);
+    }
+
+    [Fact]
+    public void UnknownIsNotAnItemLanguage()
+    {
+        Assert.Throws<ArgumentException>(() => MediaOptions.EnsureWantable(Language.Unknown));
+        Assert.Equal(Language.French, MediaOptions.EnsureWantable(Language.French));
+        Assert.Null(MediaOptions.EnsureWantable(null));
     }
 }

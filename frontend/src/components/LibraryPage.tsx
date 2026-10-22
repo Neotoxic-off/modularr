@@ -13,19 +13,6 @@ type Sort = "title" | "added" | "year";
 const titles: Record<Kind, string> = { movie: "Movies", series: "Series", anime: "Anime" };
 const nouns: Record<Kind, string> = { movie: "movie", series: "series", anime: "anime" };
 
-// Movies list without file state; it is read per movie, only once a file filter is chosen.
-// shortcut: one request per movie, upgrade by adding hasFile to the /movies list DTO.
-function useMovieFiles(items: LibraryItem[] | null, needed: boolean) {
-  const [files, setFiles] = useState<ReadonlyMap<number, boolean> | null>(null);
-  useEffect(() => {
-    if (!needed || !items || files) return;
-    Promise.all(items.map((m) => api.movie(m.id).then((d) => [m.id, d.hasFile] as const)))
-      .then((pairs) => setFiles(new Map(pairs)))
-      .catch(() => setFiles(new Map()));
-  }, [needed, items, files]);
-  return files;
-}
-
 export function LibraryPage({ kind }: { kind: Kind }) {
   const [items, setItems] = useState<LibraryItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,10 +26,8 @@ export function LibraryPage({ kind }: { kind: Kind }) {
       .catch((e: unknown) => setError(errorMessage(e)));
   }, [kind]);
 
-  const files = useMovieFiles(kind === "movie" ? items : null, filter !== "all");
-
   const complete = (item: LibraryItem): boolean | undefined =>
-    isSeries(item) ? item.episodes > 0 && item.episodesWithFile >= item.episodes : files?.get(item.id);
+    isSeries(item) ? item.episodes > 0 && item.episodesWithFile >= item.episodes : item.hasFile ?? undefined;
 
   const needle = term.trim().toLowerCase();
   const shown = (items ?? [])
@@ -53,7 +38,6 @@ export function LibraryPage({ kind }: { kind: Kind }) {
   const series = (items ?? []).filter(isSeries);
   const episodes = series.reduce((n, s) => n + s.episodes, 0);
   const withFile = series.reduce((n, s) => n + s.episodesWithFile, 0);
-  const waitingForFiles = kind === "movie" && filter !== "all" && !files;
 
   return (
     <>
@@ -84,7 +68,7 @@ export function LibraryPage({ kind }: { kind: Kind }) {
 
       {error && <div className="mb-6"><Alert>{error}</Alert></div>}
 
-      {!items || waitingForFiles ? (
+      {!items ? (
         <PosterGrid>{Array.from({ length: 12 }, (_, i) => <PosterSkeleton key={i} />)}</PosterGrid>
       ) : items.length === 0 ? (
         <Empty icon={kind === "movie" ? "film" : kind === "series" ? "tv" : "sparkles"} title={`No ${nouns[kind]} yet`}>

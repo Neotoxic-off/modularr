@@ -48,8 +48,11 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
     public async Task<IReadOnlyList<Series>> ListSeriesAsync(CancellationToken cancellationToken) =>
         await db.Series.AsNoTracking().Include(s => s.Episodes).OrderBy(s => s.SortTitle).ToListAsync(cancellationToken).ConfigureAwait(false);
 
-    public async Task<IReadOnlyList<Movie>> ListMoviesAsync(CancellationToken cancellationToken) =>
-        await db.Movies.AsNoTracking().OrderBy(m => m.Title).ToListAsync(cancellationToken).ConfigureAwait(false);
+    // With whether each movie has a file, in one query.
+    public async Task<IReadOnlyList<(Movie Movie, bool HasFile)>> ListMoviesAsync(CancellationToken cancellationToken) =>
+        [.. (await db.Movies.AsNoTracking().OrderBy(m => m.Title)
+            .Select(m => new { Movie = m, HasFile = db.MediaFiles.Any(f => f.MovieId == m.Id) })
+            .ToListAsync(cancellationToken).ConfigureAwait(false)).Select(m => (m.Movie, m.HasFile))];
 
     public async Task<Series> GetSeriesAsync(int id, CancellationToken cancellationToken) =>
         await db.Series.AsNoTracking().Include(s => s.Episodes).FirstOrDefaultAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false)
@@ -75,7 +78,7 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
         int profileId = qualityProfileId ?? options.CurrentValue.Media.For(category).ProfileId;
         await EnsureProfileAsync(profileId, cancellationToken).ConfigureAwait(false);
         Series series = ToSeries(info, profileId, options.CurrentValue.Paths, DateTime.UtcNow, monitor);
-        series.Language = language;
+        series.Language = MediaOptions.EnsureWantable(language);
         db.Series.Add(series);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return series;
@@ -92,10 +95,51 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
         await EnsureProfileAsync(profileId, cancellationToken).ConfigureAwait(false);
         MovieInfo info = await movieMetadata.GetMovieAsync(tmdbId, cancellationToken).ConfigureAwait(false);
         Movie movie = ToMovie(info, profileId, options.CurrentValue.Paths);
-        movie.Language = language;
+        movie.Language = MediaOptions.EnsureWantable(language);
         db.Movies.Add(movie);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return movie;
+    }
+
+    // Items added before the MediaPreferences migration have no original language, backdrop, rating or genres: fetch them once.
+    // A source that is down or no longer knows an item leaves it for the next start. Returns the number of items filled.
+    // shortcut: an item whose source has no original language is fetched again on every start, store a refreshed flag if libraries grow large.
+    public async Task<int> BackfillMetadataAsync(CancellationToken cancellationToken)
+    {
+        int filled = 0;
+        foreach (Movie movie in await db.Movies.Where(m => m.OriginalLanguage == Language.Unknown).ToListAsync(cancellationToken).ConfigureAwait(false))
+        {
+            if (await FetchAsync(() => movieMetadata.GetMovieAsync(movie.TmdbId, cancellationToken), cancellationToken).ConfigureAwait(false) is MovieInfo info)
+            {
+                ApplyMetadata(movie, info);
+                filled++;
+            }
+        }
+
+        foreach (Series series in await db.Series.Where(s => s.OriginalLanguage == Language.Unknown).ToListAsync(cancellationToken).ConfigureAwait(false))
+        {
+            if (await FetchAsync(() => seriesMetadata.GetSeriesAsync(series.TvdbId, cancellationToken: cancellationToken), cancellationToken).ConfigureAwait(false) is SeriesInfo info)
+            {
+                ApplyMetadata(series, info);
+                filled++;
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return filled;
+    }
+
+    private static async Task<T?> FetchAsync<T>(Func<Task<T>> fetch, CancellationToken cancellationToken)
+        where T : class
+    {
+        try
+        {
+            return await fetch().ConfigureAwait(false);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
     }
 
     // Monitored applies to the series only, its seasons and episodes keep their own flags.
@@ -106,7 +150,7 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
             ?? throw new KeyNotFoundException($"Series {id} is not in the library.");
         series.QualityProfileId = await ProfileIdAsync(update, series.QualityProfileId, cancellationToken).ConfigureAwait(false);
         series.Monitored = update.Monitored ?? series.Monitored;
-        series.Language = update.LanguageSet ? update.Language : series.Language;
+        series.Language = update.LanguageSet ? MediaOptions.EnsureWantable(update.Language) : series.Language;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return series;
     }
@@ -118,7 +162,7 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
             ?? throw new KeyNotFoundException($"Movie {id} is not in the library.");
         movie.QualityProfileId = await ProfileIdAsync(update, movie.QualityProfileId, cancellationToken).ConfigureAwait(false);
         movie.Monitored = update.Monitored ?? movie.Monitored;
-        movie.Language = update.LanguageSet ? update.Language : movie.Language;
+        movie.Language = update.LanguageSet ? MediaOptions.EnsureWantable(update.Language) : movie.Language;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return movie;
     }
@@ -179,14 +223,8 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
             Path = Path.Combine(type == SeriesType.Anime ? paths.Anime : paths.Series, FolderName(info.Title, year)),
             QualityProfileId = qualityProfileId,
             Added = added,
-            OriginalLanguage = info.OriginalLanguage,
-            Overview = info.Overview,
-            Poster = info.Images.UrlOf(MediaCoverType.Poster),
-            Backdrop = info.Images.UrlOf(MediaCoverType.Fanart),
-            Rating = info.Rating,
-            Genres = info.Genres,
-            Certification = info.Certification,
         };
+        ApplyMetadata(series, info);
 
         // Specials (season 0) are not monitored, like Sonarr's default.
         foreach (SeasonInfo season in info.Seasons)
@@ -215,24 +253,47 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
         return series;
     }
 
-    public static Movie ToMovie(MovieInfo info, int qualityProfileId, PathOptions paths) => new()
+    public static Movie ToMovie(MovieInfo info, int qualityProfileId, PathOptions paths)
     {
-        TmdbId = info.TmdbId,
-        ImdbId = info.ImdbId,
-        Title = info.Title,
-        Year = info.Year,
-        Runtime = info.Runtime,
-        Monitored = true,
-        Path = Path.Combine(paths.Movies, FolderName(info.Title, info.Year)),
-        QualityProfileId = qualityProfileId,
-        OriginalLanguage = info.OriginalLanguage,
-        Overview = info.Overview,
-        Poster = info.Images.UrlOf(MediaCoverType.Poster),
-        Backdrop = info.Images.UrlOf(MediaCoverType.Fanart),
-        Rating = info.Ratings.Rating,
-        Genres = info.Genres,
-        Certification = info.Certification,
-    };
+        ArgumentNullException.ThrowIfNull(info);
+        ArgumentNullException.ThrowIfNull(paths);
+        Movie movie = new()
+        {
+            TmdbId = info.TmdbId,
+            ImdbId = info.ImdbId,
+            Title = info.Title,
+            Year = info.Year,
+            Runtime = info.Runtime,
+            Monitored = true,
+            Path = Path.Combine(paths.Movies, FolderName(info.Title, info.Year)),
+            QualityProfileId = qualityProfileId,
+        };
+        ApplyMetadata(movie, info);
+        return movie;
+    }
+
+    // The descriptive metadata, refreshed by BackfillMetadataAsync; title, year and path stay as added.
+    private static void ApplyMetadata(Movie movie, MovieInfo info)
+    {
+        movie.OriginalLanguage = info.OriginalLanguage;
+        movie.Overview = info.Overview;
+        movie.Poster = info.Images.UrlOf(MediaCoverType.Poster);
+        movie.Backdrop = info.Images.UrlOf(MediaCoverType.Fanart);
+        movie.Rating = info.Ratings.Rating;
+        movie.Genres = info.Genres;
+        movie.Certification = info.Certification;
+    }
+
+    private static void ApplyMetadata(Series series, SeriesInfo info)
+    {
+        series.OriginalLanguage = info.OriginalLanguage;
+        series.Overview = info.Overview;
+        series.Poster = info.Images.UrlOf(MediaCoverType.Poster);
+        series.Backdrop = info.Images.UrlOf(MediaCoverType.Fanart);
+        series.Rating = info.Rating;
+        series.Genres = info.Genres;
+        series.Certification = info.Certification;
+    }
 
     // "Title (Year)" like the Sonarr/Radarr default folder format, invalid characters dropped.
     public static string FolderName(string title, int year)

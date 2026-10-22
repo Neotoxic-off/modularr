@@ -82,6 +82,34 @@ public sealed class LibraryServiceAddTests : IDisposable
         Assert.Equal(Language.Original, set.Language);
     }
 
+    [Fact]
+    public async Task BackfillFillsItemsAddedWithoutMetadataAndSkipsTheOnesTheSourceLost()
+    {
+        // As the MediaPreferences migration leaves them: no original language, no genres.
+        Movie known = _database.Insert(new Movie { TmdbId = 70981, Title = "Prometheus", Path = "/movies/p", QualityProfileId = 1 })[0];
+        Movie lost = _database.Insert(new Movie { TmdbId = 1, Title = "Lost", Path = "/movies/l", QualityProfileId = 1 })[0];
+        using (ModularrDbContext db = _database.NewContext())
+        {
+            Assert.Equal(1, await Library(db).BackfillMetadataAsync(TestContext.Current.CancellationToken));
+        }
+
+        using ModularrDbContext check = _database.NewContext();
+        Movie filled = check.Movies.Single(m => m.Id == known.Id);
+        Assert.Equal(Language.English, filled.OriginalLanguage);
+        Assert.NotEmpty(filled.Genres);
+        Assert.Equal(("Prometheus", "/movies/p"), (filled.Title, filled.Path));
+        Assert.Equal(Language.Unknown, check.Movies.Single(m => m.Id == lost.Id).OriginalLanguage);
+    }
+
+    [Fact]
+    public async Task UnknownIsRejectedAsAnItemLanguage()
+    {
+        Movie movie = _database.AddMovie(1);
+        using ModularrDbContext db = _database.NewContext();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => Library(db).UpdateMovieAsync(movie.Id, Patch("""{ "language": "Unknown" }"""), TestContext.Current.CancellationToken));
+    }
+
     [Theory]
     [InlineData(SeriesMonitor.All, true, new[] { false, true, true })]
     [InlineData(SeriesMonitor.Future, true, new[] { false, false, true })]

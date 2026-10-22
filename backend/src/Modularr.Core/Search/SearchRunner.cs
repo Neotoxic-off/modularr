@@ -18,7 +18,16 @@ public sealed class SearchRunner(IServiceScopeFactory scopes) : BackgroundServic
     private readonly Channel<SearchJob> _jobs = Channel.CreateUnbounded<SearchJob>(new UnboundedChannelOptions { SingleReader = true });
     private readonly ConcurrentDictionary<(int?, int?), SearchOutcome> _outcomes = [];
 
-    public void Enqueue(SearchJob job) => _jobs.Writer.TryWrite(job);
+    // A job already waiting is not queued twice ("Search now" clicked again).
+    private readonly ConcurrentDictionary<SearchJob, byte> _queued = [];
+
+    public void Enqueue(SearchJob job)
+    {
+        if (_queued.TryAdd(job, 0))
+        {
+            _jobs.Writer.TryWrite(job);
+        }
+    }
 
     public SearchOutcome? LastSearch(int? seriesId, int? movieId) => _outcomes.GetValueOrDefault((seriesId, movieId));
 
@@ -26,6 +35,7 @@ public sealed class SearchRunner(IServiceScopeFactory scopes) : BackgroundServic
     {
         await foreach (SearchJob job in _jobs.Reader.ReadAllAsync(stoppingToken).ConfigureAwait(false))
         {
+            _queued.TryRemove(job, out _);
             string result;
             try
             {
@@ -36,7 +46,7 @@ public sealed class SearchRunner(IServiceScopeFactory scopes) : BackgroundServic
                     : await search.SearchSeriesAsync(job.SeriesId ?? 0, job.Season, DateOnly.FromDateTime(DateTime.UtcNow), stoppingToken).ConfigureAwait(false)).Count;
                 result = grabbed == 0 ? "Nothing grabbed" : $"{grabbed} release(s) grabbed";
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
                 // One failed search (indexer, torrent link, deleted item) must not stop the queue.
                 result = $"Failed: {ex.Message}";

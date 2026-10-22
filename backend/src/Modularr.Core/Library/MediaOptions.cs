@@ -60,9 +60,34 @@ public sealed record MediaOptions : IValidatableObject
         return WantedLanguage(MediaType.Movie, movie.OriginalLanguage, movie.Language);
     }
 
+    // Unknown matches only untagged releases, so it is never a language to want (GET /languages hides it too).
+    public static Language? EnsureWantable(Language? language) =>
+        language == Language.Unknown ? throw new ArgumentException("Unknown is not a language you can ask for.", nameof(language)) : language;
+
+    // Throws the first validation error as an ArgumentException (a 400 from the API).
+    public void EnsureValid()
+    {
+        if (Validate(new ValidationContext(this)).FirstOrDefault() is ValidationResult error)
+        {
+            throw new ArgumentException(error.ErrorMessage);
+        }
+    }
+
     // Checked at startup (options validation) and before PUT /api/settings/media writes the file.
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        // A JSON body can null any of these despite the non-nullable types.
+        if (Movies is null || Series is null || Anime is null || DefaultLanguage is null || Exceptions is null || Exceptions.Any(rule => rule?.Language is null))
+        {
+            yield return new ValidationResult("movies, series, anime, defaultLanguage, exceptions and each exception's language are required.");
+            yield break;
+        }
+
+        if (new[] { DefaultLanguage, Movies.Language, Series.Language, Anime.Language }.Concat(Exceptions.Select(rule => rule.Language)).Contains(Language.Unknown))
+        {
+            yield return new ValidationResult("Unknown is not a language you can ask for.");
+        }
+
         foreach ((string name, MediaDefaults defaults) in new[] { ("movies", Movies), ("series", Series), ("anime", Anime) })
         {
             if (defaults.ProfileId < 1)

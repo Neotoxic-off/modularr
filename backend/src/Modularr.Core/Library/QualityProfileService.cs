@@ -59,6 +59,7 @@ public sealed class QualityProfileService(ModularrDbContext db, SettingsFile set
     public async Task SaveMediaAsync(MediaOptions media, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(media);
+        media.EnsureValid();
         int[] ids = [media.Movies.ProfileId, media.Series.ProfileId, media.Anime.ProfileId];
         List<int> known = await db.QualityProfiles.Where(p => ids.Contains(p.Id)).Select(p => p.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
         if (ids.Except(known).FirstOrDefault() is int missing and > 0)

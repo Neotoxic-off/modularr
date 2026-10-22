@@ -1,5 +1,6 @@
 using Modularr.Core.Persistence;
 using Modularr.Core.Search;
+using Modularr.Core.Tests.Persistence;
 
 namespace Modularr.Core.Tests.Search;
 
@@ -39,6 +40,23 @@ public sealed class AutoSearchTests
         Series series = Show((1, 1, null, Today), (2, 1, null, Today));
 
         Assert.Equal([ReleaseSearchRequest.ForSeason(42, 2)], AutoSearch.Plan(series, new HashSet<int>(), season: 2, Today).Select(p => p.Request));
+    }
+
+    [Theory]
+    [InlineData(TrackedDownloadState.Downloading)]
+    [InlineData(TrackedDownloadState.ImportBlocked)]
+    [InlineData(TrackedDownloadState.ImportPending)]
+    [InlineData(TrackedDownloadState.Importing)]
+    [InlineData(TrackedDownloadState.FailedPending)]
+    public async Task AMovieWithADownloadInProgressIsNotSearchedAgain(TrackedDownloadState state)
+    {
+        using TestDatabase database = new();
+        Movie movie = database.AddMovie(603);
+        database.Insert(new TrackedDownload { InfoHash = "AB", MovieId = movie.Id, ReleaseTitle = "x", State = state });
+        using ModularrDbContext db = database.NewContext();
+
+        // No indexer search or grab is reachable: the in-progress check returns first.
+        Assert.Empty(await new AutoSearch(db, null!, null!).SearchMovieAsync(movie.Id, TestContext.Current.CancellationToken));
     }
 
     private static Series Show(params (int Season, int Episode, int? FileId, DateOnly AirDate)[] episodes)

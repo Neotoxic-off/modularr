@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { api, errorMessage, formatAgo, formatRuntime, isSeries, kindOf } from "@/lib/api";
 import type { Episode, ItemPatch, Kind, LibraryItem, MovieDetail, SeriesDetail } from "@/lib/api";
-import { languageLabel, policyLanguage, useOptions } from "@/lib/options";
+import { languageLabel, useOptions } from "@/lib/options";
 import { useSession } from "@/components/AuthGate";
 import { Icon } from "@/components/icons";
 import { PosterArt } from "@/components/Poster";
@@ -46,6 +46,8 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searching, setSearching] = useState<number | "all" | null>(null);
+  const reloadTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(reloadTimer.current), []);
 
   async function patch(change: ItemPatch) {
     setError(null);
@@ -63,7 +65,8 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
       await api.autoSearch(kind, item.id, season);
       setNotice(season === undefined ? "Search started. Anything that matches your profile is sent to Downloads." : `Searching season ${season}.`);
       // The search runs in the background; its result shows up under "Last search".
-      setTimeout(reload, 8000);
+      clearTimeout(reloadTimer.current);
+      reloadTimer.current = setTimeout(reload, 8000);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -72,7 +75,6 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
   }
 
   const runtime = formatRuntime(item.runtime);
-  const policy = options ? policyLanguage(options.media, kind, item.originalLanguage) : null;
   const status = isSeries(item)
     ? { done: item.episodes > 0 && item.episodesWithFile >= item.episodes, label: `${item.episodesWithFile} of ${item.episodes} episodes` }
     : { done: !!detail.hasFile, label: detail.hasFile ? "Downloaded" : "Missing" };
@@ -152,9 +154,9 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
                     {options.profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </Select>
                 </Field>
-                <Field label="Language" hint={item.language ? `Overrides the language rules, which would pick ${languageLabel(policy ?? "")}.` : "Follows your language rules."}>
+                <Field label="Language" hint={item.language ? `Overrides the language rules, which would pick ${languageLabel(item.policyLanguage)}.` : "Follows your language rules."}>
                   <Select value={item.language ?? ""} onChange={(e) => patch({ language: e.target.value || null })}>
-                    <option value="">Use default ({languageLabel(policy ?? item.wantedLanguage)})</option>
+                    <option value="">Use default ({languageLabel(item.policyLanguage)})</option>
                     {options.languages.map((l) => <option key={l.id} value={l.name}>{languageLabel(l.name)}</option>)}
                   </Select>
                 </Field>

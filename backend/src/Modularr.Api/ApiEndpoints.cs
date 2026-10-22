@@ -57,7 +57,7 @@ public static class ApiEndpoints
             searches.Enqueue(new SearchJob(id, MovieId: null, season));
             return Results.Accepted();
         });
-        api.MapGet("/movies", async (LibraryService library, ItemDtos dtos, CancellationToken ct) => (await library.ListMoviesAsync(ct)).Select(dtos.Of));
+        api.MapGet("/movies", async (LibraryService library, ItemDtos dtos, CancellationToken ct) => (await library.ListMoviesAsync(ct)).Select(m => dtos.Of(m.Movie, m.HasFile)));
         api.MapGet("/movies/{id:int}", async (int id, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
         {
             (Movie movie, bool hasFile) = await library.GetMovieAsync(id, ct);
@@ -237,18 +237,22 @@ public static class ApiEndpoints
             s.Id, s.TvdbId, s.Title, s.Year, s.SeriesType, s.Runtime, s.Monitored, s.Path, s.QualityProfileId, s.Added, s.Poster, s.Backdrop, s.Overview,
             s.Rating, s.Genres, s.Certification, s.OriginalLanguage, s.Language,
             wantedLanguage = options.CurrentValue.Media.WantedLanguage(s),
+            policyLanguage = options.CurrentValue.Media.WantedLanguage(s.MediaType, s.OriginalLanguage, itemLanguage: null),
             lastSearch = searches.LastSearch(s.Id, movieId: null),
             seasons = s.Seasons,
             episodes = s.Episodes.Count,
             episodesWithFile = s.Episodes.Count(e => e.MediaFileId is not null),
         };
 
-        public object Of(Movie m) => new
+        // HasFile only where the caller knows it (the movie list); null elsewhere.
+        public object Of(Movie m, bool? hasFile = null) => new
         {
             m.Id, m.TmdbId, m.ImdbId, m.Title, m.Year, m.Runtime, m.Monitored, m.Path, m.QualityProfileId, m.Poster, m.Backdrop, m.Overview,
             m.Rating, m.Genres, m.Certification, m.OriginalLanguage, m.Language,
             wantedLanguage = options.CurrentValue.Media.WantedLanguage(m),
+            policyLanguage = options.CurrentValue.Media.WantedLanguage(MediaType.Movie, m.OriginalLanguage, itemLanguage: null),
             lastSearch = searches.LastSearch(seriesId: null, m.Id),
+            hasFile,
         };
 
         public object Detail(Series s) => new

@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -34,10 +33,7 @@ public sealed class SettingsFile(string configDirectory, IConfigurationRoot conf
     public async Task SaveMediaAsync(MediaOptions media, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(media);
-        if (media.Validate(new ValidationContext(media)).FirstOrDefault() is ValidationResult error)
-        {
-            throw new ArgumentException(error.ErrorMessage, nameof(media));
-        }
+        media.EnsureValid();
 
         await SaveSectionAsync(nameof(ModularrOptions.Media), media, cancellationToken).ConfigureAwait(false);
     }

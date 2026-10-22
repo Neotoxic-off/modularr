@@ -66,7 +66,7 @@ public static class ModularrServiceCollectionExtensions
         services.AddHttpClient<SeriesMetadataClient>();
         services.AddHttpClient<MovieMetadataClient>();
         services.AddHttpClient<ShowDiscoveryClient>();
-        services.AddMemoryCache();
+        services.AddMemoryCache(cache => cache.SizeLimit = 1000);
 
         // The end-to-end flow: library, search, grab, then the monitor imports finished torrents.
         services.AddTransient<IndexerSearch>();
@@ -82,6 +82,7 @@ public static class ModularrServiceCollectionExtensions
         services.AddSingleton<SearchRunner>();
         services.AddHostedService(provider => provider.GetRequiredService<SearchRunner>());
         services.AddHostedService<DownloadMonitor>();
+        services.AddHostedService<MetadataBackfill>();
 
         return services;
     }

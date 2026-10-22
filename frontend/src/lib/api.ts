@@ -56,12 +56,16 @@ interface ItemBase {
   originalLanguage: string;
   language: string | null;
   wantedLanguage: string;
+  // What the language rules alone would pick, ignoring the item's own language.
+  policyLanguage: string;
   lastSearch: { time: string; result: string } | null;
 }
 
 export interface Movie extends ItemBase {
   tmdbId: number;
   imdbId: string | null;
+  // Set by the /movies list only.
+  hasFile: boolean | null;
 }
 
 export interface Series extends ItemBase {

@@ -27,7 +27,7 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
             {
                 await CheckAsync(stoppingToken).ConfigureAwait(false);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception) when (!stoppingToken.IsCancellationRequested)
             {
                 // An exception escaping ExecuteAsync stops the host; a failed poll (busy database...) is retried on the next tick.
             }
@@ -54,7 +54,7 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
             {
                 await CheckAsync(id, cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception) when (!cancellationToken.IsCancellationRequested)
             {
                 // Any failure (disk, database, torrent engine) blocks this download for a manual retry instead of failing every poll;
                 // a download already failed (and blocklisted) stays failed when only its replacement search broke.

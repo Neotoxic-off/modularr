@@ -138,11 +138,12 @@ public sealed class DiscoveryService(
         }
     }
 
-    // A failed fetch is not cached.
+    // A failed fetch is not cached. Each entry counts 1 against the cache's SizeLimit, so distinct lookup terms cannot fill memory.
     private async Task<T> CachedAsync<T>(string key, TimeSpan lifetime, Func<CancellationToken, Task<T>> fetch, CancellationToken cancellationToken) =>
         (await cache.GetOrCreateAsync(key, entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = lifetime;
+            entry.Size = 1;
             return fetch(cancellationToken);
         }).ConfigureAwait(false))!;
 

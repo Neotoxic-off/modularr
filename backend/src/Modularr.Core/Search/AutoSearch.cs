@@ -8,12 +8,12 @@ namespace Modularr.Core.Search;
 // Upstream MovieSearchService/EpisodeSearchService: searches a library item and grabs the best approved releases.
 public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, DownloadService downloads)
 {
-    // A movie already downloading is not searched again.
+    // A movie with a download in progress is not searched again.
     public async Task<IReadOnlyList<TrackedDownload>> SearchMovieAsync(int movieId, CancellationToken cancellationToken)
     {
         int tmdbId = await db.Movies.Where(m => m.Id == movieId).Select(m => (int?)m.TmdbId).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"Movie {movieId} is not in the library.");
-        if (await db.TrackedDownloads.AnyAsync(d => d.MovieId == movieId && d.State == TrackedDownloadState.Downloading, cancellationToken).ConfigureAwait(false))
+        if (await db.TrackedDownloads.Where(TrackedDownload.InProgress).AnyAsync(d => d.MovieId == movieId, cancellationToken).ConfigureAwait(false))
         {
             return [];
         }
@@ -34,7 +34,7 @@ public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, Downl
             return [];
         }
 
-        List<IReadOnlyList<int>> running = await db.TrackedDownloads.Where(d => d.SeriesId == seriesId && d.State == TrackedDownloadState.Downloading)
+        List<IReadOnlyList<int>> running = await db.TrackedDownloads.Where(TrackedDownload.InProgress).Where(d => d.SeriesId == seriesId)
             .Select(d => d.EpisodeIds).ToListAsync(cancellationToken).ConfigureAwait(false);
 
         List<TrackedDownload> grabbed = [];
@@ -69,15 +69,16 @@ public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, Downl
         ];
     }
 
-    // Approved releases best first: one for a movie; for a series each release that covers a wanted episode (any, when wanted is
-    // null) and none already grabbed, so a season pack wins over its episodes and two packs never overlap.
+    // Approved releases, the ones covering the most episodes first then best first: one for a movie; for a series each release that
+    // covers a wanted episode (any, when wanted is null) and none already grabbed, so a season pack wins over its episodes and two
+    // packs never overlap.
     public async Task<IReadOnlyList<TrackedDownload>> GrabBestAsync(
         ReleaseSearchRequest request, int? seriesId, int? movieId, IReadOnlySet<(int Season, int Episode)>? wanted, CancellationToken cancellationToken)
     {
         ReleaseSearchResult result = await search.SearchAsync(request, cancellationToken).ConfigureAwait(false);
         List<TrackedDownload> grabbed = [];
         HashSet<(int, int)> covered = [];
-        foreach (DownloadDecision decision in result.Decisions.Where(d => d.Approved))
+        foreach (DownloadDecision decision in result.Decisions.Where(d => d.Approved).OrderByDescending(d => d.Candidate.Episodes.Count))
         {
             (int, int)[] episodes = [.. decision.Candidate.Episodes.Select(e => (e.SeasonNumber, e.EpisodeNumber))];
             if (seriesId is not null && (episodes.Any(covered.Contains) || (wanted is not null && !episodes.Any(wanted.Contains))))
