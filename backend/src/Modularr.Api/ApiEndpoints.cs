@@ -13,21 +13,23 @@ using Modularr.Core.Metadata;
 using Modularr.Core.Persistence;
 using Modularr.Core.Qualities;
 using Modularr.Core.Search;
+using Modularr.Core.Subtitles;
 
 namespace Modularr.Api;
 
 // HTTP shape only: every endpoint hands over to a Core service and projects the result.
 public static class ApiEndpoints
 {
-    // No profile: the category default; no language: the language policy; the search runs in the background unless SearchNow is false.
-    public sealed record AddSeriesRequest(int TvdbId, int? QualityProfileId = null, Language? Language = null, bool SearchNow = true, SeriesMonitor Monitor = SeriesMonitor.All);
+    // No profile: the category default; no version: the version policy; the search runs in the background unless SearchNow is false.
+    public sealed record AddSeriesRequest(int TvdbId, int? QualityProfileId = null, ReleaseVersion? Version = null, bool SearchNow = true, SeriesMonitor Monitor = SeriesMonitor.All);
 
-    public sealed record AddMovieRequest(int TmdbId, int? QualityProfileId = null, Language? Language = null, bool SearchNow = true);
+    public sealed record AddMovieRequest(int TmdbId, int? QualityProfileId = null, ReleaseVersion? Version = null, bool SearchNow = true);
 
     public static RouteGroupBuilder MapModularrApi(this RouteGroupBuilder api)
     {
         api.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
-        api.MapGet("/config", (IOptions<ModularrOptions> options) => Results.Ok(options.Value));
+        api.MapGet("/config", (IOptions<ModularrOptions> options, HttpContext context) =>
+            Results.Ok(IsAdmin(context) ? options.Value : options.Value.Redacted()));
         api.MapGet("/indexers", Indexers);
         api.MapGet("/search", Search);
         api.MapGet("/lookup", Lookup);
@@ -40,7 +42,7 @@ public static class ApiEndpoints
         api.MapGet("/series", async (LibraryService library, ItemDtos dtos, CancellationToken ct) => (await library.ListSeriesAsync(ct)).Select(dtos.Of));
         api.MapGet("/series/{id:int}", async (int id, LibraryService library, ItemDtos dtos, CancellationToken ct) => dtos.Detail(await library.GetSeriesAsync(id, ct)));
         api.MapPost("/series", async (AddSeriesRequest request, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
-            dtos.Of(await library.AddSeriesAsync(request.TvdbId, request.QualityProfileId, request.Language, request.Monitor, request.SearchNow, ct)));
+            dtos.Of(await library.AddSeriesAsync(request.TvdbId, request.QualityProfileId, request.Version, request.Monitor, request.SearchNow, ct)));
         api.MapPatch("/series/{id:int}", async (int id, ItemUpdate update, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
             dtos.Of(await library.UpdateSeriesAsync(id, update, ct)));
         api.MapPost("/series/{id:int}/search", async (int id, int? season, ModularrDbContext db, SearchRunner searches, CancellationToken ct) =>
@@ -56,7 +58,7 @@ public static class ApiEndpoints
             return new { movie = dtos.Of(movie), hasFile };
         });
         api.MapPost("/movies", async (AddMovieRequest request, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
-            dtos.Of(await library.AddMovieAsync(request.TmdbId, request.QualityProfileId, request.Language, request.SearchNow, ct)));
+            dtos.Of(await library.AddMovieAsync(request.TmdbId, request.QualityProfileId, request.Version, request.SearchNow, ct)));
         api.MapPatch("/movies/{id:int}", async (int id, ItemUpdate update, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
             dtos.Of(await library.UpdateMovieAsync(id, update, ct)));
         api.MapPost("/movies/{id:int}/search", async (int id, ModularrDbContext db, SearchRunner searches, CancellationToken ct) =>
@@ -67,6 +69,7 @@ public static class ApiEndpoints
         });
         api.MapGet("/qualities", () => Quality.All.Select(q => new { q.Id, q.Name, q.Source, q.Resolution }));
         api.MapGet("/languages", () => Language.All.Where(l => l != Language.Unknown).Select(l => new { l.Id, l.Name }));
+        api.MapGet("/versions", () => ReleaseVersion.All.Select(v => v.Name));
         api.MapGet("/profiles", (QualityProfileService profiles, CancellationToken ct) => profiles.ListAsync(ct));
         api.MapPost("/profiles", (QualityProfile profile, QualityProfileService profiles, CancellationToken ct) => profiles.CreateAsync(profile, ct))
             .RequireAuthorization(AuthEndpoints.AdminPolicy);
@@ -116,6 +119,13 @@ public static class ApiEndpoints
         {
             await profiles.SaveMediaAsync(media, ct);
             return options.CurrentValue.Media;
+        }).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapGet("/settings/subtitles", (IOptionsMonitor<ModularrOptions> options, HttpContext context) =>
+            IsAdmin(context) ? options.CurrentValue.Subtitles : options.CurrentValue.Subtitles.Redacted());
+        api.MapPut("/settings/subtitles", async (SubtitleOptions subtitles, SettingsFile settings, IOptionsMonitor<ModularrOptions> options, CancellationToken ct) =>
+        {
+            await settings.SaveSubtitlesAsync(subtitles, ct);
+            return options.CurrentValue.Subtitles;
         }).RequireAuthorization(AuthEndpoints.AdminPolicy);
         api.MapGet("/filesystem", (string? path) => DirectoryBrowser.Browse(path)).RequireAuthorization(AuthEndpoints.AdminPolicy);
         return api;
@@ -184,7 +194,8 @@ public static class ApiEndpoints
             {
                 release = d.Candidate.Release,
                 quality = d.Candidate.Quality.ToString(),
-                languages = d.Candidate.Languages.Select(l => l.Name),
+                languages = d.Candidate.Languages.Audio.Select(l => l.Name),
+                subtitles = d.Candidate.Languages.Subtitles.Select(l => l.Name),
                 releaseGroup = d.Candidate.ReleaseGroup,
                 approved = d.Approved,
                 temporarilyRejected = d.TemporarilyRejected,
@@ -202,6 +213,8 @@ public static class ApiEndpoints
             _ => throw new ArgumentException($"Unknown type '{type}', expected movie, series or all."),
         };
 
+    private static bool IsAdmin(HttpContext context) => context.User.IsInRole(nameof(UserRole.Admin));
+
     private static async Task EnsureExistsAsync(Task<bool> exists, string message)
     {
         if (!await exists)
@@ -210,16 +223,18 @@ public static class ApiEndpoints
         }
     }
 
-    // Library items as the UI sees them: language is the item's own override (null follows the policy), wantedLanguage the
-    // effective one, lastSearch the latest background search since startup.
+    // Library items as the UI sees them: version and subtitles are the item's own overrides (null follows the policy),
+    // wantedVersion/wantedSubtitles the effective ones, policyVersion what the policy alone picks, lastSearch the latest
+    // background search since startup.
     public sealed class ItemDtos(IOptionsMonitor<ModularrOptions> options, SearchRunner searches)
     {
         public object Of(Series s) => new
         {
             s.Id, s.TvdbId, s.Title, s.Year, s.SeriesType, s.Runtime, s.Monitored, s.Path, s.QualityProfileId, s.Added, s.Poster, s.Backdrop, s.Overview,
-            s.Rating, s.Genres, s.Certification, s.OriginalLanguage, s.Language,
-            wantedLanguage = options.CurrentValue.Media.WantedLanguage(s),
-            policyLanguage = options.CurrentValue.Media.WantedLanguage(s.MediaType, s.OriginalLanguage, itemLanguage: null),
+            s.Rating, s.Genres, s.Certification, s.OriginalLanguage, s.Version, s.Subtitles,
+            wantedVersion = options.CurrentValue.Media.WantedVersion(s),
+            policyVersion = options.CurrentValue.Media.WantedVersion(s.MediaType, s.OriginalLanguage, itemVersion: null),
+            wantedSubtitles = options.CurrentValue.Media.WantedSubtitles(s),
             lastSearch = searches.LastSearch(s.Id, movieId: null),
             seasons = s.Seasons,
             episodes = s.Episodes.Count,
@@ -230,9 +245,10 @@ public static class ApiEndpoints
         public object Of(Movie m, bool? hasFile = null) => new
         {
             m.Id, m.TmdbId, m.ImdbId, m.Title, m.Year, m.Runtime, m.Monitored, m.Path, m.QualityProfileId, m.Poster, m.Backdrop, m.Overview,
-            m.Rating, m.Genres, m.Certification, m.OriginalLanguage, m.Language,
-            wantedLanguage = options.CurrentValue.Media.WantedLanguage(m),
-            policyLanguage = options.CurrentValue.Media.WantedLanguage(MediaType.Movie, m.OriginalLanguage, itemLanguage: null),
+            m.Rating, m.Genres, m.Certification, m.OriginalLanguage, m.Version, m.Subtitles,
+            wantedVersion = options.CurrentValue.Media.WantedVersion(m),
+            policyVersion = options.CurrentValue.Media.WantedVersion(MediaType.Movie, m.OriginalLanguage, itemVersion: null),
+            wantedSubtitles = options.CurrentValue.Media.WantedSubtitles(m),
             lastSearch = searches.LastSearch(seriesId: null, m.Id),
             hasFile,
         };

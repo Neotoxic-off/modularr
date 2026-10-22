@@ -2,6 +2,8 @@
 // upstream Usenet-only cases (protocol preference, youngest first) are skipped, age-based cases rely on size and seeders here.
 using Modularr.Core.Decisions;
 using Modularr.Core.Indexers;
+using Modularr.Core.Languages;
+using Modularr.Core.Parsing;
 using Modularr.Core.Qualities;
 using static Modularr.Core.Tests.Decisions.DecisionTestData;
 
@@ -317,5 +319,52 @@ public sealed class PrioritizeDownloadDecisionTests
     public void ReleaseInfoDefaultsToMiddleIndexerPriority()
     {
         Assert.Equal(25, new ReleaseInfo { Id = "1", Title = "t", Indexer = "i" }.IndexerPriority);
+    }
+
+    private static DownloadDecision Subbed(QualityModel quality, string title, int seeders = 0) =>
+        new(Candidate(MediaType.Movie, quality, Profile(MediaType.Movie)) with
+        {
+            Release = Release(size: 0) with { Title = title, Seeders = seeders },
+            Languages = LanguageParser.ParseReleaseLanguages(title),
+            OriginalLanguage = Language.Japanese,
+        },
+        []);
+
+    private static DecisionContext WantingSubtitles(bool onlyWhenAudioDiffers, params Language[] languages) =>
+        NoPreferredSize() with { WantedSubtitles = languages, SubtitlesOnlyWhenAudioDiffers = onlyWhenAudioDiffers };
+
+    [Fact]
+    public void WantedSubtitlesBreakATieInTheirOrder()
+    {
+        IReadOnlyList<DownloadDecision> result = Prioritize(
+            WantingSubtitles(false, Language.French, Language.English),
+            Subbed(Q(Quality.Bluray1080p), "Movie.2020.1080p.BluRay.x264-NONE", seeders: 1000),
+            Subbed(Q(Quality.Bluray1080p), "Movie.2020.MULTiSUBS.1080p.BluRay.x264-MULTI"),
+            Subbed(Q(Quality.Bluray1080p), "Movie.2020.VOSTA.1080p.BluRay.x264-ENG"),
+            Subbed(Q(Quality.Bluray1080p), "Movie.2020.VOSTFR.1080p.BluRay.x264-FRA"));
+
+        Assert.Equal(["FRA", "ENG", "MULTI", "NONE"], result.Select(d => d.Candidate.Release.Title.Split('-')[^1]));
+    }
+
+    [Fact]
+    public void SubtitlesNeverBeatABetterQuality()
+    {
+        IReadOnlyList<DownloadDecision> result = Prioritize(
+            WantingSubtitles(false, Language.French),
+            Subbed(Q(Quality.WebDl720p), "Movie.2020.VOSTFR.720p.WEB.x264-GRP"),
+            Subbed(Q(Quality.Bluray1080p), "Movie.2020.1080p.BluRay.x264-GRP"));
+
+        Assert.Equal(Quality.Bluray1080p, result[0].Candidate.Quality.Quality);
+    }
+
+    [Fact]
+    public void ASubtitleInTheAudioLanguageDoesNotCountWhenOnlyWantedForForeignAudio()
+    {
+        // The French dub with French subtitles gains nothing; the VOSTFR does.
+        DownloadDecision dubbed = Subbed(Q(Quality.Bluray1080p), "Movie.2020.MULTi.VFF.SUBFRENCH.1080p.BluRay.x264-GRP");
+        DownloadDecision original = Subbed(Q(Quality.Bluray1080p), "Movie.2020.VOSTFR.1080p.BluRay.x264-GRP");
+
+        Assert.Same(original, Prioritize(WantingSubtitles(true, Language.French), dubbed, original)[0]);
+        Assert.Same(dubbed, Prioritize(WantingSubtitles(false, Language.French), dubbed, original)[0]);
     }
 }

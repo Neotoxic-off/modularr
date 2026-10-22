@@ -10,18 +10,33 @@ public static partial class LanguageParser
 
     private const string LanguagesOnly =
         @"(?<english>\b(?:ing|eng)\b)|(?<italian>\b(?:ita|italian)\b)|(?<german>(?:swiss)?german\b|videomann|ger[. ]dub|\bger\b)|" +
-        @"(?<flemish>flemish)|(?<greek>greek)|(?<french>(?:_|\b)(?:FR|VO|VF|VF2|VFF|VFI|VFQ|TRUEFRENCH|FRENCH|FRE|FRA)(?:_|\b))|" +
+        @"(?<flemish>flemish)|(?<greek>greek)|(?<french>(?<!(?:VOST|SUB)[-_. ]?)(?:_|\b)(?:FR|VF|VF2|VFF|VFI|TRUEFRENCH|FRENCH|FRE|FRA)(?:_|\b))|(?<quebec>(?:_|\b)VFQ(?:_|\b))|" +
         @"(?<russian>\b(?:rus|ru)\b)|(?<hungarian>\b(?:HUNDUB|HUN)\b)|(?<hebrew>\bHebDub(?:bed)?\b)|" +
         @"(?<polish>\b(?:PL\W?DUB|DUB\W?PL|LEK\W?PL|PL\W?LEK)\b)|(?<chinese>\[(?:CH[ST]|BIG5|GB)\]|简|繁|字幕|国语音轨[.+])|" +
         @"(?<bulgarian>\bbgaudio\b)|(?<spanish>\b(?:español|castellano|esp|spa(?!\(Latino\)))\b)|(?<ukrainian>\b(?:\dx?)?ukr)|" +
         @"(?<romanian>\b(?:RoDubbed|ROMANIAN)\b)|(?<thai>\bTHAI\b)|(?<catalan>[-,. ]cat[. ](?:DD|subs)|\b(?:catalan?|catalán|català)\b)|(?<latvian>\b(?:lat|lav|lv)\b)|" +
         @"(?<turkish>\btur\b)|(?<urdu>\burdu\b)|(?<romansh>\b(?:romansh|rumantsch|romansch)\b)|(?<mongolian>\b(?:mongolian|khalkha)\b)|" +
         @"(?<georgian>\b(?:geo|ka|kat|georgian)\b)|(?<irish>\b(?:irish|gaeilge)\b)|(?<japanese>\(JA\)|JAP|JPN)|(?<korean>\bKOR\b)|" +
-        @"(?<vietnamese>\bVIE\b)|(?<telugu>\btel\b)|(?<portuguese>[_. ]por[_. ])|(?<brazilian>\b(?:dublado|pt-BR)\b)|(?<original>\b(?:orig|original)\b)";
+        @"(?<vietnamese>\bVIE\b)|(?<telugu>\btel\b)|(?<portuguese>[_. ]por[_. ])|(?<brazilian>\b(?:dublado|pt-BR)\b)|(?<original>\b(?:orig|original)\b|(?:_|\b)VO(?:_|\b))";
 
     // A language tag followed (possibly through other language tags) by "sub" names a subtitle, not an audio track.
     [GeneratedRegex($"(?:{LanguagesOnly})(?!(?:[-_. ](?:{LanguagesOnly}))*[-_. ]subs?)", Options)]
     private static partial Regex LanguageRegex { get; }
+
+    // The same tags when they name a subtitle ("French.Subs", "ENG.FRE.SUBS").
+    [GeneratedRegex($"(?:{LanguagesOnly})(?=(?:[-_. ](?:{LanguagesOnly}))*[-_. ]subs?)", Options)]
+    private static partial Regex SubtitleLanguageTagRegex { get; }
+
+    // VOSTFR / SUBFRENCH: original audio with French subtitles; VOSTA / VOSTENG / SUBENG: with English subtitles.
+    [GeneratedRegex(@"\b(?:(?<french>VOST[-_. ]?FR|STFR|SUB[-_. ]?FR(?:ENCH)?)|(?<english>VOSTA|VOST[-_. ]?ENG?|SUB[-_. ]?ENG(?:LISH)?))\b", Options)]
+    private static partial Regex SubtitleTagRegex { get; }
+
+    [GeneratedRegex(@"\bMULTI[-_. ]?SUBS?\b", Options)]
+    private static partial Regex MultiSubsRegex { get; }
+
+    // Subtitles burned into the picture.
+    [GeneratedRegex(@"\bHARD[-_. ]?SUB(?:S|BED)?\b|\bHC\b", Options)]
+    private static partial Regex HardsubRegex { get; }
 
     [GeneratedRegex(@"(?:(?i)(?<!SUB[\W|_|^]))(?:(?<english>\bEN\b)|(?<lithuanian>\bLT\b)|(?<czech>\bCZ\b)|(?<polish>\bPL\b)|(?<bulgarian>\bBG\b)|(?<slovak>\bSK\b)|(?<german>\bDE\b)|(?<spanish>\b(?<!DTS[._ -])ES\b))(?:(?i)(?![\W|_|^]SUB))", RegexOptions.CultureInvariant)]
     private static partial Regex CaseSensitiveLanguageRegex { get; }
@@ -70,7 +85,7 @@ public static partial class LanguageParser
     private static readonly (string Group, Language Language)[] Groups =
     [
         ("english", Language.English), ("italian", Language.Italian), ("german", Language.German),
-        ("flemish", Language.Flemish), ("greek", Language.Greek), ("french", Language.French),
+        ("flemish", Language.Flemish), ("greek", Language.Greek), ("french", Language.French), ("quebec", Language.French),
         ("russian", Language.Russian), ("hungarian", Language.Hungarian), ("hebrew", Language.Hebrew),
         ("polish", Language.Polish), ("chinese", Language.Chinese), ("bulgarian", Language.Bulgarian),
         ("spanish", Language.Spanish), ("ukrainian", Language.Ukrainian), ("romanian", Language.Romanian),
@@ -83,19 +98,52 @@ public static partial class LanguageParser
         ("thai", Language.Thai),
     ];
 
-    public static IReadOnlyList<Language> ParseLanguages(string title)
+    public static IReadOnlyList<Language> ParseLanguages(string title) => ParseAudio(title).Audio;
+
+    // Audio and subtitles apart, with the French dub variant the version policy needs (VF vs VFQ).
+    public static ReleaseLanguages ParseReleaseLanguages(string title)
+    {
+        // A release group can read as a language tag ("-FRA").
+        if (ReleaseGroupParser.ParseReleaseGroup(title) is string group)
+        {
+            title = title.Replace(group, "RlsGrp", StringComparison.Ordinal);
+        }
+
+        (IReadOnlyList<Language> audio, bool franceFrench, bool quebecFrench) = ParseAudio(title);
+        title = ReleaseTokens(title);
+        IEnumerable<Language> subtitles = SubtitleTagRegex.Matches(title).Concat(SubtitleLanguageTagRegex.Matches(title))
+            .SelectMany(match => Groups.Where(g => match.Groups[g.Group].Success).Select(g => g.Language))
+            .Where(l => l.Id > 0);
+
+        return new ReleaseLanguages(audio)
+        {
+            FranceFrench = franceFrench,
+            QuebecFrench = quebecFrench,
+            Subtitles = [.. subtitles.Distinct()],
+            MultiSubs = MultiSubsRegex.IsMatch(title),
+            Hardsub = HardsubRegex.IsMatch(title),
+        };
+    }
+
+    private static string ReleaseTokens(string title)
     {
         Match seriesMatch = CleanSeriesTitleRegex.Match(title);
-        if (seriesMatch.Success)
-        {
-            title = seriesMatch.Result("$1");
-        }
+        return seriesMatch.Success ? seriesMatch.Result("$1") : title;
+    }
+
+    private static (IReadOnlyList<Language> Audio, bool FranceFrench, bool QuebecFrench) ParseAudio(string title)
+    {
+        title = ReleaseTokens(title);
+        bool franceFrench = false;
+        bool quebecFrench = false;
 
         List<Language> languages = [.. Keywords.Where(k => title.Contains(k.Keyword, StringComparison.OrdinalIgnoreCase)).Select(k => k.Language)];
 
         foreach (Match match in CaseSensitiveLanguageRegex.Matches(title).Concat(LanguageRegex.Matches(title)))
         {
             languages.AddRange(Groups.Where(g => match.Groups[g.Group].Success).Select(g => g.Language));
+            franceFrench |= match.Groups["french"].Success;
+            quebecFrench |= match.Groups["quebec"].Success;
         }
 
         if (title.Contains("english", StringComparison.OrdinalIgnoreCase))
@@ -108,12 +156,13 @@ public static partial class LanguageParser
         // non-French trackers tag MULTi without naming the dub.
         if (MultiAudioRegex.IsMatch(title))
         {
+            franceFrench |= languages.Count == 0;
             languages.AddRange(languages.Count == 0 ? [Language.French, Language.Original] : [Language.Original]);
         }
 
         if (languages.Count == 0)
         {
-            return [Language.Unknown];
+            return ([Language.Unknown], false, false);
         }
 
         // German releases tag the extra audio tracks: DL adds the original, ML adds the original and English.
@@ -129,7 +178,7 @@ public static partial class LanguageParser
             }
         }
 
-        return [.. languages.Distinct()];
+        return ([.. languages.Distinct()], franceFrench, quebecFrench);
     }
 
     public static IReadOnlyList<string> ParseLanguageTags(string fileName)

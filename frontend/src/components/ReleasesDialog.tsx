@@ -57,7 +57,7 @@ export function ReleasesDialog({ item, season, onClose }: { item: LibraryItem; s
             )}
             {shown.length === 0 ? (
               <p className="rounded-xl border border-dashed border-line px-5 py-10 text-center text-sm text-muted">
-                {decisions.length === 0 ? "No indexer returned a release for this title." : "No release matches your quality profile and language. Show the rejected ones to grab one anyway."}
+                {decisions.length === 0 ? "No indexer returned a release for this title." : "No release matches your quality profile and version. Show the rejected ones to grab one anyway."}
               </p>
             ) : (
               <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
@@ -68,6 +68,7 @@ export function ReleasesDialog({ item, season, onClose }: { item: LibraryItem; s
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                         <Badge tone={d.approved ? "accent" : "neutral"}>{d.quality}</Badge>
                         {d.languages.length > 0 && <span>{d.languages.join(", ")}</span>}
+                        {d.subtitles.length > 0 && <span>Subtitles {d.subtitles.join(", ")}</span>}
                         <span className="tabular-nums">{formatSize(d.release.size)}</span>
                         <span className="tabular-nums" title="Seeders">{d.release.seeders ?? "?"} seeders</span>
                         <span>{d.release.indexer}</span>

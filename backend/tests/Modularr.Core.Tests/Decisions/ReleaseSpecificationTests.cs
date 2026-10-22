@@ -69,50 +69,48 @@ public sealed class ReleaseSpecificationTests
         Assert.Equal(expected, DownloadSpecifications.QualityAllowedByProfile(candidate, Context()) is null);
     }
 
+    // Parsed titles: MULTi adds the original track (and French when no dub is named), VOSTFR is the original with French
+    // subtitles, an untagged release is in the original language.
     [Theory]
-    [InlineData(1, 1, true)]
-    [InlineData(1, 4, false)]
-    [InlineData(-2, 4, false)]
-    [InlineData(-2, 2, true)]
-    [InlineData(-1, 4, true)]
-    [InlineData(-1, 1, true)]
-    public void WantedLanguage(int wantedLanguageId, int releaseLanguageId, bool expected)
-    {
-        // Ids: 1 English, 2 French (the original language), 4 German, -1 Any, -2 Original.
-        ReleaseCandidate candidate = Candidate(MediaType.Movie) with
-        {
-            Languages = [Language.FindById(releaseLanguageId)],
-            OriginalLanguage = Language.French,
-        };
-
-        Assert.Equal(expected, DownloadSpecifications.WantedLanguage(candidate, Context() with { WantedLanguage = Language.FindById(wantedLanguageId) }) is null);
-    }
-
-    // Parsed titles: MULTi adds the original track (and French when no dub is named), VOSTFR is the original with French subtitles,
-    // an untagged release is in the original language.
-    [Theory]
-    [InlineData("Movie.Title.2020.MULTi.1080p.BluRay.x264-GRP", "English", "French", true)]
-    [InlineData("Movie.Title.2020.MULTi.1080p.BluRay.x264-GRP", "English", "Original", true)]
+    [InlineData("Movie.Title.2020.MULTi.1080p.BluRay.x264-GRP", "English", "VF", true)]
+    [InlineData("Movie.Title.2020.MULTi.1080p.BluRay.x264-GRP", "English", "VO", true)]
+    [InlineData("Movie.Title.2020.MULTi.1080p.BluRay.x264-GRP", "English", "MULTi", true)]
     [InlineData("Movie.Title.2020.MULTi.1080p.BluRay.x264-GRP", "English", "English", true)]
     [InlineData("Movie.Title.2020.MULTi.1080p.BluRay.x264-GRP", "English", "German", false)]
+    [InlineData("Movie.Title.2020.MULTi.1080p.BluRay.x264-GRP", "English", "VFQ", false)]
     [InlineData("Movie.Title.2020.MULTi.VFF.1080p.BluRay.x264-GRP", "Japanese", "Japanese", true)]
-    [InlineData("Movie.Title.2020.MULTi.VFQ.1080p.WEB.x264-GRP", "English", "French", true)]
-    [InlineData("Movie.Title.2020.MULTi.TRUEFRENCH.1080p.WEB.x264-GRP", "English", "French", true)]
-    [InlineData("Movie.Title.2020.TRUEFRENCH.1080p.WEB.x264-GRP", "English", "Original", false)]
-    [InlineData("Movie.Title.2020.VOSTFR.1080p.WEB.x264-GRP", "Japanese", "French", false)]
-    [InlineData("Movie.Title.2020.VOSTFR.1080p.WEB.x264-GRP", "Japanese", "Original", true)]
+    [InlineData("Movie.Title.2020.MULTi.VFQ.1080p.WEB.x264-GRP", "English", "VFQ", true)]
+    [InlineData("Movie.Title.2020.MULTi.VFQ.1080p.WEB.x264-GRP", "English", "VF", false)]
+    [InlineData("Movie.Title.2020.MULTi.VFQ.1080p.WEB.x264-GRP", "English", "MULTi", true)]
+    [InlineData("Movie.Title.2020.MULTi.VFF.VFQ.1080p.WEB.x264-GRP", "English", "VF", true)]
+    [InlineData("Movie.Title.2020.VFQ.1080p.WEB.x264-GRP", "English", "VFQ", true)]
+    [InlineData("Movie.Title.2020.VFQ.1080p.WEB.x264-GRP", "English", "MULTi", false)]
+    [InlineData("Movie.Title.2020.MULTi.TRUEFRENCH.1080p.WEB.x264-GRP", "English", "VF", true)]
+    [InlineData("Movie.Title.2020.TRUEFRENCH.1080p.WEB.x264-GRP", "English", "VF", true)]
+    [InlineData("Movie.Title.2020.TRUEFRENCH.1080p.WEB.x264-GRP", "English", "VO", false)]
+    [InlineData("Movie.Title.2020.TRUEFRENCH.1080p.WEB.x264-GRP", "English", "MULTi", false)]
+    [InlineData("Movie.Title.2020.FRENCH.1080p.WEB.x264-GRP", "French", "VO", true)]
+    [InlineData("Movie.Title.2020.1080p.WEB.x264-GRP", "French", "VF", true)]
+    [InlineData("Movie.Title.2020.VOSTFR.1080p.WEB.x264-GRP", "Japanese", "VF", false)]
+    [InlineData("Movie.Title.2020.VOSTFR.1080p.WEB.x264-GRP", "Japanese", "VO", true)]
+    [InlineData("Movie.Title.2020.VOSTFR.1080p.WEB.x264-GRP", "Japanese", "VOSTFR", true)]
+    [InlineData("Movie.Title.2020.SUBFRENCH.1080p.WEB.x264-GRP", "Japanese", "VOSTFR", true)]
+    [InlineData("Movie.Title.2020.1080p.WEB.x264-GRP", "Japanese", "VOSTFR", false)]
+    [InlineData("Movie.Title.2020.VOSTA.1080p.WEB.x264-GRP", "Japanese", "VOSTFR", false)]
+    [InlineData("Movie.Title.2020.MULTi.VOSTFR.1080p.WEB.x264-GRP", "Japanese", "VOSTFR", true)]
     [InlineData("Movie.Title.2020.1080p.WEB.x264-GRP", "English", "English", true)]
-    [InlineData("Movie.Title.2020.1080p.WEB.x264-GRP", "English", "French", false)]
+    [InlineData("Movie.Title.2020.1080p.WEB.x264-GRP", "English", "VF", false)]
+    [InlineData("Movie.Title.2020.1080p.WEB.x264-GRP", "English", "Any", true)]
     [InlineData("Movie.Title.2020.Eng.Fre.Multi.Subs.1080p.WEB.x264-GRP", "Japanese", "Japanese", false)]
-    public void WantedLanguageOfParsedTitle(string title, string original, string wanted, bool expected)
+    public void WantedVersionOfParsedTitle(string title, string original, string wanted, bool expected)
     {
         ReleaseCandidate candidate = Candidate(MediaType.Movie) with
         {
-            Languages = LanguageParser.ParseLanguages(title),
+            Languages = LanguageParser.ParseReleaseLanguages(title),
             OriginalLanguage = Language.FindByName(original),
         };
 
-        Assert.Equal(expected, DownloadSpecifications.WantedLanguage(candidate, Context() with { WantedLanguage = Language.FindByName(wanted) }) is null);
+        Assert.Equal(expected, DownloadSpecifications.WantedVersion(candidate, Context() with { WantedVersion = ReleaseVersion.FindByName(wanted) }) is null);
     }
 
     [Theory]

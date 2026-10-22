@@ -20,25 +20,38 @@ public enum SeriesMonitor
     None,
 }
 
-// PATCH body: an absent field is left unchanged; Language present as null clears the item's override.
+// PATCH body: an absent field is left unchanged; Version or Subtitles present as null clears the item's override.
 public sealed record ItemUpdate
 {
     public int? QualityProfileId { get; init; }
     public bool? Monitored { get; init; }
 
-    public Language? Language
+    public ReleaseVersion? Version
     {
         get;
         init
         {
             field = value;
-            LanguageSet = true;
+            VersionSet = true;
         }
     }
 
-    // The JSON reader calls the setter only for a field present in the body.
+    public IReadOnlyList<Language>? Subtitles
+    {
+        get;
+        init
+        {
+            field = value;
+            SubtitlesSet = true;
+        }
+    }
+
+    // The JSON reader calls the setters only for a field present in the body.
     [JsonIgnore]
-    public bool LanguageSet { get; private init; }
+    public bool VersionSet { get; private init; }
+
+    [JsonIgnore]
+    public bool SubtitlesSet { get; private init; }
 }
 
 // Adds series and movies from the metadata sources; the one place metadata records become library entities.
@@ -75,10 +88,10 @@ public sealed class LibraryService(
 
     // Adding an existing series returns it unchanged. No profile: the category default (series or anime) from MediaOptions.
     // A monitored series is searched in the background unless search is false.
-    public async Task<Series> AddSeriesAsync(int tvdbId, int? qualityProfileId, Language? language, SeriesMonitor monitor, bool search, CancellationToken cancellationToken)
+    public async Task<Series> AddSeriesAsync(int tvdbId, int? qualityProfileId, ReleaseVersion? version, SeriesMonitor monitor, bool search, CancellationToken cancellationToken)
     {
         Series series = await db.Series.Include(s => s.Episodes).FirstOrDefaultAsync(s => s.TvdbId == tvdbId, cancellationToken).ConfigureAwait(false)
-            ?? await CreateSeriesAsync(tvdbId, qualityProfileId, language, monitor, cancellationToken).ConfigureAwait(false);
+            ?? await CreateSeriesAsync(tvdbId, qualityProfileId, version, monitor, cancellationToken).ConfigureAwait(false);
         if (search && series.Monitored)
         {
             searches.Enqueue(new SearchJob(series.Id, MovieId: null));
@@ -87,10 +100,10 @@ public sealed class LibraryService(
         return series;
     }
 
-    public async Task<Movie> AddMovieAsync(int tmdbId, int? qualityProfileId, Language? language, bool search, CancellationToken cancellationToken)
+    public async Task<Movie> AddMovieAsync(int tmdbId, int? qualityProfileId, ReleaseVersion? version, bool search, CancellationToken cancellationToken)
     {
         Movie movie = await db.Movies.FirstOrDefaultAsync(m => m.TmdbId == tmdbId, cancellationToken).ConfigureAwait(false)
-            ?? await CreateMovieAsync(tmdbId, qualityProfileId, language, cancellationToken).ConfigureAwait(false);
+            ?? await CreateMovieAsync(tmdbId, qualityProfileId, version, cancellationToken).ConfigureAwait(false);
         if (search && movie.Monitored)
         {
             searches.Enqueue(new SearchJob(SeriesId: null, movie.Id));
@@ -99,14 +112,14 @@ public sealed class LibraryService(
         return movie;
     }
 
-    private async Task<Series> CreateSeriesAsync(int tvdbId, int? qualityProfileId, Language? language, SeriesMonitor monitor, CancellationToken cancellationToken)
+    private async Task<Series> CreateSeriesAsync(int tvdbId, int? qualityProfileId, ReleaseVersion? version, SeriesMonitor monitor, CancellationToken cancellationToken)
     {
         SeriesInfo info = await seriesMetadata.GetSeriesAsync(tvdbId, cancellationToken: cancellationToken).ConfigureAwait(false);
         MediaType category = TypeOf(info) == SeriesType.Anime ? MediaType.Anime : MediaType.Series;
         int profileId = qualityProfileId ?? options.CurrentValue.Media.For(category).ProfileId;
         await EnsureProfileAsync(profileId, cancellationToken).ConfigureAwait(false);
         Series series = ToSeries(info, profileId, options.CurrentValue.Paths, DateTime.UtcNow, monitor);
-        series.Language = MediaOptions.EnsureWantable(language);
+        series.Version = version;
         db.Series.Add(series);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await activities.RecordAsync(
@@ -115,13 +128,13 @@ public sealed class LibraryService(
         return series;
     }
 
-    private async Task<Movie> CreateMovieAsync(int tmdbId, int? qualityProfileId, Language? language, CancellationToken cancellationToken)
+    private async Task<Movie> CreateMovieAsync(int tmdbId, int? qualityProfileId, ReleaseVersion? version, CancellationToken cancellationToken)
     {
         int profileId = qualityProfileId ?? options.CurrentValue.Media.Movies.ProfileId;
         await EnsureProfileAsync(profileId, cancellationToken).ConfigureAwait(false);
         MovieInfo info = await movieMetadata.GetMovieAsync(tmdbId, cancellationToken).ConfigureAwait(false);
         Movie movie = ToMovie(info, profileId, options.CurrentValue.Paths);
-        movie.Language = MediaOptions.EnsureWantable(language);
+        movie.Version = version;
         db.Movies.Add(movie);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await activities.RecordAsync(
@@ -179,7 +192,8 @@ public sealed class LibraryService(
             ?? throw new KeyNotFoundException($"Series {id} is not in the library.");
         series.QualityProfileId = await ProfileIdAsync(update, series.QualityProfileId, cancellationToken).ConfigureAwait(false);
         series.Monitored = update.Monitored ?? series.Monitored;
-        series.Language = update.LanguageSet ? MediaOptions.EnsureWantable(update.Language) : series.Language;
+        series.Version = update.VersionSet ? update.Version : series.Version;
+        series.Subtitles = update.SubtitlesSet ? MediaOptions.EnsureSubtitleLanguages(update.Subtitles) : series.Subtitles;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return series;
     }
@@ -191,7 +205,8 @@ public sealed class LibraryService(
             ?? throw new KeyNotFoundException($"Movie {id} is not in the library.");
         movie.QualityProfileId = await ProfileIdAsync(update, movie.QualityProfileId, cancellationToken).ConfigureAwait(false);
         movie.Monitored = update.Monitored ?? movie.Monitored;
-        movie.Language = update.LanguageSet ? MediaOptions.EnsureWantable(update.Language) : movie.Language;
+        movie.Version = update.VersionSet ? update.Version : movie.Version;
+        movie.Subtitles = update.SubtitlesSet ? MediaOptions.EnsureSubtitleLanguages(update.Subtitles) : movie.Subtitles;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return movie;
     }

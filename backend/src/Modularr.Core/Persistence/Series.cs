@@ -34,8 +34,9 @@ public sealed class Series
     // Unknown for series added before it was stored.
     public Language OriginalLanguage { get; set; } = Language.Unknown;
 
-    // Wanted audio language for this series only; null follows MediaOptions.
-    public Language? Language { get; set; }
+    // Wanted version and subtitle languages for this series only; null follows MediaOptions.
+    public ReleaseVersion? Version { get; set; }
+    public IReadOnlyList<Language>? Subtitles { get; set; }
     public string? Overview { get; set; }
 
     // Metadata at add time: poster and fanart URLs, a 0-10 rating, genres and the (US) certification.

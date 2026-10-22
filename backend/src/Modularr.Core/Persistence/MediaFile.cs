@@ -15,4 +15,7 @@ public sealed class MediaFile
     public IReadOnlyList<Language> Languages { get; set; } = [];
     public string? ReleaseGroup { get; set; }
     public DateTime DateAdded { get; set; }
+
+    // Last automatic subtitle search, so the periodic retry goes round the library oldest first.
+    public DateTime? SubtitlesSearched { get; set; }
 }

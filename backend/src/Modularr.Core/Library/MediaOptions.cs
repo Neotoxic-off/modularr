@@ -5,35 +5,38 @@ using Modularr.Core.Persistence;
 
 namespace Modularr.Core.Library;
 
-// What a newly added item gets, per category: its quality profile and the audio language wanted (null: DefaultLanguage).
+// What a newly added item gets, per category: its quality profile, the version wanted (null: DefaultVersion) and the subtitle
+// languages wanted, most wanted first.
 public sealed record MediaDefaults
 {
     public int ProfileId { get; init; } = 1;
-    public Language? Language { get; init; }
+    public ReleaseVersion? Version { get; init; }
+    public IReadOnlyList<Language> Subtitles { get; init; } = [];
 }
 
-// "anime -> Original", "originalLanguage Japanese -> French": a null condition matches anything, at least one is set.
-public sealed record LanguageRule
+// "anime -> VOSTFR", "originalLanguage Japanese -> VF": a null condition matches anything, at least one is set.
+public sealed record VersionRule
 {
     public MediaType? Category { get; init; }
     public Language? OriginalLanguage { get; init; }
-    public Language Language { get; init; } = Language.Any;
+    public ReleaseVersion Version { get; init; } = ReleaseVersion.Any;
 
     public bool Matches(MediaType category, Language originalLanguage) =>
         (Category is null || Category == category) && (OriginalLanguage is null || OriginalLanguage == originalLanguage);
 }
 
-// The modularr.json "Media" section, edited through PUT /api/settings/media. It is the single language policy: quality
-// profiles carry no language. Wanted language = item override ?? first matching exception ?? category language ?? DefaultLanguage.
+// The modularr.json "Media" section, edited through PUT /api/settings/media. It is the single version policy: quality
+// profiles carry no language. Wanted version = item override ?? first matching exception ?? category version ?? DefaultVersion.
+// Wanted subtitles = item override ?? category subtitles.
 public sealed record MediaOptions : IValidatableObject
 {
     public MediaDefaults Movies { get; init; } = new();
     public MediaDefaults Series { get; init; } = new();
     public MediaDefaults Anime { get; init; } = new();
 
-    // Any disables the language check; Original is each item's original language.
-    public Language DefaultLanguage { get; init; } = Language.Any;
-    public IReadOnlyList<LanguageRule> Exceptions { get; init; } = [];
+    // Any disables the version check.
+    public ReleaseVersion DefaultVersion { get; init; } = ReleaseVersion.Any;
+    public IReadOnlyList<VersionRule> Exceptions { get; init; } = [];
 
     public MediaDefaults For(MediaType category) => category switch
     {
@@ -42,27 +45,46 @@ public sealed record MediaOptions : IValidatableObject
         _ => Series,
     };
 
-    public Language WantedLanguage(MediaType category, Language originalLanguage, Language? itemLanguage) =>
-        itemLanguage
-        ?? Exceptions.FirstOrDefault(rule => rule.Matches(category, originalLanguage))?.Language
-        ?? For(category).Language
-        ?? DefaultLanguage;
+    public ReleaseVersion WantedVersion(MediaType category, Language originalLanguage, ReleaseVersion? itemVersion) =>
+        itemVersion
+        ?? Exceptions.FirstOrDefault(rule => rule.Matches(category, originalLanguage))?.Version
+        ?? For(category).Version
+        ?? DefaultVersion;
 
-    public Language WantedLanguage(Series series)
+    public ReleaseVersion WantedVersion(Series series)
     {
         ArgumentNullException.ThrowIfNull(series);
-        return WantedLanguage(series.MediaType, series.OriginalLanguage, series.Language);
+        return WantedVersion(series.MediaType, series.OriginalLanguage, series.Version);
     }
 
-    public Language WantedLanguage(Movie movie)
+    public ReleaseVersion WantedVersion(Movie movie)
     {
         ArgumentNullException.ThrowIfNull(movie);
-        return WantedLanguage(MediaType.Movie, movie.OriginalLanguage, movie.Language);
+        return WantedVersion(MediaType.Movie, movie.OriginalLanguage, movie.Version);
     }
 
-    // Unknown matches only untagged releases, so it is never a language to want (GET /languages hides it too).
-    public static Language? EnsureWantable(Language? language) =>
-        language == Language.Unknown ? throw new ArgumentException("Unknown is not a language you can ask for.", nameof(language)) : language;
+    public IReadOnlyList<Language> WantedSubtitles(MediaType category, IReadOnlyList<Language>? itemSubtitles) => itemSubtitles ?? For(category).Subtitles;
+
+    public IReadOnlyList<Language> WantedSubtitles(Series series)
+    {
+        ArgumentNullException.ThrowIfNull(series);
+        return WantedSubtitles(series.MediaType, series.Subtitles);
+    }
+
+    public IReadOnlyList<Language> WantedSubtitles(Movie movie)
+    {
+        ArgumentNullException.ThrowIfNull(movie);
+        return WantedSubtitles(MediaType.Movie, movie.Subtitles);
+    }
+
+    // Real languages only (not Unknown, Any or Original), each once.
+    public static IReadOnlyList<Language>? EnsureSubtitleLanguages(IReadOnlyList<Language>? languages) =>
+        languages is null || AreSubtitleLanguages(languages)
+            ? languages
+            : throw new ArgumentException("Subtitle languages must be real languages, each listed once.", nameof(languages));
+
+    private static bool AreSubtitleLanguages(IReadOnlyList<Language> languages) =>
+        languages.All(l => l is not null && l.Id > 0) && languages.Distinct().Count() == languages.Count;
 
     // Throws the first validation error as an ArgumentException (a 400 from the API).
     public void EnsureValid()
@@ -77,15 +99,11 @@ public sealed record MediaOptions : IValidatableObject
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         // A JSON body can null any of these despite the non-nullable types.
-        if (Movies is null || Series is null || Anime is null || DefaultLanguage is null || Exceptions is null || Exceptions.Any(rule => rule?.Language is null))
+        if (Movies is null || Series is null || Anime is null || DefaultVersion is null || Exceptions is null || Exceptions.Any(rule => rule?.Version is null)
+            || Movies.Subtitles is null || Series.Subtitles is null || Anime.Subtitles is null)
         {
-            yield return new ValidationResult("movies, series, anime, defaultLanguage, exceptions and each exception's language are required.");
+            yield return new ValidationResult("movies, series, anime, their subtitles, defaultVersion, exceptions and each exception's version are required.");
             yield break;
-        }
-
-        if (new[] { DefaultLanguage, Movies.Language, Series.Language, Anime.Language }.Concat(Exceptions.Select(rule => rule.Language)).Contains(Language.Unknown))
-        {
-            yield return new ValidationResult("Unknown is not a language you can ask for.");
         }
 
         foreach ((string name, MediaDefaults defaults) in new[] { ("movies", Movies), ("series", Series), ("anime", Anime) })
@@ -93,6 +111,11 @@ public sealed record MediaOptions : IValidatableObject
             if (defaults.ProfileId < 1)
             {
                 yield return new ValidationResult($"{name}: profileId must be a quality profile id.");
+            }
+
+            if (!AreSubtitleLanguages(defaults.Subtitles))
+            {
+                yield return new ValidationResult($"{name}: subtitles must be real languages, each listed once.");
             }
         }
 

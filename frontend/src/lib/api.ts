@@ -54,10 +54,13 @@ interface ItemBase {
   genres: string[];
   certification: string | null;
   originalLanguage: string;
-  language: string | null;
-  wantedLanguage: string;
-  // What the language rules alone would pick, ignoring the item's own language.
-  policyLanguage: string;
+  // The item's own overrides; null follows the version rules and the category's subtitles.
+  version: string | null;
+  subtitles: string[] | null;
+  wantedVersion: string;
+  wantedSubtitles: string[];
+  // What the version rules alone would pick, ignoring the item's own version.
+  policyVersion: string;
   lastSearch: { time: string; result: string } | null;
 }
 
@@ -104,12 +107,13 @@ export interface MovieDetail {
 export interface ItemPatch {
   qualityProfileId?: number;
   monitored?: boolean;
-  language?: string | null;
+  version?: string | null;
+  subtitles?: string[] | null;
 }
 
 export interface AddOptions {
   qualityProfileId?: number | null;
-  language?: string | null;
+  version?: string | null;
   searchNow?: boolean;
   monitor?: "All" | "Future" | "None";
 }
@@ -128,6 +132,7 @@ export interface Decision {
   release: Release;
   quality: string;
   languages: string[];
+  subtitles: string[];
   releaseGroup: string | null;
   approved: boolean;
   temporarilyRejected: boolean;
@@ -212,21 +217,56 @@ export interface Profile {
 
 export interface MediaDefaults {
   profileId: number;
-  language: string | null;
+  version: string | null;
+  // Most wanted first.
+  subtitles: string[];
 }
 
-export interface LanguageRule {
+export interface VersionRule {
   category: Category | null;
   originalLanguage: string | null;
-  language: string;
+  version: string;
 }
 
 export interface MediaSettings {
   movies: MediaDefaults;
   series: MediaDefaults;
   anime: MediaDefaults;
-  defaultLanguage: string;
-  exceptions: LanguageRule[];
+  defaultVersion: string;
+  exceptions: VersionRule[];
+}
+
+export interface SubtitleSettings {
+  onlyWhenAudioDiffers: boolean;
+  preferHearingImpaired: boolean;
+  // Secrets come back null for non-admins.
+  openSubtitles: { apiKey: string | null; username: string | null; password: string | null };
+}
+
+// A movie's file or an episode's file.
+export type SubtitleTarget = { movieId: number } | { episodeId: number };
+
+export interface SubtitleFile {
+  language: string;
+  hearingImpaired: boolean;
+  forced: boolean;
+  file: string;
+}
+
+export interface SubtitleStatus {
+  present: SubtitleFile[];
+  missing: string[];
+}
+
+export interface SubtitleCandidate {
+  provider: string;
+  id: string;
+  language: string;
+  release: string;
+  hearingImpaired: boolean;
+  forced: boolean;
+  hashMatch: boolean;
+  downloads: number;
 }
 
 export interface Paths {
@@ -244,7 +284,8 @@ export interface Folder {
 
 export type ActivityKind =
   | "Added" | "SearchStarted" | "SearchCompleted" | "NothingFound" | "SearchFailed" | "Grabbed" | "DownloadStarted"
-  | "DownloadStalled" | "DownloadFailed" | "Blocklisted" | "Regrabbed" | "Imported" | "ImportFailed" | "Removed";
+  | "DownloadStalled" | "DownloadFailed" | "Blocklisted" | "Regrabbed" | "Imported" | "ImportFailed" | "Removed"
+  | "SubtitleDownloaded" | "SubtitlesMissing";
 
 export interface Activity {
   id: number;
@@ -357,6 +398,7 @@ export const api = {
 
   qualities: () => request<Quality[]>("/qualities"),
   languages: () => request<Language[]>("/languages"),
+  versions: () => request<string[]>("/versions"),
   profiles: () => request<Profile[]>("/profiles"),
   createProfile: (profile: Profile) => send<Profile>("POST", "/profiles", profile),
   saveProfile: (profile: Profile) => send<Profile>("PUT", `/profiles/${profile.id}`, profile),
@@ -364,6 +406,11 @@ export const api = {
 
   media: () => request<MediaSettings>("/settings/media"),
   saveMedia: (media: MediaSettings) => send<MediaSettings>("PUT", "/settings/media", media),
+  subtitleSettings: () => request<SubtitleSettings>("/settings/subtitles"),
+  saveSubtitleSettings: (settings: SubtitleSettings) => send<SubtitleSettings>("PUT", "/settings/subtitles", settings),
+  subtitles: (target: SubtitleTarget) => request<SubtitleStatus>(`/subtitles?${new URLSearchParams(Object.entries(target).map(([k, v]) => [k, String(v)]))}`),
+  searchSubtitles: (target: SubtitleTarget, language?: string) => send<SubtitleCandidate[]>("POST", "/subtitles/search", { ...target, language }),
+  downloadSubtitle: (target: SubtitleTarget, candidate: SubtitleCandidate) => send<SubtitleFile>("POST", "/subtitles/download", { ...target, ...candidate }),
   paths: () => request<Paths>("/settings/paths"),
   savePaths: (paths: Paths) => send<Paths>("PUT", "/settings/paths", paths),
   folders: (path: string | null) => request<Folder>(`/filesystem${path ? `?path=${encodeURIComponent(path)}` : ""}`),

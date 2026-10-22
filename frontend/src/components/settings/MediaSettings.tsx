@@ -3,10 +3,10 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { api } from "@/lib/api";
-import type { Category, LanguageRule, MediaSettings as Media } from "@/lib/api";
-import { languageLabel, reloadOptions, useOptions } from "@/lib/options";
+import type { Category, MediaSettings as Media, VersionRule } from "@/lib/api";
+import { realLanguages, reloadOptions, useOptions, versionLabel } from "@/lib/options";
 import { Icon } from "@/components/icons";
-import { Button, Field, SaveBar, Section, Select, Skeleton, useAction } from "@/components/ui";
+import { Button, Field, PickList, SaveBar, Section, Select, Skeleton, useAction } from "@/components/ui";
 
 const categories: readonly { key: "movies" | "series" | "anime"; label: string }[] = [
   { key: "movies", label: "Movies" },
@@ -24,9 +24,9 @@ export function MediaSettings() {
 
   if (!options || !media) return <Skeleton className="h-96 rounded-2xl" />;
 
-  const languages = options.languages;
-  // Conditions match an item's real original language, so Any and Original make no sense there.
-  const realLanguages = languages.filter((l) => l.id >= 0);
+  const versions = options.versions;
+  // Conditions match an item's real original language, subtitles a real language: Any and Original make no sense there.
+  const languages = realLanguages(options).map((l) => l.name);
 
   const save = (event: FormEvent) => {
     event.preventDefault();
@@ -36,7 +36,7 @@ export function MediaSettings() {
     });
   };
 
-  const setRule = (index: number, rule: LanguageRule) => setMedia({ ...media, exceptions: media.exceptions.map((r, i) => (i === index ? rule : r)) });
+  const setRule = (index: number, rule: VersionRule) => setMedia({ ...media, exceptions: media.exceptions.map((r, i) => (i === index ? rule : r)) });
   const moveRule = (index: number, step: number) => {
     const rules = [...media.exceptions];
     rules.splice(index + step, 0, ...rules.splice(index, 1));
@@ -45,21 +45,21 @@ export function MediaSettings() {
 
   return (
     <form onSubmit={save} className="space-y-6">
-      <Section title="Default language" description="The audio language Modularr looks for when nothing more specific applies.">
-        <div className="max-w-xs">
-          <Select value={media.defaultLanguage} onChange={(e) => setMedia({ ...media, defaultLanguage: e.target.value })} aria-label="Default language">
-            {languages.map((l) => <option key={l.id} value={l.name}>{languageLabel(l.name)}</option>)}
+      <Section title="Default version" description="The version Modularr looks for when nothing more specific applies.">
+        <div className="max-w-sm">
+          <Select value={media.defaultVersion} onChange={(e) => setMedia({ ...media, defaultVersion: e.target.value })} aria-label="Default version">
+            {versions.map((v) => <option key={v} value={v}>{versionLabel(v)}</option>)}
           </Select>
         </div>
-        <p className="mt-3 text-xs text-muted">“Any language” turns the language check off. “Original language” follows each title’s own original language.</p>
+        <p className="mt-3 text-xs text-muted">“Any version” turns the check off. VO follows each title’s own original language; VF also covers VFF, TRUEFRENCH and FRENCH releases.</p>
       </Section>
 
-      <Section title="Language exceptions" description="Checked from top to bottom; the first rule that matches a title wins over the category and default language."
-        actions={<Button type="button" size="sm" onClick={() => setMedia({ ...media, exceptions: [...media.exceptions, { category: "Anime", originalLanguage: null, language: "Original" }] })}>
+      <Section title="Version exceptions" description="Checked from top to bottom; the first rule that matches a title wins over the category and default version."
+        actions={<Button type="button" size="sm" onClick={() => setMedia({ ...media, exceptions: [...media.exceptions, { category: "Anime", originalLanguage: null, version: "VOSTFR" }] })}>
           <Icon name="plus" size={14} />Add rule
         </Button>}>
         {media.exceptions.length === 0 ? (
-          <p className="text-sm text-muted">No exceptions. For example, add one so anime keeps its original Japanese audio.</p>
+          <p className="text-sm text-muted">No exceptions. For example, add one so anime comes in VOSTFR.</p>
         ) : (
           <ol className="space-y-2">
             {media.exceptions.map((rule, i) => (
@@ -75,12 +75,12 @@ export function MediaSettings() {
                 <Select value={rule.originalLanguage ?? ""} aria-label="Original language" className="w-40"
                   onChange={(e) => setRule(i, { ...rule, originalLanguage: e.target.value || null })}>
                   <option value="">any original language</option>
-                  {realLanguages.map((l) => <option key={l.id} value={l.name}>{l.name}</option>)}
+                  {languages.map((l) => <option key={l} value={l}>{l}</option>)}
                 </Select>
                 <span className="text-muted">want</span>
-                <Select value={rule.language} aria-label="Wanted language" className="w-40"
-                  onChange={(e) => setRule(i, { ...rule, language: e.target.value })}>
-                  {languages.map((l) => <option key={l.id} value={l.name}>{languageLabel(l.name)}</option>)}
+                <Select value={rule.version} aria-label="Wanted version" className="w-48"
+                  onChange={(e) => setRule(i, { ...rule, version: e.target.value })}>
+                  {versions.map((v) => <option key={v} value={v}>{versionLabel(v)}</option>)}
                 </Select>
                 <span className="ml-auto flex gap-0.5">
                   <Button type="button" variant="ghost" size="sm" disabled={i === 0} onClick={() => moveRule(i, -1)} aria-label={`Move rule ${i + 1} up`}><Icon name="up" size={14} /></Button>
@@ -96,7 +96,7 @@ export function MediaSettings() {
         )}
       </Section>
 
-      <Section title="Category defaults" description="Used when you add a title without choosing a profile or language.">
+      <Section title="Category defaults" description="Used when you add a title without choosing a profile or version, and for the subtitles of every title that has none of its own.">
         <div className="grid gap-4 md:grid-cols-3">
           {categories.map(({ key, label }) => (
             <div key={key} className="space-y-3 rounded-xl border border-line bg-background/40 p-4">
@@ -106,12 +106,14 @@ export function MediaSettings() {
                   {options.profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </Select>
               </Field>
-              <Field label="Language">
-                <Select value={media[key].language ?? ""} onChange={(e) => setMedia({ ...media, [key]: { ...media[key], language: e.target.value || null } })}>
-                  <option value="">Default ({languageLabel(media.defaultLanguage)})</option>
-                  {languages.map((l) => <option key={l.id} value={l.name}>{languageLabel(l.name)}</option>)}
+              <Field label="Version">
+                <Select value={media[key].version ?? ""} onChange={(e) => setMedia({ ...media, [key]: { ...media[key], version: e.target.value || null } })}>
+                  <option value="">Default ({versionLabel(media.defaultVersion)})</option>
+                  {versions.map((v) => <option key={v} value={v}>{versionLabel(v)}</option>)}
                 </Select>
               </Field>
+              <PickList label="Subtitles" values={media[key].subtitles} choices={languages} empty="No subtitles wanted"
+                onChange={(subtitles) => setMedia({ ...media, [key]: { ...media[key], subtitles } })} hint="Most wanted first." />
             </div>
           ))}
         </div>

@@ -7,12 +7,14 @@ import type { IconName } from "@/components/icons";
 import { Account, Folders, Indexers, Users } from "@/components/settings/General";
 import { MediaSettings } from "@/components/settings/MediaSettings";
 import { Profiles } from "@/components/settings/Profiles";
+import { SubtitleSettings } from "@/components/settings/SubtitleSettings";
 import { PageHeader } from "@/components/ui";
 
-type Tab = "media" | "profiles" | "folders" | "indexers" | "users" | "account";
+type Tab = "media" | "subtitles" | "profiles" | "folders" | "indexers" | "users" | "account";
 
 const tabs: readonly { value: Tab; label: string; icon: IconName; admin: boolean }[] = [
   { value: "media", label: "Media management", icon: "languages", admin: true },
+  { value: "subtitles", label: "Subtitles", icon: "list", admin: true },
   { value: "profiles", label: "Quality profiles", icon: "sliders", admin: true },
   { value: "folders", label: "Folders", icon: "folder", admin: true },
   { value: "indexers", label: "Indexers", icon: "globe", admin: false },
@@ -56,6 +58,7 @@ export default function SettingsPage() {
         </nav>
         <div key={tab} className="min-w-0 animate-fade">
           {tab === "media" && <MediaSettings />}
+          {tab === "subtitles" && <SubtitleSettings />}
           {tab === "profiles" && <Profiles />}
           {tab === "folders" && <Folders />}
           {tab === "indexers" && <Indexers />}

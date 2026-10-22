@@ -321,6 +321,9 @@ namespace Modularr.Core.Persistence.Migrations
                     b.Property<long>("Size")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("SubtitlesSearched")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("MovieId");
@@ -355,9 +358,6 @@ namespace Modularr.Core.Persistence.Migrations
                     b.Property<string>("ImdbId")
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("Language")
-                        .HasColumnType("INTEGER");
-
                     b.Property<bool>("Monitored")
                         .HasColumnType("INTEGER");
 
@@ -383,12 +383,18 @@ namespace Modularr.Core.Persistence.Migrations
                     b.Property<int>("Runtime")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Subtitles")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("TmdbId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Version")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Year")
                         .HasColumnType("INTEGER");
@@ -422,9 +428,6 @@ namespace Modularr.Core.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("Language")
-                        .HasColumnType("INTEGER");
-
                     b.Property<bool>("Monitored")
                         .HasColumnType("INTEGER");
 
@@ -457,12 +460,18 @@ namespace Modularr.Core.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Subtitles")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("TvdbId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Version")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Year")
                         .HasColumnType("INTEGER");
