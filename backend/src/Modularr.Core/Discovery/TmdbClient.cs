@@ -18,7 +18,21 @@ public sealed class TmdbClient(HttpClient httpClient, IOptionsMonitor<ModularrOp
     // Rating sorts ignore titles too few people rated.
     private const int MinVotesForRating = 200;
 
-    public bool Enabled => !string.IsNullOrWhiteSpace(options.CurrentValue.Metadata.TmdbApiKey);
+    public bool Enabled => options.CurrentValue.Metadata.EffectiveTmdbApiKey is not null;
+
+    // Null when TMDB accepts the effective key, else why not.
+    public async Task<string?> TestAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await GetGenresAsync(cancellationToken).ConfigureAwait(false);
+            return null;
+        }
+        catch (Exception ex) when (ex is MetadataSourceException or InvalidOperationException)
+        {
+            return ex.Message;
+        }
+    }
 
     // TMDB genre id -> name.
     public async Task<IReadOnlyDictionary<int, string>> GetGenresAsync(CancellationToken cancellationToken) =>
@@ -102,7 +116,7 @@ public sealed class TmdbClient(HttpClient httpClient, IOptionsMonitor<ModularrOp
     private async Task<T> GetAsync<T>(string relative, CancellationToken cancellationToken)
         where T : class
     {
-        string key = options.CurrentValue.Metadata.TmdbApiKey?.Trim() is { Length: > 0 } set ? set : throw new InvalidOperationException("No TMDB key is set.");
+        string key = options.CurrentValue.Metadata.EffectiveTmdbApiKey ?? throw new InvalidOperationException("No TMDB key is set.");
         bool bearer = key.Contains('.', StringComparison.Ordinal);
         string url = ApiUrl + relative + (bearer ? "" : "&api_key=" + Uri.EscapeDataString(key));
         try

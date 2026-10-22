@@ -207,12 +207,17 @@ public static class ApiEndpoints
             await settings.SaveImportModeAsync(request.ImportMode, ct);
             return new { options.CurrentValue.PostProcessing.ImportMode };
         }).RequireAuthorization(AuthEndpoints.AdminPolicy);
-        api.MapGet("/settings/metadata", (IOptionsMonitor<ModularrOptions> options) => new { options.CurrentValue.Metadata.TmdbApiKey })
+        api.MapGet("/settings/metadata", (IOptionsMonitor<ModularrOptions> options) => MetadataSettings(options.CurrentValue.Metadata))
             .RequireAuthorization(AuthEndpoints.AdminPolicy);
         api.MapPut("/settings/metadata", async (MetadataRequest request, SettingsFile settings, IOptionsMonitor<ModularrOptions> options, CancellationToken ct) =>
         {
             await settings.SaveTmdbApiKeyAsync(request.TmdbApiKey, ct);
-            return new { options.CurrentValue.Metadata.TmdbApiKey };
+            return MetadataSettings(options.CurrentValue.Metadata);
+        }).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapPost("/settings/metadata/test", async (TmdbClient tmdb, CancellationToken ct) =>
+        {
+            string? error = await tmdb.TestAsync(ct);
+            return new { ok = error is null, error };
         }).RequireAuthorization(AuthEndpoints.AdminPolicy);
         api.MapGet("/filesystem", (string? path) => DirectoryBrowser.Browse(path)).RequireAuthorization(AuthEndpoints.AdminPolicy);
         return api;
@@ -303,6 +308,14 @@ public static class ApiEndpoints
         };
 
     private static bool IsAdmin(HttpContext context) => context.User.IsInRole(nameof(UserRole.Admin));
+
+    // The settings key is shown to the admin who typed it; the effective key (possibly the environment's) only masked.
+    private static object MetadataSettings(MetadataOptions metadata) => new
+    {
+        tmdbApiKey = metadata.TmdbApiKey,
+        source = metadata.TmdbKeySource,
+        effective = metadata.EffectiveTmdbApiKey is string key ? new string('•', 8) + key[^Math.Min(4, key.Length)..] : null,
+    };
 
     private static async Task<object> MovieAsync(int id, LibraryService library, ItemDtos dtos, CancellationToken ct)
     {

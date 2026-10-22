@@ -146,6 +146,7 @@ public static class ModularrServiceCollectionExtensions
         options.Torrents = options.Torrents with { StateDirectory = ResolvePath(options.Torrents.StateDirectory, configDirectory) };
         options.Indexers = options.Indexers with { DefinitionsDirectory = ResolvePath(options.Indexers.DefinitionsDirectory, configDirectory) };
         options.Database = options.Database with { Path = ResolvePath(options.Database.Path, configDirectory) };
+        options.Metadata = options.Metadata with { EnvironmentTmdbApiKey = Environment.GetEnvironmentVariable(MetadataOptions.TmdbApiKeyVariable) };
 
         // The binder appends configured items to a non-empty default set (case-sensitively); a configured list must replace it.
         IConfigurationSection postProcessing = file.GetSection(nameof(ModularrOptions.PostProcessing));

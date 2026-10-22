@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { api, errorMessage } from "@/lib/api";
-import type { ImportMode, IndexerList, Paths, Role, User } from "@/lib/api";
+import type { ImportMode, IndexerList, MetadataSettings, Paths, Role, User } from "@/lib/api";
 import { FolderPicker } from "@/components/FolderPicker";
 import { Icon } from "@/components/icons";
 import { Alert, Badge, Button, Empty, Field, Input, SaveBar, Section, Select, Skeleton, Segmented, useAction } from "@/components/ui";
@@ -32,16 +32,29 @@ function Saved({ at }: { at: number }) {
   return at > now ? <span role="status" className="flex animate-fade items-center gap-1 text-[13px] text-ok"><Icon name="check" size={15} />Saved</span> : null;
 }
 
+const keySources: Record<MetadataSettings["source"], { label: string; tone: "ok" | "live" | "neutral" }> = {
+  Custom: { label: "Custom key", tone: "ok" },
+  Environment: { label: "From MODULARR_TMDB_API_KEY", tone: "live" },
+  None: { label: "No key: limited Explore", tone: "neutral" },
+};
+
 // Each setting saves on its own: the mode as it is picked, the key when the field loses focus.
 export function General() {
   const [mode, setMode] = useState<ImportMode | null>(null);
+  const [metadata, setMetadata] = useState<MetadataSettings | null>(null);
   const [key, setKey] = useState<string | null>(null);
   const [saved, setSaved] = useState({ mode: 0, key: 0 });
+  const [test, setTest] = useState<{ busy: boolean; result: string | null; ok: boolean }>({ busy: false, result: null, ok: false });
   const [error, setError] = useState<string | null>(null);
+
+  const showMetadata = (m: MetadataSettings) => {
+    setMetadata(m);
+    setKey(m.tmdbApiKey ?? "");
+  };
 
   useEffect(() => {
     api.importMode().then((r) => setMode(r.importMode)).catch((e: unknown) => setError(errorMessage(e)));
-    api.metadata().then((r) => setKey(r.tmdbApiKey ?? "")).catch((e: unknown) => setError(errorMessage(e)));
+    api.metadata().then(showMetadata).catch((e: unknown) => setError(errorMessage(e)));
   }, []);
 
   async function saveMode(next: ImportMode) {
@@ -57,13 +70,25 @@ export function General() {
     }
   }
 
-  async function saveKey() {
+  async function saveKey(value: string | null) {
+    if ((value?.trim() || null) === (metadata?.tmdbApiKey ?? null)) return;
     try {
-      setKey((await api.saveMetadata(key?.trim() || null)).tmdbApiKey ?? "");
+      showMetadata(await api.saveMetadata(value?.trim() || null));
       setSaved((s) => ({ ...s, key: Date.now() }));
+      setTest({ busy: false, result: null, ok: false });
       setError(null);
     } catch (e) {
       setError(errorMessage(e));
+    }
+  }
+
+  async function testKey() {
+    setTest({ busy: true, result: null, ok: false });
+    try {
+      const r = await api.testMetadata();
+      setTest({ busy: false, result: r.ok ? "TMDB accepts the key." : r.error, ok: r.ok });
+    } catch (e) {
+      setTest({ busy: false, result: errorMessage(e), ok: false });
     }
   }
 
@@ -79,10 +104,23 @@ export function General() {
         )}
       </Section>
       <Section title="TMDB" description="A TMDB key opens the full movie catalogue in Explore, with every filter." actions={<Saved at={saved.key} />}>
-        {key === null ? <Skeleton className="h-20" /> : (
-          <Field label="API key or read access token" hint="Free from themoviedb.org, under Settings, API. Leave it empty to use the short built-in lists.">
-            <Input type="password" value={key} onChange={(e) => setKey(e.target.value)} onBlur={() => void saveKey()} autoComplete="off" spellCheck={false} className="font-mono text-xs" />
-          </Field>
+        {!metadata || key === null ? <Skeleton className="h-20" /> : (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge tone={keySources[metadata.source].tone}>{keySources[metadata.source].label}</Badge>
+              {metadata.effective && <span className="font-mono text-xs text-ink-2" aria-label="Key in use, masked">{metadata.effective}</span>}
+              <span className="flex-1" />
+              <Button size="sm" onClick={() => void testKey()} loading={test.busy} disabled={metadata.source === "None"}>Test</Button>
+              {metadata.source === "Custom" && (
+                <Button size="sm" variant="ghost" onClick={() => void saveKey(null)}>Use the environment key</Button>
+              )}
+            </div>
+            {test.result && <p role="status" className={`text-[13px] ${test.ok ? "text-ok" : "text-warn"}`}>{test.result}</p>}
+            <Field label="Custom API key or read access token" hint="Overrides MODULARR_TMDB_API_KEY. Free from themoviedb.org, under Settings, API. Empty falls back to the environment key, then to the short built-in lists.">
+              <Input type="password" value={key} onChange={(e) => setKey(e.target.value)} onBlur={() => void saveKey(key)} autoComplete="off" spellCheck={false} className="font-mono text-xs" />
+            </Field>
+            <p className="text-xs text-ink-3">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+          </div>
         )}
       </Section>
     </div>

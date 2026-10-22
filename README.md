@@ -16,8 +16,12 @@ docker run -d --name modularr --restart unless-stopped \
   -p 8080:8080 -p 6881:6881/tcp -p 6881:6881/udp \
   -v modularr-config:/config \
   -v "$PWD/media:/media" \
+  --env-file .env \
   modularr:dev
 ```
+
+`.env` (git- and docker-ignored) holds secrets such as `MODULARR_TMDB_API_KEY`, the default TMDB key for Explore; a key saved
+in Settings → General overrides it.
 
 `/config` holds the database, keys and `modularr.json`. `media/` (git-ignored) holds `downloads`, `movies`, `series` and `anime`;
 `modularr.json` points `Paths` at `/media/...`. One mount for all four keeps imports on the same filesystem.

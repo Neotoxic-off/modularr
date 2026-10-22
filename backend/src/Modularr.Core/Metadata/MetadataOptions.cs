@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace Modularr.Core.Metadata;
 
@@ -31,9 +32,23 @@ public sealed record MetadataOptions
     [Url]
     public string AnimeMappingUrl { get; init; } = "https://raw.githubusercontent.com/Fribb/anime-lists/master/anime-list-mini.json";
 
+    public const string TmdbApiKeyVariable = "MODULARR_TMDB_API_KEY";
+
     // A TMDB v3 API key or v4 read access token: movie exploration with real filters. Without it, the keyless lists.
     public string? TmdbApiKey { get; init; }
 
+    // Set from TmdbApiKeyVariable at startup, never from modularr.json; the settings key overrides it.
+    [JsonIgnore]
+    public string? EnvironmentTmdbApiKey { get; init; }
+
+    [JsonIgnore]
+    public string? EffectiveTmdbApiKey => NonBlank(TmdbApiKey) ?? NonBlank(EnvironmentTmdbApiKey);
+
+    [JsonIgnore]
+    public string TmdbKeySource => NonBlank(TmdbApiKey) is not null ? "Custom" : NonBlank(EnvironmentTmdbApiKey) is not null ? "Environment" : "None";
+
     // What a non-admin may see.
-    public MetadataOptions Redacted() => this with { TmdbApiKey = null };
+    public MetadataOptions Redacted() => this with { TmdbApiKey = null, EnvironmentTmdbApiKey = null };
+
+    private static string? NonBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

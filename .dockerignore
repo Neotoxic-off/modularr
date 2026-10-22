@@ -5,3 +5,5 @@
 **/obj
 .git
 /media
+.env
+*.env

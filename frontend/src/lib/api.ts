@@ -1,6 +1,13 @@
 // Typed client for the ASP.NET API (same origin in production, rewritten to the container in dev).
 
 export type Kind = "movie" | "series" | "anime";
+
+// tmdbApiKey is the key saved in settings; effective is the key in use (it may come from MODULARR_TMDB_API_KEY), masked.
+export interface MetadataSettings {
+  tmdbApiKey: string | null;
+  source: "Custom" | "Environment" | "None";
+  effective: string | null;
+}
 export type Role = "Admin" | "User";
 export type Category = "Movie" | "Series" | "Anime";
 
@@ -540,8 +547,9 @@ export const api = {
   savePaths: (paths: Paths) => send<Paths>("PUT", "/settings/paths", paths),
   importMode: () => request<{ importMode: ImportMode }>("/settings/import"),
   saveImportMode: (importMode: ImportMode) => send<{ importMode: ImportMode }>("PUT", "/settings/import", { importMode }),
-  metadata: () => request<{ tmdbApiKey: string | null }>("/settings/metadata"),
-  saveMetadata: (tmdbApiKey: string | null) => send<{ tmdbApiKey: string | null }>("PUT", "/settings/metadata", { tmdbApiKey }),
+  metadata: () => request<MetadataSettings>("/settings/metadata"),
+  saveMetadata: (tmdbApiKey: string | null) => send<MetadataSettings>("PUT", "/settings/metadata", { tmdbApiKey }),
+  testMetadata: () => send<{ ok: boolean; error: string | null }>("POST", "/settings/metadata/test"),
   folders: (path: string | null) => request<Folder>(`/filesystem${path ? `?path=${encodeURIComponent(path)}` : ""}`),
 };
 
