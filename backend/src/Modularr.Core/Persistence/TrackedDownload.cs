@@ -26,4 +26,5 @@ public sealed class TrackedDownload
     public required string ReleaseTitle { get; set; }
     public string? Indexer { get; set; }
     public TrackedDownloadState State { get; set; }
+    public DateTime Added { get; set; }
 }

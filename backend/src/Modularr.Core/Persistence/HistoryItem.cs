@@ -3,13 +3,14 @@ using Modularr.Core.Qualities;
 
 namespace Modularr.Core.Persistence;
 
-// Values follow Sonarr EpisodeHistoryEventType (Grabbed, DownloadFolderImported, DownloadFailed, EpisodeFileDeleted).
+// Values follow Sonarr EpisodeHistoryEventType (Grabbed, DownloadFolderImported, DownloadFailed, EpisodeFileDeleted, DownloadIgnored).
 public enum HistoryEventType
 {
     Grabbed = 1,
     Imported = 3,
     Failed = 4,
     Deleted = 5,
+    Ignored = 7,
 }
 
 public sealed class HistoryItem
