@@ -1,0 +1,32 @@
+namespace Modularr.Core.Decisions;
+
+// The Sonarr/Radarr DownloadRejectionReason values the ported specifications produce.
+public enum DownloadRejectionReason
+{
+    QualityNotWanted,
+    QualityUpgradesDisabled,
+    WantedLanguage,
+    UnknownRuntime,
+    BelowMinimumSize,
+    AboveMaximumSize,
+    MaximumSizeExceeded,
+    MinimumAge,
+    MinimumSeeders,
+    Sample,
+    Raw,
+    Blocklisted,
+    RepackDisabled,
+    RepackUnknownReleaseGroup,
+    RepackReleaseGroupDoesNotMatch,
+    UnknownReleaseGroup,
+    ReleaseGroupDoesNotMatch,
+    FullSeasonNotAired,
+    MultiSeason,
+    SplitEpisode,
+    DiskHigherPreference,
+    DiskHigherRevision,
+    DiskCutoffMet,
+    DiskCustomFormatScore,
+    DiskUpgradesNotAllowed,
+    DiskNotUpgrade,
+}
