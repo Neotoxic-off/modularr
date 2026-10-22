@@ -61,6 +61,8 @@ public static class MediaFileExtensions
         [".m2ts"] = Quality.Bluray720p,
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
+    public static bool IsMediaFile(string extension) => QualityByExtension.ContainsKey(extension);
+
     public static Quality GetQualityForExtension(string extension) =>
         QualityByExtension.GetValueOrDefault(extension, Quality.Unknown);
 }
