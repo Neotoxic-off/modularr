@@ -7,4 +7,7 @@
     <ProjectReference Include="..\..\src\Modularr.Core\Modularr.Core.csproj" />
     <Using Include="Xunit" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="PostProcessing\Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
