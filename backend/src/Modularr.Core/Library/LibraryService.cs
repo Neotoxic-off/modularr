@@ -150,13 +150,17 @@ public sealed class LibraryService(
         return movie;
     }
 
-    // Items added before the MediaPreferences migration have no original language, backdrop, rating or genres: fetch them once.
-    // A source that is down or no longer knows an item leaves it for the next start. Returns the number of items filled.
-    // shortcut: an item whose source has no original language is fetched again on every start, store a refreshed flag if libraries grow large.
+    // Items added before the MediaPreferences migration have no original language, backdrop, rating or genres, and movies added
+    // before CalendarDates no release days: fetch them once. A source that is down or no longer knows an item leaves it for the
+    // next start. Returns the number of items filled.
+    // shortcut: an item whose source has no original language (or a movie with no release day) is fetched again on every start,
+    // store a refreshed flag if libraries grow large.
     public async Task<int> BackfillMetadataAsync(CancellationToken cancellationToken)
     {
         int filled = 0;
-        foreach (Movie movie in await db.Movies.Where(m => m.OriginalLanguage == Language.Unknown).ToListAsync(cancellationToken).ConfigureAwait(false))
+        foreach (Movie movie in await db.Movies
+            .Where(m => m.OriginalLanguage == Language.Unknown || (m.InCinemas == null && m.DigitalRelease == null && m.PhysicalRelease == null))
+            .ToListAsync(cancellationToken).ConfigureAwait(false))
         {
             if (await FetchAsync(() => movieMetadata.GetMovieAsync(movie.TmdbId, cancellationToken), cancellationToken).ConfigureAwait(false) is MovieInfo info)
             {
@@ -396,7 +400,12 @@ public sealed class LibraryService(
         movie.Rating = info.Ratings.Rating;
         movie.Genres = info.Genres;
         movie.Certification = info.Certification;
+        movie.InCinemas = DayOf(info.InCinemas);
+        movie.DigitalRelease = DayOf(info.DigitalRelease);
+        movie.PhysicalRelease = DayOf(info.PhysicalRelease);
     }
+
+    private static DateOnly? DayOf(DateTime? time) => time is DateTime t ? DateOnly.FromDateTime(t) : null;
 
     private static void ApplyMetadata(Series series, SeriesInfo info)
     {

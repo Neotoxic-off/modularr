@@ -129,6 +129,8 @@ public static class ApiEndpoints
                 summary.Recent,
             };
         });
+        api.MapGet("/calendar", (DateOnly start, DateOnly end, CalendarService calendar, CancellationToken ct) => calendar.GetAsync(start, end, ct));
+        api.MapGet("/calendar/upcoming", (CalendarService calendar, CancellationToken ct) => calendar.UpcomingAsync(DateOnly.FromDateTime(DateTime.Now), ct));
         api.MapPost("/series/{id:int}/rescan", (int id, DiskScanService scans, CancellationToken ct) => scans.ScanSeriesAsync(id, record: true, ct));
         api.MapPost("/movies/{id:int}/rescan", (int id, DiskScanService scans, CancellationToken ct) => scans.ScanMovieAsync(id, record: true, ct));
         api.MapPost("/library/rescan", (DiskScanService scans, CancellationToken ct) => scans.ScanAllAsync(record: true, ct)).RequireAuthorization(AuthEndpoints.AdminPolicy);

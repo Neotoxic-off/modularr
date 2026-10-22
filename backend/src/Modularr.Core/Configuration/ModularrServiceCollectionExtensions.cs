@@ -110,6 +110,7 @@ public static class ModularrServiceCollectionExtensions
         services.AddScoped<LibraryService>();
         services.AddScoped<DiscoveryService>();
         services.AddScoped<DashboardService>();
+        services.AddScoped<CalendarService>();
         services.AddScoped<ReleaseSearch>();
         services.AddScoped<DownloadService>();
         services.AddScoped<DownloadImporter>();

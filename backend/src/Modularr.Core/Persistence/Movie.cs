@@ -32,4 +32,9 @@ public sealed class Movie
     public decimal? Rating { get; set; }
     public IReadOnlyList<string> Genres { get; set; } = [];
     public string? Certification { get; set; }
+
+    // Release days shown on the calendar, null when the source has none.
+    public DateOnly? InCinemas { get; set; }
+    public DateOnly? DigitalRelease { get; set; }
+    public DateOnly? PhysicalRelease { get; set; }
 }

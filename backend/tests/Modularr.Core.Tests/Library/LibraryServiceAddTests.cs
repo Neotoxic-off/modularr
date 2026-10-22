@@ -112,6 +112,23 @@ public sealed class LibraryServiceAddTests : IDisposable
     }
 
     [Fact]
+    public async Task BackfillFillsTheReleaseDaysOfMoviesAddedBeforeTheCalendar()
+    {
+        // As the CalendarDates migration leaves them: metadata known, no release day.
+        Movie movie = _database.Insert(new Movie { TmdbId = 70981, Title = "Prometheus", Path = "/movies/p", QualityProfileId = 1, OriginalLanguage = Language.English })[0];
+        using (ModularrDbContext db = _database.NewContext())
+        {
+            Assert.Equal(1, await Library(db).BackfillMetadataAsync(TestContext.Current.CancellationToken));
+        }
+
+        using ModularrDbContext check = _database.NewContext();
+        Movie filled = check.Movies.Single(m => m.Id == movie.Id);
+        Assert.Equal(
+            (new DateOnly(2012, 5, 30), new DateOnly(2012, 6, 7), new DateOnly(2012, 9, 25)),
+            (filled.InCinemas, filled.DigitalRelease, filled.PhysicalRelease));
+    }
+
+    [Fact]
     public async Task UnknownIsNotAVersion()
     {
         Movie movie = _database.AddMovie(1);

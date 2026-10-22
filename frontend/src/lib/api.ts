@@ -394,6 +394,12 @@ export interface AiringEpisode {
   monitored: boolean;
 }
 
+// One event per episode air day and per movie release day (cinema, digital, physical).
+export type CalendarEvent = { date: string; title: string; poster: string | null; hasFile: boolean; monitored: boolean } & (
+  | { type: "episode"; seriesId: number; season: number; episode: number; episodeTitle: string | null; kind: "series" | "anime" }
+  | { type: "movie"; movieId: number; release: "cinema" | "digital" | "physical" }
+);
+
 // Storage sizes cover the whole disks holding the library and downloads; libraryBytes is the imported files only.
 export interface Dashboard {
   counts: { movies: number; series: number; anime: number; episodes: number; episodesWithFile: number; missing: number };
@@ -486,6 +492,10 @@ export const api = {
   explore: (kind: Kind, filter: ExploreQuery) => request<ExplorePage>(`/explore/${kind === "movie" ? "movies" : kind}?${query(filter)}`),
   exploreGenres: (kind: Kind) => request<string[]>(`/explore/${kind === "movie" ? "movies" : kind}/genres`),
   dashboard: () => request<Dashboard>("/dashboard"),
+  // At most 62 days, both ends included.
+  calendar: (start: string, end: string) => request<CalendarEvent[]>(`/calendar?${query({ start, end })}`),
+  // The next 10 events within 6 months.
+  upcoming: () => request<CalendarEvent[]>("/calendar/upcoming"),
 
   movies: () => request<Movie[]>("/movies"),
   movie: (id: number) => request<MovieDetail>(`/movies/${id}`),

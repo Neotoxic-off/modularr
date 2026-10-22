@@ -353,11 +353,17 @@ namespace Modularr.Core.Persistence.Migrations
                     b.Property<string>("Certification")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateOnly?>("DigitalRelease")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Genres")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ImdbId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("InCinemas")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("Monitored")
@@ -371,6 +377,9 @@ namespace Modularr.Core.Persistence.Migrations
 
                     b.Property<string>("Path")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("PhysicalRelease")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Poster")
