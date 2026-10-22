@@ -1,8 +1,10 @@
 using System.Collections.Frozen;
+using System.Net;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Downloads.Torrents;
+using Modularr.Core.Indexers.Cardigann;
 using Modularr.Core.PostProcessing;
 
 namespace Modularr.Core.Configuration;
@@ -27,6 +29,10 @@ public static class ModularrServiceCollectionExtensions
 
         services.AddSingleton<TorrentEngineHost>();
         services.AddHostedService(provider => provider.GetRequiredService<TorrentEngineHost>());
+
+        // Redirects are handled per search path (Cardigann "followredirect"), so the handler must not follow them itself.
+        services.AddHttpClient<CardigannSearcher>(client => client.DefaultRequestHeaders.UserAgent.ParseAdd("Modularr/1.0"))
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false, AutomaticDecompression = DecompressionMethods.All });
 
         return services;
     }
