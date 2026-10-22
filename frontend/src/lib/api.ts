@@ -289,6 +289,37 @@ export interface ScanResult {
   removed: number;
 }
 
+export type LibraryRoot = "movies" | "series" | "anime";
+export type MatchConfidence = "None" | "Low" | "Medium" | "High";
+
+// A library folder no title owns yet, with the best metadata match for its name.
+export interface ImportProposal {
+  folder: string;
+  parsed: { title: string; year: number | null; idSource: string | null; id: string | null; lookupTerm: string };
+  match: DiscoveryItem | null;
+  confidence: MatchConfidence;
+}
+
+// Total counts every unowned folder; items is the first page of them.
+export interface ImportProposals {
+  total: number;
+  items: ImportProposal[];
+}
+
+export interface ImportItem {
+  folder: string;
+  tmdbId?: number;
+  tvdbId?: number;
+}
+
+export interface ImportOutcome {
+  folder: string;
+  seriesId: number | null;
+  movieId: number | null;
+  files: number;
+  error: string | null;
+}
+
 export type ActivityKind =
   | "Added" | "SearchStarted" | "SearchCompleted" | "NothingFound" | "SearchFailed" | "Grabbed" | "DownloadStarted"
   | "DownloadStalled" | "DownloadFailed" | "Blocklisted" | "Regrabbed" | "Imported" | "ImportFailed" | "Removed"
@@ -384,6 +415,9 @@ export const api = {
   autoSearch: (kind: Kind, id: number, season?: number) =>
     send<void>("POST", `${libraryPath(kind)}/${id}/search${season === undefined ? "" : `?season=${season}`}`),
   rescan: (kind: Kind, id: number) => send<ScanResult>("POST", `${libraryPath(kind)}/${id}/rescan`),
+  rescanLibrary: () => send<ScanResult>("POST", "/library/rescan"),
+  importProposals: (root: LibraryRoot) => request<ImportProposals>(`/library/import?root=${root}`),
+  importFolders: (items: ImportItem[]) => send<ImportOutcome[]>("POST", "/library/import", { items }),
   releases: (item: LibraryItem, season?: number) =>
     request<SearchResult>(isSeries(item)
       ? `/search?type=series&tvdbId=${item.tvdbId}${season === undefined ? "" : `&season=${season}`}`

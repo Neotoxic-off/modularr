@@ -15,7 +15,7 @@ import { ToastProvider } from "@/components/Toasts";
 import { Logo } from "@/components/ui";
 
 type Badge = "downloads" | "unread";
-type NavItem = { label: string; icon: IconName; badge?: Badge } & ({ href: string } | { action: "notifications" });
+type NavItem = { label: string; icon: IconName; badge?: Badge; admin?: boolean } & ({ href: string } | { action: "notifications" });
 
 const sections: readonly { label: string | null; items: readonly NavItem[] }[] = [
   { label: null, items: [{ href: "/", label: "Discover", icon: "compass" }] },
@@ -28,11 +28,14 @@ const sections: readonly { label: string | null; items: readonly NavItem[] }[] =
     { href: "/downloads/", label: "Downloads", icon: "download", badge: "downloads" },
     { action: "notifications", label: "Notifications", icon: "bell", badge: "unread" },
   ] },
-  { label: "System", items: [{ href: "/settings/", label: "Settings", icon: "settings" }] },
+  { label: "System", items: [
+    { href: "/import/", label: "Library import", icon: "folder", admin: true },
+    { href: "/settings/", label: "Settings", icon: "settings" },
+  ] },
 ];
 
-// Settings moves to the account menu in the header on small screens.
-const mobileLinks = sections.flatMap((s) => s.items).filter((i): i is NavItem & { href: string } => "href" in i && i.href !== "/settings/");
+// System pages move to the account menu in the header on small screens.
+const mobileLinks = sections.filter((s) => s.label !== "System").flatMap((s) => s.items).filter((i): i is NavItem & { href: string } => "href" in i);
 
 const COLLAPSED_KEY = "modularr.sidebar.collapsed";
 
@@ -50,6 +53,7 @@ export function Shell({ children }: { children: ReactNode }) {
 
 function Frame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { user } = useSession();
   const { unread, activeDownloads } = useActivity();
   const [searching, setSearching] = useState(false);
   const [notifying, setNotifying] = useState(false);
@@ -103,7 +107,7 @@ function Frame({ children }: { children: ReactNode }) {
                   <span aria-hidden="true" className="mx-3 mb-2 hidden h-px bg-line group-data-collapsed/side:block" />
                 </>
               )}
-              {section.items.map((item) => (
+              {section.items.filter((item) => !item.admin || user.role === "Admin").map((item) => (
                 <SideItem key={item.label} item={item} count={item.badge && counts[item.badge]}
                   current={"href" in item ? current(item.href) : undefined} onAction={() => setNotifying(true)} />
               ))}
@@ -243,6 +247,11 @@ function UserMenu({ placement, compact }: { placement: "up" | "down"; compact: b
           {placement === "down" && (
             <Link role="menuitem" href="/settings/" onClick={() => setOpen(false)} className={item}>
               <Icon name="settings" size={16} className="text-muted" />Settings
+            </Link>
+          )}
+          {placement === "down" && user.role === "Admin" && (
+            <Link role="menuitem" href="/import/" onClick={() => setOpen(false)} className={item}>
+              <Icon name="folder" size={16} className="text-muted" />Library import
             </Link>
           )}
           <Link role="menuitem" href="/settings/#account" onClick={() => setOpen(false)} className={item}>

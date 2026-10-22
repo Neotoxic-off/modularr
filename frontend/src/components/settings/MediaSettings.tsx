@@ -6,9 +6,9 @@ import { api } from "@/lib/api";
 import type { Category, MediaSettings as Media, VersionRule } from "@/lib/api";
 import { realLanguages, reloadOptions, useOptions, versionLabel } from "@/lib/options";
 import { Icon } from "@/components/icons";
-import { Button, Field, PickList, SaveBar, Section, Select, Skeleton, useAction } from "@/components/ui";
+import { Button, Field, SaveBar, Section, Select, Skeleton, useAction } from "@/components/ui";
 
-const categories: readonly { key: "movies" | "series" | "anime"; label: string }[] = [
+export const categories: readonly { key: "movies" | "series" | "anime"; label: string }[] = [
   { key: "movies", label: "Movies" },
   { key: "series", label: "Series" },
   { key: "anime", label: "Anime" },
@@ -25,7 +25,7 @@ export function MediaSettings() {
   if (!options || !media) return <Skeleton className="h-96 rounded-2xl" />;
 
   const versions = options.versions;
-  // Conditions match an item's real original language, subtitles a real language: Any and Original make no sense there.
+  // Conditions match an item's real original language: Any and Original make no sense there.
   const languages = realLanguages(options).map((l) => l.name);
 
   const save = (event: FormEvent) => {
@@ -96,7 +96,7 @@ export function MediaSettings() {
         )}
       </Section>
 
-      <Section title="Category defaults" description="Used when you add a title without choosing a profile or version, and for the subtitles of every title that has none of its own.">
+      <Section title="Category defaults" description="Used when you add a title without choosing a profile or version. Wanted subtitles are set in Subtitles.">
         <div className="grid gap-4 md:grid-cols-3">
           {categories.map(({ key, label }) => (
             <div key={key} className="space-y-3 rounded-xl border border-line bg-background/40 p-4">
@@ -108,12 +108,10 @@ export function MediaSettings() {
               </Field>
               <Field label="Version">
                 <Select value={media[key].version ?? ""} onChange={(e) => setMedia({ ...media, [key]: { ...media[key], version: e.target.value || null } })}>
-                  <option value="">Default ({versionLabel(media.defaultVersion)})</option>
+                  <option value="">Use default ({media.defaultVersion})</option>
                   {versions.map((v) => <option key={v} value={v}>{versionLabel(v)}</option>)}
                 </Select>
               </Field>
-              <PickList label="Subtitles" values={media[key].subtitles} choices={languages} empty="No subtitles wanted"
-                onChange={(subtitles) => setMedia({ ...media, [key]: { ...media[key], subtitles } })} hint="Most wanted first." />
             </div>
           ))}
         </div>

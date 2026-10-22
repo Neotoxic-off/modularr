@@ -109,7 +109,7 @@ function AddDialog({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: 
                 </Field>
                 <Field label="Version">
                   <Select value={version} onChange={(e) => setVersion(e.target.value)}>
-                    <option value="">Default</option>
+                    <option value="">Use default ({defaults?.version ?? options.media.defaultVersion})</option>
                     {options.versions.map((v) => <option key={v} value={v}>{versionLabel(v)}</option>)}
                   </Select>
                 </Field>

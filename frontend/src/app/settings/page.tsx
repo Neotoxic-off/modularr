@@ -14,7 +14,7 @@ type Tab = "media" | "subtitles" | "profiles" | "folders" | "indexers" | "users"
 
 const tabs: readonly { value: Tab; label: string; icon: IconName; admin: boolean }[] = [
   { value: "media", label: "Media management", icon: "languages", admin: true },
-  { value: "subtitles", label: "Subtitles", icon: "list", admin: true },
+  { value: "subtitles", label: "Subtitles", icon: "subtitles", admin: true },
   { value: "profiles", label: "Quality profiles", icon: "sliders", admin: true },
   { value: "folders", label: "Folders", icon: "folder", admin: true },
   { value: "indexers", label: "Indexers", icon: "globe", admin: false },

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { api, errorMessage, formatAgo, formatRuntime, isSeries, kindOf } from "@/lib/api";
 import type { Episode, ItemPatch, Kind, LibraryItem, MovieDetail, SeriesDetail, SubtitleTarget } from "@/lib/api";
@@ -13,7 +13,7 @@ import { useSession } from "@/components/AuthGate";
 import { Icon } from "@/components/icons";
 import { PosterArt } from "@/components/Poster";
 import { ReleasesDialog } from "@/components/ReleasesDialog";
-import { SubtitlesDialog } from "@/components/SubtitlesDialog";
+import { SubtitleSummary, SubtitlesDialog } from "@/components/SubtitlesDialog";
 import { Alert, Badge, Button, Empty, Field, Modal, PickList, Rating, Select, Skeleton, Spinner, Switch } from "@/components/ui";
 
 type Detail = { item: LibraryItem; hasFile?: boolean; seasons?: SeriesDetail["seasons"]; episodes?: Episode[] };
@@ -52,6 +52,7 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
   const [searching, setSearching] = useState<number | "all" | null>(null);
   const [scanning, setScanning] = useState(false);
   const scope = isSeries(item) ? { seriesId: item.id } : { movieId: item.id };
+  const movieTarget = useMemo(() => ({ movieId: item.id }), [item.id]);
   // Searches and imports change the status and "Last search", so the title reloads as they happen.
   useTitleEvents(scope, reload);
 
@@ -168,8 +169,8 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
             </div>
             <Switch checked={item.monitored} onChange={(monitored) => patch({ monitored })} label="Monitored"
               description={item.monitored ? "New and missing releases are grabbed automatically." : "Nothing is grabbed automatically."} />
-            {!isSeries(item) && detail.hasFile && (
-              <Button className="w-full" onClick={() => setSubtitles({ target: { movieId: item.id }, title: item.title })}><Icon name="languages" size={16} />Subtitles</Button>
+            {!isSeries(item) && detail.hasFile && !subtitles && (
+              <SubtitleSummary target={movieTarget} onOpen={() => setSubtitles({ target: movieTarget, title: item.title })} />
             )}
           </div>
 
@@ -183,7 +184,7 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
                 </Field>
                 <Field label="Version" hint={item.version ? `Overrides the version rules, which would pick ${versionLabel(item.policyVersion)}.` : "Follows your version rules."}>
                   <Select value={item.version ?? ""} onChange={(e) => patch({ version: e.target.value || null })}>
-                    <option value="">Use default ({versionLabel(item.policyVersion)})</option>
+                    <option value="">Use default ({item.policyVersion})</option>
                     {options.versions.map((v) => <option key={v} value={v}>{versionLabel(v)}</option>)}
                   </Select>
                 </Field>
@@ -277,7 +278,7 @@ function Seasons({ seasons, episodes, searching, onSearch, onReleases, onSubtitl
                         <span className="hidden w-24 shrink-0 text-right text-xs text-muted tabular-nums sm:block">{e.airDate ?? "TBA"}</span>
                         {e.hasFile && (
                           <Button variant="ghost" size="sm" onClick={() => onSubtitles(e)} aria-label={`Subtitles of episode ${e.episodeNumber}`} title="Subtitles">
-                            <Icon name="languages" size={14} />
+                            <Icon name="subtitles" size={14} />
                           </Button>
                         )}
                         <span className="w-20 shrink-0 text-right">

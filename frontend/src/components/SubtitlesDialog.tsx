@@ -94,3 +94,29 @@ export function SubtitlesDialog({ target, title, onClose }: { target: SubtitleTa
     </Modal>
   );
 }
+
+// A file's subtitles at a glance: present languages, then the missing ones, and a button to open the dialog.
+export function SubtitleSummary({ target, onOpen }: { target: SubtitleTarget; onOpen: () => void }) {
+  const [status, setStatus] = useState<SubtitleStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.subtitles(target).then(setStatus).catch((e: unknown) => setError(errorMessage(e)));
+  }, [target]);
+
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm text-muted">Subtitles</span>
+        <Button size="sm" variant="ghost" onClick={onOpen}><Icon name="search" size={14} />Find</Button>
+      </div>
+      {error ? <p className="text-xs text-red-300">{error}</p> : !status ? <Skeleton className="h-6" /> : (
+        <div className="flex flex-wrap gap-1.5">
+          {status.present.map((s) => <Badge key={s.file} tone="green"><Icon name="check" size={11} />{s.language}{s.hearingImpaired && " HI"}{s.forced && " forced"}</Badge>)}
+          {status.missing.map((l) => <Badge key={l} tone="amber">{l} missing</Badge>)}
+          {status.present.length === 0 && status.missing.length === 0 && <span className="text-xs text-muted">None wanted for this title.</span>}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { api, errorMessage, isSeries, kindOf, titleHref } from "@/lib/api";
 import type { Kind, LibraryItem } from "@/lib/api";
+import { useSession } from "@/components/AuthGate";
 import { Icon } from "@/components/icons";
 import { LibraryCard, overlayTag, PosterGrid, PosterSkeleton } from "@/components/Poster";
-import { Alert, Button, Empty, Input, PageHeader, Select, Tabs } from "@/components/ui";
+import { Alert, Button, Empty, Input, PageHeader, Select, Spinner, Tabs } from "@/components/ui";
 
 type Filter = "all" | "missing" | "downloaded";
 type Sort = "title" | "added" | "year";
@@ -19,12 +20,28 @@ export function LibraryPage({ kind }: { kind: Kind }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("added");
   const [term, setTerm] = useState("");
+  const [scan, setScan] = useState<{ busy: boolean; notice: string | null }>({ busy: false, notice: null });
+  const [reload, setReload] = useState(0);
+  const { user } = useSession();
 
   useEffect(() => {
     (kind === "movie" ? api.movies() : api.series())
       .then((all) => setItems(all.filter((i) => kindOf(i) === kind)))
       .catch((e: unknown) => setError(errorMessage(e)));
-  }, [kind]);
+  }, [kind, reload]);
+
+  async function rescan() {
+    setScan({ busy: true, notice: null });
+    setError(null);
+    try {
+      const result = await api.rescanLibrary();
+      setScan({ busy: false, notice: `Scanned ${result.items} titles: ${result.added} new ${result.added === 1 ? "file" : "files"}, ${result.removed} gone from disk.` });
+      setReload((n) => n + 1);
+    } catch (e) {
+      setError(errorMessage(e));
+      setScan({ busy: false, notice: null });
+    }
+  }
 
   const complete = (item: LibraryItem): boolean | undefined =>
     isSeries(item) ? item.episodes > 0 && item.episodesWithFile >= item.episodes : item.hasFile ?? undefined;
@@ -47,7 +64,13 @@ export function LibraryPage({ kind }: { kind: Kind }) {
           <span><span className="text-foreground tabular-nums">{items.filter((i) => i.monitored).length}</span> monitored</span>
           {kind !== "movie" && <span><span className="text-foreground tabular-nums">{withFile}</span> of {episodes} episodes on disk</span>}
         </span>
-      )} />
+      )}>
+        {user.role === "Admin" && (
+          <Button onClick={rescan} disabled={scan.busy} title="Look for files added or deleted in every library folder">
+            {scan.busy ? <Spinner /> : <Icon name="refresh" size={16} />}Rescan library
+          </Button>
+        )}
+      </PageHeader>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <Tabs label="Filter" value={filter} onChange={setFilter} options={[
@@ -67,6 +90,7 @@ export function LibraryPage({ kind }: { kind: Kind }) {
       </div>
 
       {error && <div className="mb-6"><Alert>{error}</Alert></div>}
+      {scan.notice && <p role="status" className="mb-6 flex animate-fade items-center gap-2 rounded-lg bg-accent/10 px-4 py-2.5 text-sm text-accent"><Icon name="check" size={16} />{scan.notice}</p>}
 
       {!items ? (
         <PosterGrid>{Array.from({ length: 12 }, (_, i) => <PosterSkeleton key={i} />)}</PosterGrid>
@@ -86,7 +110,8 @@ export function LibraryPage({ kind }: { kind: Kind }) {
               <LibraryCard key={item.id} href={titleHref(kind, item.id)} title={item.title} year={item.year} poster={item.poster} rating={item.rating}
                 progress={isSeries(item) && item.episodes > 0 ? item.episodesWithFile / item.episodes : undefined}
                 status={!item.monitored ? <span className={`text-white/80 ${overlayTag}`}>Unmonitored</span>
-                  : done === true && !isSeries(item) ? <span className={`text-emerald-300 ${overlayTag}`}>Downloaded</span> : undefined} />
+                  : isSeries(item) ? undefined
+                  : <span className={`${done ? "text-emerald-300" : "text-amber-200"} ${overlayTag}`}>{done ? "Downloaded" : "Missing"}</span>} />
             );
           })}
         </PosterGrid>
