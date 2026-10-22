@@ -18,6 +18,7 @@ public enum ActivityKind
     Imported,
     ImportFailed,
     Removed,
+    ScanCompleted,
 }
 
 public enum ActivityLevel

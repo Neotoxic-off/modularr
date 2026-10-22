@@ -242,9 +242,16 @@ export interface Folder {
   directories: { name: string; path: string }[];
 }
 
+// Items is 0 when the title's folder was skipped (missing, linked or outside the library roots).
+export interface ScanResult {
+  items: number;
+  added: number;
+  removed: number;
+}
+
 export type ActivityKind =
   | "Added" | "SearchStarted" | "SearchCompleted" | "NothingFound" | "SearchFailed" | "Grabbed" | "DownloadStarted"
-  | "DownloadStalled" | "DownloadFailed" | "Blocklisted" | "Regrabbed" | "Imported" | "ImportFailed" | "Removed";
+  | "DownloadStalled" | "DownloadFailed" | "Blocklisted" | "Regrabbed" | "Imported" | "ImportFailed" | "Removed" | "ScanCompleted";
 
 export interface Activity {
   id: number;
@@ -335,6 +342,7 @@ export const api = {
     send<void>("DELETE", `${libraryPath(kind)}/${id}?deleteFiles=${deleteFiles}`),
   autoSearch: (kind: Kind, id: number, season?: number) =>
     send<void>("POST", `${libraryPath(kind)}/${id}/search${season === undefined ? "" : `?season=${season}`}`),
+  rescan: (kind: Kind, id: number) => send<ScanResult>("POST", `${libraryPath(kind)}/${id}/rescan`),
   releases: (item: LibraryItem, season?: number) =>
     request<SearchResult>(isSeries(item)
       ? `/search?type=series&tvdbId=${item.tvdbId}${season === undefined ? "" : `&season=${season}`}`

@@ -24,6 +24,8 @@ public static class ApiEndpoints
 
     public sealed record AddMovieRequest(int TmdbId, int? QualityProfileId = null, Language? Language = null, bool SearchNow = true);
 
+    public sealed record ImportRequest(IReadOnlyList<ImportItem> Items);
+
     public static RouteGroupBuilder MapModularrApi(this RouteGroupBuilder api)
     {
         api.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
@@ -32,11 +34,11 @@ public static class ApiEndpoints
         api.MapGet("/search", Search);
         api.MapGet("/lookup", Lookup);
         api.MapGet("/discover/movies", (string? list, DiscoveryService discovery, CancellationToken ct) =>
-            discovery.DiscoverMoviesAsync(ParseList(list, MovieList.Popular), ct));
+            discovery.DiscoverMoviesAsync(ParseEnum(list, MovieList.Popular), ct));
         api.MapGet("/discover/series", (string? list, DiscoveryService discovery, CancellationToken ct) =>
-            discovery.DiscoverSeriesAsync(ParseList(list, SeriesList.Popular), ct));
+            discovery.DiscoverSeriesAsync(ParseEnum(list, SeriesList.Popular), ct));
         api.MapGet("/discover/anime", (string? list, DiscoveryService discovery, CancellationToken ct) =>
-            discovery.DiscoverAnimeAsync(ParseList(list, AnimeList.Trending), ct));
+            discovery.DiscoverAnimeAsync(ParseEnum(list, AnimeList.Trending), ct));
         api.MapGet("/series", async (LibraryService library, ItemDtos dtos, CancellationToken ct) => (await library.ListSeriesAsync(ct)).Select(dtos.Of));
         api.MapGet("/series/{id:int}", async (int id, LibraryService library, ItemDtos dtos, CancellationToken ct) => dtos.Detail(await library.GetSeriesAsync(id, ct)));
         api.MapPost("/series", async (AddSeriesRequest request, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
@@ -65,6 +67,13 @@ public static class ApiEndpoints
             searches.Enqueue(new SearchJob(SeriesId: null, id));
             return Results.Accepted();
         });
+        api.MapPost("/series/{id:int}/rescan", (int id, DiskScanService scans, CancellationToken ct) => scans.ScanSeriesAsync(id, record: true, ct));
+        api.MapPost("/movies/{id:int}/rescan", (int id, DiskScanService scans, CancellationToken ct) => scans.ScanMovieAsync(id, record: true, ct));
+        api.MapPost("/library/rescan", (DiskScanService scans, CancellationToken ct) => scans.ScanAllAsync(ct)).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapGet("/library/import", (string? root, LibraryImportService imports, CancellationToken ct) =>
+            imports.ProposeAsync(ParseEnum(root, LibraryRoot.Movies), ct)).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapPost("/library/import", (ImportRequest request, LibraryImportService imports, CancellationToken ct) =>
+            imports.ImportAsync(request.Items, ct)).RequireAuthorization(AuthEndpoints.AdminPolicy);
         api.MapGet("/qualities", () => Quality.All.Select(q => new { q.Id, q.Name, q.Source, q.Resolution }));
         api.MapGet("/languages", () => Language.All.Where(l => l != Language.Unknown).Select(l => new { l.Id, l.Name }));
         api.MapGet("/profiles", (QualityProfileService profiles, CancellationToken ct) => profiles.ListAsync(ct));
@@ -253,11 +262,11 @@ public static class ApiEndpoints
         };
     }
 
-    private static T ParseList<T>(string? list, T fallback)
+    private static T ParseEnum<T>(string? value, T fallback)
         where T : struct, Enum =>
-        list is null ? fallback
-        : Enum.TryParse(list, ignoreCase: true, out T parsed) && Enum.IsDefined(parsed) ? parsed
-        : throw new ArgumentException($"Unknown list '{list}', expected {string.Join(", ", Enum.GetNames<T>()).ToLowerInvariant()}.");
+        value is null ? fallback
+        : Enum.TryParse(value, ignoreCase: true, out T parsed) && Enum.IsDefined(parsed) ? parsed
+        : throw new ArgumentException($"Unknown value '{value}', expected {string.Join(", ", Enum.GetNames<T>()).ToLowerInvariant()}.");
 
     private static object ToDto(TrackedDownload d) => new { d.Id, d.InfoHash, d.ReleaseTitle, d.Indexer, d.State, d.Message, d.SeriesId, d.MovieId, d.EpisodeIds, d.Regrabs };
 

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
 using Modularr.Core.Downloads.Torrents;
+using Modularr.Core.Library;
 using Modularr.Core.Persistence;
 
 namespace Modularr.Core.Downloads;
@@ -81,6 +82,21 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
         }
     }
 
+    // Picks up what the import replaced or left aside; the download stays imported whatever happens here.
+    private static async Task RescanAsync(DiskScanService scans, TrackedDownload download, CancellationToken cancellationToken)
+    {
+        try
+        {
+            _ = download.MovieId is int movieId
+                ? await scans.ScanMovieAsync(movieId, record: true, cancellationToken).ConfigureAwait(false)
+                : await scans.ScanSeriesAsync(download.SeriesId ?? 0, record: true, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // The periodic library scan catches up.
+        }
+    }
+
     // One scope per download, so a failed SaveChanges does not leave pending changes for the next one.
     private async Task CheckAsync(int id, CancellationToken cancellationToken)
     {
@@ -102,6 +118,10 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
                 if (await scope.ServiceProvider.GetRequiredService<DownloadImporter>().ImportAsync(download, torrent.OutputPath, cancellationToken).ConfigureAwait(false))
                 {
                     await failed.RemoveAndRegrabAsync(download, cancellationToken).ConfigureAwait(false);
+                }
+                else if (download.State == TrackedDownloadState.Imported)
+                {
+                    await RescanAsync(scope.ServiceProvider.GetRequiredService<DiskScanService>(), download, cancellationToken).ConfigureAwait(false);
                 }
 
                 break;

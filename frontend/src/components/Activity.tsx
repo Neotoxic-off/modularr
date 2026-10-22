@@ -32,7 +32,7 @@ export function useActivity(): ActivityState {
 export const kindIcon: Record<ActivityKind, IconName> = {
   Added: "plus", SearchStarted: "search", SearchCompleted: "list", NothingFound: "searchX", SearchFailed: "alert",
   Grabbed: "download", DownloadStarted: "down", DownloadStalled: "clock", DownloadFailed: "x", Blocklisted: "ban",
-  Regrabbed: "refresh", Imported: "check", ImportFailed: "alert", Removed: "trash",
+  Regrabbed: "refresh", Imported: "check", ImportFailed: "alert", Removed: "trash", ScanCompleted: "folder",
 };
 
 export const levelTone: Record<Activity["level"], Tone> = { Info: "accent", Success: "green", Warning: "amber", Error: "red" };

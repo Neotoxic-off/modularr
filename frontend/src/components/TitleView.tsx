@@ -48,6 +48,7 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searching, setSearching] = useState<number | "all" | null>(null);
+  const [scanning, setScanning] = useState(false);
   const scope = isSeries(item) ? { seriesId: item.id } : { movieId: item.id };
   // Searches and imports change the status and "Last search", so the title reloads as they happen.
   useTitleEvents(scope, reload);
@@ -71,6 +72,22 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
       setError(errorMessage(e));
     } finally {
       setSearching(null);
+    }
+  }
+
+  async function rescan() {
+    setScanning(true);
+    setError(null);
+    try {
+      const result = await api.rescan(kind, item.id);
+      setNotice(result.items === 0
+        ? "The folder could not be scanned: it is missing, a link, or outside the library folders."
+        : `Folder scanned: ${result.added} file(s) found, ${result.removed} missing.`);
+      reload();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setScanning(false);
     }
   }
 
@@ -116,6 +133,9 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
                   {searching === "all" ? <Spinner /> : <Icon name="bolt" size={16} />}Search now
                 </Button>
                 <Button variant="glass" size="lg" onClick={() => setReleases({})}><Icon name="list" size={16} />Browse releases</Button>
+                <Button variant="ghost" size="lg" onClick={rescan} disabled={scanning} title="Look for files added or deleted in the folder">
+                  {scanning ? <Spinner /> : <Icon name="folder" size={16} />}Rescan folder
+                </Button>
                 {user.role === "Admin" && (
                   <Button variant="ghost" size="lg" onClick={() => setRemoving(true)} aria-label="Remove from library"><Icon name="trash" size={16} />Remove</Button>
                 )}

@@ -12,13 +12,22 @@ public sealed record GrabResult(IReadOnlyList<TrackedDownload> Grabbed, int Rele
 // Upstream MovieSearchService/EpisodeSearchService: searches a library item and grabs the best approved releases.
 public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, DownloadService downloads, ActivityLog activities)
 {
-    // A movie with a download in progress is not searched again.
+    // A movie with a download in progress, or with a file that meets its profile's cutoff, is not searched again.
     public async Task<IReadOnlyList<TrackedDownload>> SearchMovieAsync(int movieId, CancellationToken cancellationToken)
     {
-        Movie movie = await db.Movies.AsNoTracking().FirstOrDefaultAsync(m => m.Id == movieId, cancellationToken).ConfigureAwait(false)
+        Movie movie = await db.Movies.AsNoTracking().Include(m => m.QualityProfile).FirstOrDefaultAsync(m => m.Id == movieId, cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"Movie {movieId} is not in the library.");
         if (await db.TrackedDownloads.Where(TrackedDownload.InProgress).AnyAsync(d => d.MovieId == movieId, cancellationToken).ConfigureAwait(false))
         {
+            return [];
+        }
+
+        if (await db.MediaFiles.AsNoTracking().FirstOrDefaultAsync(f => f.MovieId == movieId, cancellationToken).ConfigureAwait(false) is MediaFile file
+            && !UpgradableSpecification.QualityCutoffNotMet(movie.QualityProfile, file.Quality))
+        {
+            await activities.RecordAsync(
+                new Activity { Kind = ActivityKind.SearchCompleted, Level = ActivityLevel.Info, Title = movie.Title, Message = "Its file meets the quality cutoff", MovieId = movieId },
+                cancellationToken).ConfigureAwait(false);
             return [];
         }
 
@@ -28,13 +37,14 @@ public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, Downl
             cancellationToken).ConfigureAwait(false);
     }
 
-    // The aired, monitored episodes without a file or a running download: a season search when the whole aired season is missing,
-    // otherwise one search per episode.
+    // The aired, monitored episodes without a file (or with one below the profile's cutoff) or a running download: a season search
+    // when the whole aired season is missing, otherwise one search per episode.
     // shortcut: anime releases numbered only absolutely are rejected by episode searches (ReleaseDecisions wants an episode
     // number), search anime by absolute number when it matters.
     public async Task<IReadOnlyList<TrackedDownload>> SearchSeriesAsync(int seriesId, int? season, DateOnly today, CancellationToken cancellationToken)
     {
-        Series series = await db.Series.AsNoTracking().Include(s => s.Episodes).FirstOrDefaultAsync(s => s.Id == seriesId, cancellationToken).ConfigureAwait(false)
+        Series series = await db.Series.AsNoTracking().Include(s => s.Episodes).Include(s => s.QualityProfile)
+            .FirstOrDefaultAsync(s => s.Id == seriesId, cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"Series {seriesId} is not in the library.");
         if (!series.Monitored)
         {
@@ -43,9 +53,11 @@ public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, Downl
 
         List<IReadOnlyList<int>> running = await db.TrackedDownloads.Where(TrackedDownload.InProgress).Where(d => d.SeriesId == seriesId)
             .Select(d => d.EpisodeIds).ToListAsync(cancellationToken).ConfigureAwait(false);
+        List<MediaFile> files = await db.MediaFiles.AsNoTracking().Where(f => f.SeriesId == seriesId).ToListAsync(cancellationToken).ConfigureAwait(false);
+        HashSet<int> belowCutoff = [.. files.Where(f => UpgradableSpecification.QualityCutoffNotMet(series.QualityProfile, f.Quality)).Select(f => f.Id)];
 
         IReadOnlyList<(ReleaseSearchRequest Request, IReadOnlySet<(int Season, int Episode)> Wanted)> plan =
-            Plan(series, running.SelectMany(ids => ids).ToHashSet(), season, today);
+            Plan(series, running.SelectMany(ids => ids).ToHashSet(), season, today, belowCutoff);
         if (plan.Count == 0)
         {
             await activities.RecordAsync(
@@ -107,15 +119,20 @@ public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, Downl
         return grabbed;
     }
 
-    // The searches for a series' missing episodes, each with the season's missing episodes it may grab.
+    // The searches for a series' missing episodes, each with the season's missing episodes it may grab. An episode whose file is
+    // below the cutoff (belowCutoff holds MediaFile ids) counts as missing.
     public static IReadOnlyList<(ReleaseSearchRequest Request, IReadOnlySet<(int Season, int Episode)> Wanted)> Plan(
-        Series series, IReadOnlySet<int> downloading, int? season, DateOnly today)
+        Series series, IReadOnlySet<int> downloading, int? season, DateOnly today, IReadOnlySet<int>? belowCutoff = null)
     {
         ArgumentNullException.ThrowIfNull(series);
         ArgumentNullException.ThrowIfNull(downloading);
         HashSet<int> monitoredSeasons = [.. series.Seasons.Where(s => s.Monitored).Select(s => s.Number)];
         Episode[] aired = [.. series.Episodes.Where(e => e.AirDate <= today && (season is null || e.SeasonNumber == season))];
-        Episode[] missing = [.. aired.Where(e => e.Monitored && monitoredSeasons.Contains(e.SeasonNumber) && e.MediaFileId is null && !downloading.Contains(e.Id))];
+        Episode[] missing =
+        [
+            .. aired.Where(e => e.Monitored && monitoredSeasons.Contains(e.SeasonNumber) && !downloading.Contains(e.Id)
+                && (e.MediaFileId is not int fileId || belowCutoff?.Contains(fileId) == true)),
+        ];
 
         return
         [
