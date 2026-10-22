@@ -432,3 +432,9 @@ backend/src/Modularr.Api/wwwroot/
 
 # dev config directory (modularr.json, torrent state)
 backend/src/Modularr.Api/config/
+
+# Claude Code (local settings, worktrees, memory)
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.mcp.json
