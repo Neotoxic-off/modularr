@@ -17,4 +17,8 @@ public sealed record IndexerOptions
 
     // Per indexer id, a base URL to use instead of the definition's first link (a legacy one is migrated).
     public IReadOnlyDictionary<string, string> BaseUrls { get; init; } = new Dictionary<string, string>();
+
+    // Per HTTP request to an indexer (Prowlarr's default is 100 s; search UIs need an answer sooner).
+    [Range(typeof(TimeSpan), "00:00:01", "00:10:00")]
+    public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(30);
 }

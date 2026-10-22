@@ -1,7 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="AngleSharp" />
+    <PackageReference Include="AngleSharp.Xml" />
     <PackageReference Include="MonoTorrent" />
+    <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="SharpCompress" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>

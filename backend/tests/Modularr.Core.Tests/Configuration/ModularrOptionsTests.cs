@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Configuration;
+using Modularr.Core.Indexers.Cardigann;
 using Modularr.Core.MediaFiles;
 using Modularr.Core.PostProcessing;
 
@@ -33,6 +34,7 @@ public sealed class ModularrOptionsTests : IDisposable
         Assert.Equal(Path.Combine(_configDirectory, "downloads"), options.Paths.Downloads);
         Assert.Equal(Path.Combine(_configDirectory, "torrents"), options.Torrents.StateDirectory);
         Assert.Equal(Path.Combine(_configDirectory, "indexers"), options.Indexers.DefinitionsDirectory);
+        Assert.Equal(TimeSpan.FromSeconds(30), options.Indexers.RequestTimeout);
         Assert.Equal(6881, options.Torrents.ListenPort);
         Assert.Same(MediaFileExtensions.VideoExtensions, options.PostProcessing.VideoExtensions);
         Assert.Same(PostProcessingOptions.DefaultSubtitleExtensions, options.PostProcessing.SubtitleExtensions);
@@ -74,9 +76,18 @@ public sealed class ModularrOptionsTests : IDisposable
     [InlineData("""{ "Torrents": { "SeedRatioLimit": -1 } }""")]
     [InlineData("""{ "Paths": { "Series": "" } }""")]
     [InlineData("""{ "PostProcessing": { "SubtitleExtensions": ["srt"] } }""")]
+    [InlineData("""{ "Indexers": { "RequestTimeout": "00:00:00" } }""")]
     public void RejectsInvalidValues(string json)
     {
         Assert.Throws<OptionsValidationException>(() => Load(json));
+    }
+
+    [Fact]
+    public void RegistersTheCardigannSearcher()
+    {
+        using ServiceProvider provider = new ServiceCollection().AddModularrCore(_configDirectory).BuildServiceProvider();
+
+        Assert.NotNull(provider.GetRequiredService<CardigannSearcher>());
     }
 
     [Fact]
