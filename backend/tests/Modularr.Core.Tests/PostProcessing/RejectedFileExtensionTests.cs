@@ -102,7 +102,7 @@ public sealed class RejectedFileExtensionTests : IDisposable
     [Fact]
     public void ExtractsArchiveInsteadOfRejectingIt()
     {
-        _download.Zip("Droned.S01E01.zip", ("Droned.S01E01.mkv", new byte[16]));
+        _download.Zip("Droned.S01E01.zip", ("Droned.S01E01.mkv", TempDownload.Video));
 
         PostProcessingVerdict.Accepted accepted = Assert.IsType<PostProcessingVerdict.Accepted>(Process());
 

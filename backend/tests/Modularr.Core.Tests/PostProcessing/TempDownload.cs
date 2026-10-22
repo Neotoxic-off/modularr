@@ -1,35 +1,49 @@
 using System.IO.Compression;
+using Modularr.Core.MediaFiles;
+using SharpCompress.Common;
+using SharpCompress.Writers;
 
 namespace Modularr.Core.Tests.PostProcessing;
 
 // A real completed-download folder on disk, removed after the test.
 public sealed class TempDownload : IDisposable
 {
+    // The smallest content the video check accepts: a Matroska header.
+    public static byte[] Video { get; } = [0x1A, 0x45, 0xDF, 0xA3, .. new byte[12]];
+
     public string Root { get; } = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "modularr-pp-" + Guid.NewGuid().ToString("N"))).FullName;
 
     public string PathOf(string relative) => Path.Combine(Root, relative);
 
+    // Video files start with a Matroska header so the content check accepts them.
     public string CreateFile(string relative, int size = 16)
     {
-        string path = PathOf(relative);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllBytes(path, new byte[size]);
-        return path;
+        byte[] content = new byte[size];
+        if (MediaFileExtensions.VideoExtensions.Contains(Path.GetExtension(relative)))
+        {
+            Video.AsSpan(0, Math.Min(size, 4)).CopyTo(content);
+        }
+
+        return Write(relative, content);
     }
 
-    public string Zip(string relative, params (string Name, byte[] Content)[] entries)
+    public string Write(string relative, byte[] content)
     {
         string path = PathOf(relative);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllBytes(path, ZipBytes(entries));
+        File.WriteAllBytes(path, content);
         return path;
     }
 
-    public string Fixture(string name)
+    public string Zip(string relative, params (string Name, byte[] Content)[] entries) => Write(relative, ZipBytes(entries));
+
+    // Copies every fixture whose name starts with prefix: one file, or all volumes of a set.
+    public void Fixture(string prefix)
     {
-        string path = PathOf(name);
-        File.Copy(Path.Combine(AppContext.BaseDirectory, "PostProcessing", "Fixtures", name), path);
-        return path;
+        foreach (string fixture in Directory.EnumerateFiles(Path.Combine(AppContext.BaseDirectory, "PostProcessing", "Fixtures"), prefix + "*"))
+        {
+            File.Copy(fixture, PathOf(Path.GetFileName(fixture)));
+        }
     }
 
     public string[] Files() =>
@@ -46,6 +60,34 @@ public sealed class TempDownload : IDisposable
                 using Stream entry = zip.CreateEntry(name, CompressionLevel.NoCompression).Open();
                 entry.Write(content);
             }
+        }
+
+        return stream.ToArray();
+    }
+
+    public static byte[] TarBytes(params (string Name, byte[] Content)[] entries)
+    {
+        using MemoryStream stream = new();
+
+        using (IWriter writer = WriterFactory.OpenWriter(stream, ArchiveType.Tar, new WriterOptions(CompressionType.None) { LeaveStreamOpen = true }))
+        {
+            foreach ((string name, byte[] content) in entries)
+            {
+                writer.Write(name, new MemoryStream(content));
+            }
+        }
+
+        return stream.ToArray();
+    }
+
+    // compressor must leave the underlying stream open.
+    public static byte[] Compress(byte[] content, Func<Stream, Stream> compressor)
+    {
+        using MemoryStream stream = new();
+
+        using (Stream compressed = compressor(stream))
+        {
+            compressed.Write(content);
         }
 
         return stream.ToArray();

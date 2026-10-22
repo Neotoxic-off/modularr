@@ -27,6 +27,10 @@ public sealed record PostProcessingOptions : IValidatableObject
 
     public IReadOnlySet<string> IgnorableExtensions { get; init; } = DefaultIgnorableExtensions;
 
+    // Archive levels extracted, 2 = an archive inside an archive. Deeper nesting rejects the release.
+    [Range(1, 10)]
+    public int MaxArchiveDepth { get; init; } = 2;
+
     // Path.GetExtension returns the leading dot, so an entry without one could never match.
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) =>
         new (string Name, IReadOnlySet<string> Extensions)[] { (nameof(VideoExtensions), VideoExtensions), (nameof(SubtitleExtensions), SubtitleExtensions), (nameof(IgnorableExtensions), IgnorableExtensions) }

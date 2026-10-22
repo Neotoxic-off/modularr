@@ -2,9 +2,6 @@ namespace Modularr.Core.PostProcessing;
 
 public static class CompletedDownloadProcessor
 {
-    // Archive in archive is extracted, one level only.
-    private const int ExtractionPasses = 2;
-
     // Links are never followed: one pointing outside the download would get its target's files deleted.
     private static readonly EnumerationOptions WalkOptions = new()
     {
@@ -51,38 +48,26 @@ public static class CompletedDownloadProcessor
             }
         }
 
-        List<string> pending = files;
+        ArchiveExtraction extraction = ArchiveExtractor.ExtractAll(files, options);
 
-        for (int pass = 0; pass < ExtractionPasses; pass++)
+        if (extraction.Error is not null)
         {
-            List<string> extracted = [];
-
-            foreach (string archive in pending.Where(f => FileClassifier.Classify(f, options) == FileKind.Archive && ArchiveExtractor.IsFirstVolume(f)).ToList())
-            {
-                ArchiveExtraction extraction = ArchiveExtractor.Extract(archive);
-
-                if (extraction.Error is not null)
-                {
-                    return new PostProcessingVerdict.Rejected(extraction.Error, Blacklist: true);
-                }
-
-                foreach (string volume in extraction.Volumes)
-                {
-                    Delete(volume);
-                }
-
-                files.RemoveAll(f => extraction.Volumes.Contains(f, StringComparer.OrdinalIgnoreCase));
-                files.AddRange(extraction.ExtractedFiles.Except(files, StringComparer.OrdinalIgnoreCase));
-                extracted.AddRange(extraction.ExtractedFiles);
-            }
-
-            pending = extracted;
+            return Reject(extraction.Error);
         }
+
+        foreach (string volume in extraction.Volumes)
+        {
+            Delete(volume);
+        }
+
+        files.RemoveAll(f => extraction.Volumes.Contains(f, StringComparer.OrdinalIgnoreCase));
+        files.AddRange(extraction.ExtractedFiles.Except(files, StringComparer.OrdinalIgnoreCase));
 
         List<string> videos = [];
         List<string> subtitles = [];
         List<string> dangerous = [];
         List<string> executables = [];
+        List<string> fakeVideos = [];
         List<string> disallowed = [];
 
         foreach (string file in files.Distinct(StringComparer.OrdinalIgnoreCase))
@@ -91,7 +76,7 @@ public static class CompletedDownloadProcessor
 
             List<string>? keep = kind switch
             {
-                FileKind.Video when !SampleDetector.IsSample(file, new FileInfo(file).Length) => videos,
+                FileKind.Video when !SampleDetector.IsSample(file, new FileInfo(file).Length) => VideoSignature.IsVideoFile(file) ? videos : fakeVideos,
                 FileKind.Subtitle => subtitles,
                 FileKind.Dangerous => dangerous,
                 FileKind.Executable => executables,
@@ -107,12 +92,13 @@ public static class CompletedDownloadProcessor
             }
         }
 
-        return (dangerous, executables, disallowed, videos) switch
+        return (dangerous, executables, fakeVideos, disallowed, videos) switch
         {
-            ({ Count: > 0 }, _, _, _) => Reject($"Caution: Found potentially dangerous file with extension: {Extensions(dangerous)}"),
-            (_, { Count: > 0 }, _, _) => Reject($"Caution: Found executable file with extension: {Extensions(executables)}"),
-            (_, _, { Count: > 0 }, _) => Reject($"Found file with disallowed extension: {Extensions(disallowed)}"),
-            (_, _, _, { Count: 0 }) => Reject("No video file found"),
+            ({ Count: > 0 }, _, _, _, _) => Reject($"Caution: Found potentially dangerous file with extension: {Extensions(dangerous)}"),
+            (_, { Count: > 0 }, _, _, _) => Reject($"Caution: Found executable file with extension: {Extensions(executables)}"),
+            (_, _, { Count: > 0 }, _, _) => Reject($"Caution: Found file whose content is not a video: {string.Join(", ", fakeVideos.Select(Path.GetFileName))}"),
+            (_, _, _, { Count: > 0 }, _) => Reject($"Found file with disallowed extension: {Extensions(disallowed)}"),
+            (_, _, _, _, { Count: 0 }) => Reject("No video file found"),
             _ => new PostProcessingVerdict.Accepted(videos, subtitles),
         };
     }

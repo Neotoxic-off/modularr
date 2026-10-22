@@ -5,7 +5,7 @@ namespace Modularr.Core.Tests.PostProcessing;
 
 public sealed class CompletedDownloadProcessorTests : IDisposable
 {
-    private static readonly byte[] Payload = new byte[16];
+    private static readonly byte[] Payload = TempDownload.Video;
 
     private readonly TempDownload _download = new();
 
@@ -112,14 +112,25 @@ public sealed class CompletedDownloadProcessorTests : IDisposable
     }
 
     [Fact]
-    public void RejectsArchiveNestedTwoLevels()
+    public void RejectsArchiveNestedTwoLevelsAndLeavesTheDownloadAsItWas()
     {
         byte[] innermost = TempDownload.ZipBytes(("Show.S01E01.mkv", Payload));
         byte[] inner = TempDownload.ZipBytes(("innermost.zip", innermost));
         _download.Zip("outer.zip", ("inner.zip", inner));
 
-        AssertRejected(".zip");
-        Assert.Empty(_download.Files());
+        AssertRejected("innermost.zip: archive nested deeper than 2 levels");
+        Assert.Equal(["outer.zip"], _download.Files());
+    }
+
+    [Fact]
+    public void ExtractsDeeperNestingWhenConfigured()
+    {
+        byte[] innermost = TempDownload.ZipBytes(("Show.S01E01.mkv", Payload));
+        byte[] inner = TempDownload.ZipBytes(("innermost.zip", innermost));
+        _download.Zip("outer.zip", ("inner.zip", inner));
+
+        Assert.IsType<PostProcessingVerdict.Accepted>(CompletedDownloadProcessor.Process(_download.Root, new PostProcessingOptions { MaxArchiveDepth = 3 }));
+        Assert.Equal(["Show.S01E01.mkv"], _download.Files());
     }
 
     [Fact]
@@ -223,17 +234,14 @@ public sealed class CompletedDownloadProcessorTests : IDisposable
         AssertRejected("Show.S01E01.zip");
     }
 
+    // The fixture's .mkv holds plain text: extracted fine, then refused by the content check.
     [Fact]
-    public void Extracts7z()
+    public void Extracts7zAndRejectsAVideoThatIsNotOne()
     {
         _download.Fixture("episode.7z");
 
-        PostProcessingVerdict.Accepted accepted = Assert.IsType<PostProcessingVerdict.Accepted>(Process());
-
-        Assert.Equal([_download.PathOf("Show.S01E01.mkv")], accepted.VideoFiles);
-        Assert.Equal([_download.PathOf("Show.S01E01.srt")], accepted.SubtitleFiles);
-        Assert.Equal("fake matroska payload\n", File.ReadAllText(_download.PathOf("Show.S01E01.mkv")));
-        Assert.Equal(["Show.S01E01.mkv", "Show.S01E01.srt"], _download.Files());
+        AssertRejected("content is not a video: Show.S01E01.mkv");
+        Assert.Equal(["Show.S01E01.srt"], _download.Files());
     }
 
     [Theory]
@@ -247,7 +255,6 @@ public sealed class CompletedDownloadProcessorTests : IDisposable
         Assert.Equal([fixture], _download.Files());
     }
 
-    // shortcut: no rar fixture (no free rar creator), multi-volume rar is covered by volume naming only, add real fixtures when one can be produced legitimately.
     [Theory]
     [InlineData("Show.S01E01.rar", true)]
     [InlineData("Show.S01E01.r00", false)]
