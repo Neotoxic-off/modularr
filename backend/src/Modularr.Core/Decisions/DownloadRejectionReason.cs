@@ -5,6 +5,10 @@ public enum DownloadRejectionReason
 {
     UnableToParse,
     UnknownSeries,
+    UnknownEpisode,
+    WrongSeason,
+    FullSeason,
+    WrongEpisode,
     WrongMovie,
     QualityNotWanted,
     QualityUpgradesDisabled,

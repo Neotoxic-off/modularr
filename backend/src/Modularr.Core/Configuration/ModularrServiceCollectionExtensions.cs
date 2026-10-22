@@ -20,6 +20,9 @@ namespace Modularr.Core.Configuration;
 
 public static class ModularrServiceCollectionExtensions
 {
+    // Indexer pages and .torrent files come from crowd-sourced public sites: a hostile or broken one must not exhaust memory.
+    private const long MaxResponseBytes = 10 * 1024 * 1024;
+
     // Binds <configDirectory>/modularr.json to ModularrOptions (validated at startup) and registers the module services.
     public static IServiceCollection AddModularrCore(this IServiceCollection services, string configDirectory)
     {
@@ -44,12 +47,17 @@ public static class ModularrServiceCollectionExtensions
         services.AddHostedService(provider => provider.GetRequiredService<TorrentEngineHost>());
 
         services.AddHttpClient();
+        services.AddHttpClient(nameof(DownloadService), client => client.MaxResponseContentBufferSize = MaxResponseBytes);
         services.AddSingleton<IndexerCatalogHost>();
         services.AddHostedService(provider => provider.GetRequiredService<IndexerCatalogHost>());
         services.AddSingleton<IndexerDomainHealth>();
 
         // Redirects are handled per search path (Cardigann "followredirect"), so the handler must not follow them itself.
-        services.AddHttpClient<CardigannSearcher>(client => client.DefaultRequestHeaders.UserAgent.ParseAdd("Modularr/1.0"))
+        services.AddHttpClient<CardigannSearcher>(client =>
+            {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("Modularr/1.0");
+                client.MaxResponseContentBufferSize = MaxResponseBytes;
+            })
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false, AutomaticDecompression = DecompressionMethods.All });
 
         services.AddHttpClient<SeriesMetadataClient>();

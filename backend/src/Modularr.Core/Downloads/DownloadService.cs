@@ -107,7 +107,23 @@ public sealed class DownloadService(
             db.History.Add(history);
         }
 
-        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException)
+        {
+            // A concurrent grab of the same torrent inserted it first (InfoHash is unique).
+            db.ChangeTracker.Clear();
+            TrackedDownload? raced = await db.TrackedDownloads.FirstOrDefaultAsync(d => d.InfoHash == id, cancellationToken).ConfigureAwait(false);
+            if (raced is null)
+            {
+                throw;
+            }
+
+            return raced;
+        }
+
         return download;
     }
 
@@ -118,8 +134,16 @@ public sealed class DownloadService(
             : release.DownloadUrl is string downloadUrl ? new Uri(downloadUrl)
             : throw new ArgumentException($"Release '{release.Title}' has no download link.", nameof(release));
 
-        if (!IsMagnet(link) && catalog.Catalog.Find(release.IndexerId ?? "") is IndexerCatalogEntry entry)
+        if (!IsMagnet(link))
         {
+            // The release comes from the request body: only fetch a link on the site of the enabled indexer it names (no SSRF).
+            IndexerCatalogEntry entry = catalog.Catalog.Find(release.IndexerId ?? "") is { Enabled: true } found ? found
+                : throw new ArgumentException($"Release '{release.Title}' does not come from an enabled indexer.", nameof(release));
+            if (!IsIndexerLink(link, [.. entry.Links, health.ActiveBaseUrl(entry.Definition)]))
+            {
+                throw new ArgumentException($"Release '{release.Title}' links to {link.Host}, which is not a site of {entry.Name}.", nameof(release));
+            }
+
             CardigannDownloadResult resolved = await searcher.ResolveDownloadAsync(entry.Definition, health.ActiveBaseUrl(entry.Definition), link, cancellationToken).ConfigureAwait(false);
             link = resolved switch
             {
@@ -151,6 +175,19 @@ public sealed class DownloadService(
         byte[] torrentFile = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
         return await torrents.Engine.AddTorrentFileAsync(torrentFile, saveDirectory, category).ConfigureAwait(false);
     }
+
+    // http(s) on one of the indexer's hosts or a subdomain of one ("www." aside).
+    public static bool IsIndexerLink(Uri link, IEnumerable<string> siteUrls)
+    {
+        ArgumentNullException.ThrowIfNull(link);
+        ArgumentNullException.ThrowIfNull(siteUrls);
+        string host = TrimWww(link.Host);
+        return (link.Scheme == Uri.UriSchemeHttp || link.Scheme == Uri.UriSchemeHttps)
+            && siteUrls.Any(url => Uri.TryCreate(url, UriKind.Absolute, out Uri? site)
+                && (host.Equals(TrimWww(site.Host), StringComparison.OrdinalIgnoreCase) || host.EndsWith("." + TrimWww(site.Host), StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static string TrimWww(string host) => host.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ? host[4..] : host;
 
     private static bool IsMagnet(Uri link) => link.Scheme.Equals("magnet", StringComparison.OrdinalIgnoreCase);
 }

@@ -15,7 +15,8 @@ app.UseApiErrors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-// shortcut: no auth on /api (nothing secret in ModularrOptions yet), add an API key requirement before any credential enters the config.
+// shortcut: no auth on /api (grab only fetches links on catalog indexer sites, but anyone reaching the port can add to the library and
+// start downloads), add an API key with the front's login before exposing the port beyond a trusted LAN or storing any credential.
 app.MapGroup("/api").MapModularrApi();
 
 // Unknown /api routes must 404, not fall through to the SPA.

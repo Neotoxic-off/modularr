@@ -48,6 +48,30 @@ public sealed class ReleaseDecisionsTests
     }
 
     [Fact]
+    public void ReleaseOfAnEpisodeNotInTheLibraryIsRejectedEvenWithoutASize()
+    {
+        DownloadDecision decision = ReleaseDecisions.ForSeries(Release("The.Office.US.S09E99.720p.HDTV.x264-GRP", null), Any, Office(), Files(), Context);
+
+        Assert.Equal(DownloadRejectionReason.UnknownEpisode, Assert.Single(decision.Rejections).Reason);
+    }
+
+    [Theory]
+    [InlineData("The.Office.US.S01E02.720p.HDTV.x264-GRP", 1, 2, null)]
+    [InlineData("The.Office.US.S02E01.720p.HDTV.x264-GRP", 1, 2, DownloadRejectionReason.WrongSeason)]
+    [InlineData("The.Office.US.S01E01.720p.HDTV.x264-GRP", 1, 2, DownloadRejectionReason.WrongEpisode)]
+    [InlineData("The.Office.US.S01.720p.HDTV.x264-GRP", 1, 2, DownloadRejectionReason.FullSeason)]
+    [InlineData("The.Office.US.S01.720p.HDTV.x264-GRP", 1, null, null)]
+    [InlineData("The.Office.US.S02E01.720p.HDTV.x264-GRP", 1, null, DownloadRejectionReason.WrongSeason)]
+    public void InteractiveSearchOnlyApprovesTheRequestedSeasonOrEpisode(string title, int season, int? episode, DownloadRejectionReason? rejection)
+    {
+        DownloadDecision decision = ReleaseDecisions.ForSeries(Release(title, null), Any, Office(), Files(), Context, season, episode);
+
+        // A matching season pack still meets the other specifications (unaired, disk cutoff), only the search match is checked here.
+        DownloadRejectionReason[] searchMatch = [DownloadRejectionReason.WrongSeason, DownloadRejectionReason.WrongEpisode, DownloadRejectionReason.FullSeason];
+        Assert.Equal(rejection, decision.Rejections.Where(r => searchMatch.Contains(r.Reason)).Select(r => (DownloadRejectionReason?)r.Reason).SingleOrDefault());
+    }
+
+    [Fact]
     public void UnparsableReleaseIsRejected()
     {
         DownloadDecision decision = ReleaseDecisions.ForSeries(Release("Some random words", 400), Any, null, Files(), Context);
@@ -99,7 +123,7 @@ public sealed class ReleaseDecisionsTests
         [7] = new MediaFile { Id = 7, SeriesId = 1, Path = "/tv/The Office (US)/Season 01/e1.mkv", Quality = new QualityModel(Quality.Hdtv720p, new Revision()) },
     };
 
-    private static ReleaseInfo Release(string title, long megabytes) => new()
+    private static ReleaseInfo Release(string title, long? megabytes) => new()
     {
         Id = title,
         Title = title,

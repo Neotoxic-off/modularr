@@ -48,6 +48,24 @@ public sealed class IndexerCatalogTests : IDisposable
     }
 
     [Fact]
+    public void LeavesOutAdultIndexersWithOnlyAVideoCategory()
+    {
+        // e-hentai maps everything to TV/Anime.
+        Assert.Null(Load(new Dictionary<string, string> { ["ehentai.yml"] = CatalogTestFiles.Fixture("ehentai.yml") }).Find("ehentai"));
+    }
+
+    [Theory]
+    [InlineData("TV", "TV", true)]
+    [InlineData("tv/anime", "TV", true)]
+    [InlineData("TVShows", "TV", false)]
+    [InlineData("Movies/HD", "TV", false)]
+    [InlineData("Movies/HD", "Movies", true)]
+    public void CategoryBelongsToItsRoot(string category, string root, bool expected)
+    {
+        Assert.Equal(expected, IndexerCatalog.IsCategoryOf(category, root));
+    }
+
+    [Fact]
     public void ExposesTheEntryDetails()
     {
         IndexerCatalogEntry entry = Load(RealFixtures()).Find("1337x")!;

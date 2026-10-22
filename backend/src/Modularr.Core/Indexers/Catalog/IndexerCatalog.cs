@@ -1,10 +1,11 @@
+using System.Text.RegularExpressions;
 using Modularr.Core.Indexers.Cardigann;
 using Modularr.Core.Indexers.Definitions;
 
 namespace Modularr.Core.Indexers.Catalog;
 
-// Every cached definition that can return movies or TV; modularr is video only so the rest is left out.
-public sealed record IndexerCatalog
+// Every cached definition that can return movies or TV; modularr is video only so the rest (and adult sites) is left out.
+public sealed partial record IndexerCatalog
 {
     public static IndexerCatalog Empty { get; } = new() { Entries = [], Errors = [] };
 
@@ -51,7 +52,7 @@ public sealed record IndexerCatalog
             }
 
             IReadOnlyList<string> categories = Categories(definition);
-            if (categories.Any(IsVideoCategory))
+            if (categories.Any(IsVideoCategory) && !IsAdult(definition))
             {
                 // shortcut: private, semi-private and login-only indexers stay disabled until credentials can be configured.
                 bool enabled = CardigannSearcher.IsSupported(definition) && !disabled.Contains(definition.Id);
@@ -75,9 +76,20 @@ public sealed record IndexerCatalog
     ];
 
     // Newznab 2000 (Movies) and 5000 (TV) ranges, e.g. "Movies/UHD", "TV/Anime".
-    private static bool IsVideoCategory(string category) =>
-        category.Equals("Movies", StringComparison.OrdinalIgnoreCase) || category.StartsWith("Movies/", StringComparison.OrdinalIgnoreCase)
-        || category.Equals("TV", StringComparison.OrdinalIgnoreCase) || category.StartsWith("TV/", StringComparison.OrdinalIgnoreCase);
+    private static bool IsVideoCategory(string category) => IsCategoryOf(category, "Movies") || IsCategoryOf(category, "TV");
+
+    // "TV/Anime" is under "TV"; "TVShows" is not.
+    public static bool IsCategoryOf(string category, string root)
+    {
+        ArgumentNullException.ThrowIfNull(category);
+        return category.Equals(root, StringComparison.OrdinalIgnoreCase) || category.StartsWith(root + "/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Adult sites that only declare a video category (e-hentai maps everything to TV/Anime).
+    private static bool IsAdult(CardigannDefinition definition) => AdultPattern().IsMatch(definition.Name + " " + definition.Description);
+
+    [GeneratedRegex(@"\b(hentai|porn|xxx)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex AdultPattern();
 }
 
 public sealed record IndexerCatalogEntry(CardigannDefinition Definition, IReadOnlyList<string> Categories, bool Enabled)

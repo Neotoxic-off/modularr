@@ -63,7 +63,10 @@ public sealed class ReleaseSearch(ModularrDbContext db, IndexerCatalogHost catal
             ImdbId = ParseImdbId(request.ImdbId ?? movie?.ImdbId),
         };
 
-        Task<IndexerSearchResult> searching = indexers.SearchAsync(catalog.Catalog.Entries.Where(e => e.Enabled).Select(e => e.Definition), query, cancellationToken);
+        // Like Prowlarr, only indexers whose categories cover the search (a TV-only site is not asked for a movie).
+        string root = movies ? "Movies" : "TV";
+        Task<IndexerSearchResult> searching = indexers.SearchAsync(
+            catalog.Catalog.Entries.Where(e => e.Enabled && e.Categories.Any(c => IndexerCatalog.IsCategoryOf(c, root))).Select(e => e.Definition), query, cancellationToken);
 
         QualityProfile profile = series?.QualityProfile ?? movie?.QualityProfile
             ?? await db.QualityProfiles.AsNoTracking().OrderBy(p => p.Id).FirstAsync(cancellationToken).ConfigureAwait(false);
@@ -79,13 +82,15 @@ public sealed class ReleaseSearch(ModularrDbContext db, IndexerCatalogHost catal
         }
 
         IndexerSearchResult found = await searching.ConfigureAwait(false);
+        // A daily episode ("2024-01-31") is only shaped into the query, not matched.
+        int? episodeNumber = int.TryParse(request.Episode, NumberStyles.None, CultureInfo.InvariantCulture, out int number) ? number : null;
         DecisionContext context = new() { Options = options.Value.Decisions, Blocklist = blocklist };
         Dictionary<int, MediaFile> filesById = files.ToDictionary(f => f.Id);
         DownloadDecision[] decisions =
         [
             .. found.Releases.Select(release => movies
                 ? ReleaseDecisions.ForMovie(release, profile, movie, files, context)
-                : ReleaseDecisions.ForSeries(release, profile, series, filesById, context)),
+                : ReleaseDecisions.ForSeries(release, profile, series, filesById, context, request.Season, episodeNumber)),
         ];
 
         return new ReleaseSearchResult(

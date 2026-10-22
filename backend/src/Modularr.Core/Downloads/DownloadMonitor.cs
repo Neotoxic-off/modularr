@@ -17,41 +17,59 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
         using PeriodicTimer timer = new(PollInterval);
         while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
         {
-            await CheckAsync(stoppingToken).ConfigureAwait(false);
+            try
+            {
+                await CheckAsync(stoppingToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // An exception escaping ExecuteAsync stops the host; a failed poll (busy database...) is retried on the next tick.
+            }
         }
     }
 
     private async Task CheckAsync(CancellationToken cancellationToken)
     {
+        List<int> ids;
+        await using (AsyncServiceScope scope = scopes.CreateAsyncScope())
+        {
+            ids = await scope.ServiceProvider.GetRequiredService<ModularrDbContext>().TrackedDownloads
+                .Where(d => d.State == TrackedDownloadState.Downloading).Select(d => d.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        foreach (int id in ids)
+        {
+            try
+            {
+                await CheckAsync(id, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Any failure (disk, database, torrent engine) blocks this download for a manual retry instead of failing every poll.
+                await using AsyncServiceScope scope = scopes.CreateAsyncScope();
+                await scope.ServiceProvider.GetRequiredService<ModularrDbContext>().TrackedDownloads.Where(d => d.Id == id)
+                    .ExecuteUpdateAsync(setters => setters.SetProperty(d => d.State, TrackedDownloadState.ImportBlocked), cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    // One scope per download, so a failed SaveChanges does not leave pending changes for the next one.
+    private async Task CheckAsync(int id, CancellationToken cancellationToken)
+    {
         await using AsyncServiceScope scope = scopes.CreateAsyncScope();
         ModularrDbContext db = scope.ServiceProvider.GetRequiredService<ModularrDbContext>();
-        DownloadImporter importer = scope.ServiceProvider.GetRequiredService<DownloadImporter>();
-
-        foreach (TrackedDownload download in await db.TrackedDownloads.Where(d => d.State == TrackedDownloadState.Downloading).ToListAsync(cancellationToken).ConfigureAwait(false))
+        TrackedDownload download = await db.TrackedDownloads.SingleAsync(d => d.Id == id, cancellationToken).ConfigureAwait(false);
+        TorrentStatus? torrent = torrents.Engine.Get(download.InfoHash);
+        if (torrent is null)
         {
-            TorrentStatus? torrent = torrents.Engine.Get(download.InfoHash);
-            if (torrent is null)
-            {
-                // Removed from the engine by hand: stop tracking it.
-                download.State = TrackedDownloadState.Ignored;
-                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            }
-            else if (torrent.Status == DownloadItemStatus.Completed)
-            {
-                try
-                {
-                    if (await importer.ImportAsync(download, torrent.OutputPath, cancellationToken).ConfigureAwait(false))
-                    {
-                        await torrents.Engine.RemoveAsync(download.InfoHash, deleteData: true).ConfigureAwait(false);
-                    }
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                    // A disk error must not stop the monitor (an unhandled one stops the host); the user retries by hand.
-                    download.State = TrackedDownloadState.ImportBlocked;
-                    await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                }
-            }
+            // Removed from the engine by hand: stop tracking it.
+            download.State = TrackedDownloadState.Ignored;
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        else if (torrent.Status == DownloadItemStatus.Completed
+            && await scope.ServiceProvider.GetRequiredService<DownloadImporter>().ImportAsync(download, torrent.OutputPath, cancellationToken).ConfigureAwait(false))
+        {
+            await torrents.Engine.RemoveAsync(download.InfoHash, deleteData: true).ConfigureAwait(false);
         }
     }
 }

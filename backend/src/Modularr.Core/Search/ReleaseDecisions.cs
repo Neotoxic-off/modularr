@@ -12,7 +12,9 @@ namespace Modularr.Core.Search;
 public static class ReleaseDecisions
 {
     // shortcut: titles are matched on their clean form only (no aliases or scene mappings), add them with a scene mapping source.
-    public static DownloadDecision ForSeries(ReleaseInfo release, QualityProfile profile, Series? series, IReadOnlyDictionary<int, MediaFile> files, DecisionContext context)
+    // searchSeason/searchEpisode: an interactive season or episode search (upstream SeasonMatch + SingleEpisodeSearchMatch).
+    public static DownloadDecision ForSeries(
+        ReleaseInfo release, QualityProfile profile, Series? series, IReadOnlyDictionary<int, MediaFile> files, DecisionContext context, int? searchSeason = null, int? searchEpisode = null)
     {
         ArgumentNullException.ThrowIfNull(release);
         ParsedEpisodeInfo? parsed = EpisodeParser.ParseTitle(release.Title);
@@ -47,6 +49,29 @@ public static class ReleaseDecisions
         if (series is not null && ReleaseTitle.CleanTitle(parsed.SeriesTitle) != expected && ReleaseTitle.CleanTitle(parsed.SeriesTitleInfo.TitleWithoutYear) != expected)
         {
             return Reject(candidate, DownloadRejectionReason.UnknownSeries, $"'{parsed.SeriesTitle}' is not {series.Title}");
+        }
+
+        if (series is not null && targets.Count == 0)
+        {
+            return Reject(candidate, DownloadRejectionReason.UnknownEpisode, "Unable to identify correct episode(s) using release name");
+        }
+
+        if (searchSeason is int season && !(parsed.SeasonNumbers.Count > 0 ? parsed.SeasonNumbers.Contains(season) : targets.Any(t => t.SeasonNumber == season)))
+        {
+            return Reject(candidate, DownloadRejectionReason.WrongSeason, "Wrong season");
+        }
+
+        if (searchSeason is not null && searchEpisode is int episode)
+        {
+            if (parsed.EpisodeNumbers.Count == 0)
+            {
+                return Reject(candidate, DownloadRejectionReason.FullSeason, "Full season pack");
+            }
+
+            if (!parsed.EpisodeNumbers.Contains(episode))
+            {
+                return Reject(candidate, DownloadRejectionReason.WrongEpisode, "Wrong episode");
+            }
         }
 
         return DownloadDecisionMaker.GetDecision(candidate, context);
