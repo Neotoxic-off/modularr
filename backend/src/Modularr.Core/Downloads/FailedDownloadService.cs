@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Configuration;
@@ -14,8 +13,7 @@ namespace Modularr.Core.Downloads;
 public sealed class FailedDownloadService(
     ModularrDbContext db,
     DownloadImporter importer,
-    DownloadService downloads,
-    ReleaseSearch search,
+    AutoSearch search,
     TorrentEngineHost torrents,
     IOptions<ModularrOptions> options)
 {
@@ -45,20 +43,12 @@ public sealed class FailedDownloadService(
             return;
         }
 
-        ReleaseSearchResult result = await search.SearchAsync(request, cancellationToken).ConfigureAwait(false);
-        foreach (DownloadDecision decision in result.Decisions.Where(d => d.Approved))
+        foreach (TrackedDownload next in await search.GrabBestAsync(request, download.SeriesId, download.MovieId, wanted: null, cancellationToken).ConfigureAwait(false))
         {
-            TrackedDownload next = await downloads.GrabAsync(
-                new GrabRequest { Release = decision.Candidate.Release, SeriesId = download.SeriesId, MovieId = download.MovieId }, cancellationToken).ConfigureAwait(false);
-
-            // A failed release again under another title (no infohash from the indexer, so the blocklist missed it): try the next one.
-            if (next.State != TrackedDownloadState.Failed)
-            {
-                next.Regrabs = download.Regrabs + 1;
-                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                return;
-            }
+            next.Regrabs = download.Regrabs + 1;
         }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     // The search that finds a replacement: the movie, or the series episode (or season) the failed download was for.
@@ -83,13 +73,8 @@ public sealed class FailedDownloadService(
         int tvdbId = await db.Series.Where(s => s.Id == download.SeriesId).Select(s => s.TvdbId).SingleAsync(cancellationToken).ConfigureAwait(false);
         return episodes switch
         {
-            [Episode episode] => new ReleaseSearchRequest
-            {
-                TvdbId = tvdbId,
-                Season = episode.SeasonNumber,
-                Episode = episode.EpisodeNumber.ToString(CultureInfo.InvariantCulture),
-            },
-            [Episode first, ..] when episodes.All(e => e.SeasonNumber == first.SeasonNumber) => new ReleaseSearchRequest { TvdbId = tvdbId, Season = first.SeasonNumber },
+            [Episode episode] => ReleaseSearchRequest.ForEpisode(tvdbId, episode),
+            [Episode first, ..] when episodes.All(e => e.SeasonNumber == first.SeasonNumber) => ReleaseSearchRequest.ForSeason(tvdbId, first.SeasonNumber),
             _ => null,
         };
     }

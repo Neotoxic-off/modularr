@@ -1,4 +1,5 @@
 using Modularr.Core.Decisions;
+using Modularr.Core.Languages;
 
 namespace Modularr.Core.Persistence;
 
@@ -21,11 +22,20 @@ public sealed class Series
     // Minutes per episode, 0 when unknown; drives the release size limits.
     public int Runtime { get; set; }
     public SeriesType SeriesType { get; set; }
+
+    // Get-only, not mapped: anime is the series type upstream, its own category for profiles and languages here.
+    public MediaType MediaType => SeriesType == SeriesType.Anime ? MediaType.Anime : MediaType.Series;
     public bool Monitored { get; set; }
     public required string Path { get; set; }
     public int QualityProfileId { get; set; }
     public QualityProfile QualityProfile { get; set; } = null!;
     public DateTime Added { get; set; }
+
+    // Unknown for series added before it was stored.
+    public Language OriginalLanguage { get; set; } = Language.Unknown;
+
+    // Wanted audio language for this series only; null follows MediaOptions.
+    public Language? Language { get; set; }
     public string? Overview { get; set; }
 
     // URL of the metadata poster at add time.

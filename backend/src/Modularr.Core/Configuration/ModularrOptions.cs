@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using Modularr.Core.Decisions;
 using Modularr.Core.Downloads.Torrents;
 using Modularr.Core.Indexers;
+using Modularr.Core.Library;
 using Modularr.Core.Metadata;
 using Modularr.Core.Persistence;
 using Modularr.Core.PostProcessing;
@@ -34,4 +35,7 @@ public sealed class ModularrOptions
 
     [ValidateObjectMembers]
     public DecisionOptions Decisions { get; set; } = new();
+
+    [ValidateObjectMembers]
+    public MediaOptions Media { get; set; } = new();
 }

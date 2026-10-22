@@ -27,19 +27,12 @@ public sealed class JsonValueComparer<T>() : ValueComparer<T>(
 
 public static class PersistenceJson
 {
-    private static readonly JsonSerializerOptions Options = new() { Converters = { new QualityJson(), new LanguageJson(), new QualityModelJson() } };
+    private static readonly JsonSerializerOptions Options = new() { Converters = { new LanguageJson(), new QualityModelJson() } };
 
     public static string Serialize<T>(T value) => JsonSerializer.Serialize(value, Options);
 
     public static T Deserialize<T>(string json) =>
         JsonSerializer.Deserialize<T>(json, Options) ?? throw new JsonException($"Null {typeof(T).Name} in a non-null column.");
-
-    private sealed class QualityJson : JsonConverter<Quality>
-    {
-        public override Quality Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => Quality.FindById(reader.GetInt32());
-
-        public override void Write(Utf8JsonWriter writer, Quality value, JsonSerializerOptions options) => writer.WriteNumberValue(value.Id);
-    }
 
     // Detection sources describe how a title was parsed, not the file: not stored, so equal models store equal JSON.
     private sealed class QualityModelJson : JsonConverter<QualityModel>
@@ -56,6 +49,7 @@ public static class PersistenceJson
         private sealed record Stored(Quality Quality, Revision Revision);
     }
 
+    // Ids, where the API's own converter writes names.
     private sealed class LanguageJson : JsonConverter<Language>
     {
         public override Language Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => Language.FindById(reader.GetInt32());

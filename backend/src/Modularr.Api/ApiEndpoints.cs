@@ -1,13 +1,16 @@
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Configuration;
 using Modularr.Core.Decisions;
 using Modularr.Core.Downloads;
 using Modularr.Core.Indexers;
 using Modularr.Core.Indexers.Catalog;
+using Modularr.Core.Languages;
 using Modularr.Core.Library;
 using Modularr.Core.Metadata;
 using Modularr.Core.Persistence;
+using Modularr.Core.Qualities;
 using Modularr.Core.Search;
 
 namespace Modularr.Api;
@@ -15,9 +18,10 @@ namespace Modularr.Api;
 // HTTP shape only: every endpoint hands over to a Core service and projects the result.
 public static class ApiEndpoints
 {
-    public sealed record AddSeriesRequest(int TvdbId, int QualityProfileId = 1);
+    // No profile: the category default; no language: the language policy; the search runs in the background.
+    public sealed record AddSeriesRequest(int TvdbId, int? QualityProfileId = null, Language? Language = null, bool SearchNow = true, SeriesMonitor Monitor = SeriesMonitor.All);
 
-    public sealed record AddMovieRequest(int TmdbId, int QualityProfileId = 1);
+    public sealed record AddMovieRequest(int TmdbId, int? QualityProfileId = null, Language? Language = null, bool SearchNow = true);
 
     public static RouteGroupBuilder MapModularrApi(this RouteGroupBuilder api)
     {
@@ -26,12 +30,56 @@ public static class ApiEndpoints
         api.MapGet("/indexers", Indexers);
         api.MapGet("/search", Search);
         api.MapGet("/lookup", Lookup);
-        api.MapGet("/series", async (LibraryService library, CancellationToken ct) => (await library.ListSeriesAsync(ct)).Select(ToDto));
-        api.MapPost("/series", async (AddSeriesRequest request, LibraryService library, CancellationToken ct) =>
-            ToDto(await library.AddSeriesAsync(request.TvdbId, request.QualityProfileId, ct)));
-        api.MapGet("/movies", async (LibraryService library, CancellationToken ct) => (await library.ListMoviesAsync(ct)).Select(ToDto));
-        api.MapPost("/movies", async (AddMovieRequest request, LibraryService library, CancellationToken ct) =>
-            ToDto(await library.AddMovieAsync(request.TmdbId, request.QualityProfileId, ct)));
+        api.MapGet("/series", async (LibraryService library, ItemDtos dtos, CancellationToken ct) => (await library.ListSeriesAsync(ct)).Select(dtos.Of));
+        api.MapPost("/series", async (AddSeriesRequest request, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
+        {
+            Series series = await library.AddSeriesAsync(request.TvdbId, request.QualityProfileId, request.Language, request.Monitor, ct);
+            if (request.SearchNow && request.Monitor != SeriesMonitor.None)
+            {
+                dtos.Searches.Enqueue(new SearchJob(series.Id, MovieId: null));
+            }
+
+            return dtos.Of(series);
+        });
+        api.MapPatch("/series/{id:int}", async (int id, ItemUpdate update, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
+            dtos.Of(await library.UpdateSeriesAsync(id, update, ct)));
+        api.MapPost("/series/{id:int}/search", async (int id, int? season, ModularrDbContext db, SearchRunner searches, CancellationToken ct) =>
+        {
+            await EnsureExistsAsync(db.Series.AnyAsync(s => s.Id == id, ct), $"Series {id} is not in the library.");
+            searches.Enqueue(new SearchJob(id, MovieId: null, season));
+            return Results.Accepted();
+        });
+        api.MapGet("/movies", async (LibraryService library, ItemDtos dtos, CancellationToken ct) => (await library.ListMoviesAsync(ct)).Select(dtos.Of));
+        api.MapPost("/movies", async (AddMovieRequest request, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
+        {
+            Movie movie = await library.AddMovieAsync(request.TmdbId, request.QualityProfileId, request.Language, ct);
+            if (request.SearchNow)
+            {
+                dtos.Searches.Enqueue(new SearchJob(SeriesId: null, movie.Id));
+            }
+
+            return dtos.Of(movie);
+        });
+        api.MapPatch("/movies/{id:int}", async (int id, ItemUpdate update, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
+            dtos.Of(await library.UpdateMovieAsync(id, update, ct)));
+        api.MapPost("/movies/{id:int}/search", async (int id, ModularrDbContext db, SearchRunner searches, CancellationToken ct) =>
+        {
+            await EnsureExistsAsync(db.Movies.AnyAsync(m => m.Id == id, ct), $"Movie {id} is not in the library.");
+            searches.Enqueue(new SearchJob(SeriesId: null, id));
+            return Results.Accepted();
+        });
+        api.MapGet("/qualities", () => Quality.All.Select(q => new { q.Id, q.Name, q.Source, q.Resolution }));
+        api.MapGet("/languages", () => Language.All.Where(l => l != Language.Unknown).Select(l => new { l.Id, l.Name }));
+        api.MapGet("/profiles", (QualityProfileService profiles, CancellationToken ct) => profiles.ListAsync(ct));
+        api.MapPost("/profiles", (QualityProfile profile, QualityProfileService profiles, CancellationToken ct) => profiles.CreateAsync(profile, ct))
+            .RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapPut("/profiles/{id:int}", (int id, QualityProfile profile, QualityProfileService profiles, CancellationToken ct) => profiles.UpdateAsync(id, profile, ct))
+            .RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapDelete("/profiles/{id:int}", async (int id, QualityProfileService profiles, CancellationToken ct) =>
+        {
+            await profiles.DeleteAsync(id, ct);
+            return Results.NoContent();
+        }).RequireAuthorization(AuthEndpoints.AdminPolicy);
         api.MapPost("/releases/grab", async (GrabRequest request, DownloadService downloads, CancellationToken ct) =>
             ToDto(await downloads.GrabAsync(request, ct)));
         api.MapGet("/downloads", async (DownloadService downloads, CancellationToken ct) => (await downloads.ListAsync(ct)).Select(ToDto));
@@ -61,10 +109,16 @@ public static class ApiEndpoints
             return Results.NoContent();
         }).RequireAuthorization(AuthEndpoints.AdminPolicy);
         api.MapGet("/settings/paths", (IOptionsMonitor<ModularrOptions> options) => options.CurrentValue.Paths);
-        api.MapPut("/settings/paths", async (PathOptions paths, PathSettings settings, IOptionsMonitor<ModularrOptions> options, CancellationToken ct) =>
+        api.MapPut("/settings/paths", async (PathOptions paths, SettingsFile settings, IOptionsMonitor<ModularrOptions> options, CancellationToken ct) =>
         {
-            await settings.SaveAsync(paths, ct);
+            await settings.SavePathsAsync(paths, ct);
             return options.CurrentValue.Paths;
+        }).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapGet("/settings/media", (IOptionsMonitor<ModularrOptions> options) => options.CurrentValue.Media);
+        api.MapPut("/settings/media", async (MediaOptions media, QualityProfileService profiles, IOptionsMonitor<ModularrOptions> options, CancellationToken ct) =>
+        {
+            await profiles.SaveMediaAsync(media, ct);
+            return options.CurrentValue.Media;
         }).RequireAuthorization(AuthEndpoints.AdminPolicy);
         api.MapGet("/filesystem", (string? path) => DirectoryBrowser.Browse(path)).RequireAuthorization(AuthEndpoints.AdminPolicy);
         return api;
@@ -150,15 +204,39 @@ public static class ApiEndpoints
             _ => throw new ArgumentException($"Unknown type '{type}', expected series or movie."),
         };
 
-    private static object ToDto(Series s) => new
+    private static async Task EnsureExistsAsync(Task<bool> exists, string message)
     {
-        s.Id, s.TvdbId, s.Title, s.Year, s.SeriesType, s.Runtime, s.Monitored, s.Path, s.QualityProfileId, s.Added, s.Poster, s.Overview,
-        seasons = s.Seasons,
-        episodes = s.Episodes.Count,
-        episodesWithFile = s.Episodes.Count(e => e.MediaFileId is not null),
-    };
+        if (!await exists)
+        {
+            throw new KeyNotFoundException(message);
+        }
+    }
 
-    private static object ToDto(Movie m) => new { m.Id, m.TmdbId, m.ImdbId, m.Title, m.Year, m.Runtime, m.Monitored, m.Path, m.QualityProfileId, m.Poster, m.Overview };
+    // Library items as the UI sees them: language is the item's own override (null follows the policy), wantedLanguage the
+    // effective one, lastSearch the latest background search since startup.
+    public sealed class ItemDtos(IOptionsMonitor<ModularrOptions> options, SearchRunner searches)
+    {
+        public SearchRunner Searches => searches;
+
+        public object Of(Series s) => new
+        {
+            s.Id, s.TvdbId, s.Title, s.Year, s.SeriesType, s.Runtime, s.Monitored, s.Path, s.QualityProfileId, s.Added, s.Poster, s.Overview,
+            s.OriginalLanguage, s.Language,
+            wantedLanguage = options.CurrentValue.Media.WantedLanguage(s),
+            lastSearch = searches.LastSearch(s.Id, movieId: null),
+            seasons = s.Seasons,
+            episodes = s.Episodes.Count,
+            episodesWithFile = s.Episodes.Count(e => e.MediaFileId is not null),
+        };
+
+        public object Of(Movie m) => new
+        {
+            m.Id, m.TmdbId, m.ImdbId, m.Title, m.Year, m.Runtime, m.Monitored, m.Path, m.QualityProfileId, m.Poster, m.Overview,
+            m.OriginalLanguage, m.Language,
+            wantedLanguage = options.CurrentValue.Media.WantedLanguage(m),
+            lastSearch = searches.LastSearch(seriesId: null, m.Id),
+        };
+    }
 
     private static object ToDto(TrackedDownload d) => new { d.Id, d.InfoHash, d.ReleaseTitle, d.Indexer, d.State, d.Message, d.SeriesId, d.MovieId, d.EpisodeIds, d.Regrabs };
 

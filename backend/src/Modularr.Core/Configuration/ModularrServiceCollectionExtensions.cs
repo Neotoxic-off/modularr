@@ -39,7 +39,7 @@ public static class ModularrServiceCollectionExtensions
             .PostConfigure(options => Resolve(options, file, configDirectory))
             .ValidateDataAnnotations()
             .ValidateOnStart();
-        services.AddSingleton(new PathSettings(configDirectory, file));
+        services.AddSingleton(new SettingsFile(configDirectory, file));
 
         services.AddDbContext<ModularrDbContext>((provider, builder) => builder.UseSqlite(
             new SqliteConnectionStringBuilder { DataSource = provider.GetRequiredService<IOptions<ModularrOptions>>().Value.Database.Path }.ToString()));
@@ -73,6 +73,10 @@ public static class ModularrServiceCollectionExtensions
         services.AddScoped<DownloadService>();
         services.AddScoped<DownloadImporter>();
         services.AddScoped<FailedDownloadService>();
+        services.AddScoped<QualityProfileService>();
+        services.AddScoped<AutoSearch>();
+        services.AddSingleton<SearchRunner>();
+        services.AddHostedService(provider => provider.GetRequiredService<SearchRunner>());
         services.AddHostedService<DownloadMonitor>();
 
         return services;

@@ -3,6 +3,7 @@
 // NotSample and Blocklist have no upstream specification fixture: their cases are new.
 using Modularr.Core.Decisions;
 using Modularr.Core.Languages;
+using Modularr.Core.Parsing;
 using Modularr.Core.Qualities;
 using static Modularr.Core.Tests.Decisions.DecisionTestData;
 
@@ -75,17 +76,43 @@ public sealed class ReleaseSpecificationTests
     [InlineData(-2, 2, true)]
     [InlineData(-1, 4, true)]
     [InlineData(-1, 1, true)]
-    public void WantedLanguage(int profileLanguageId, int releaseLanguageId, bool expected)
+    public void WantedLanguage(int wantedLanguageId, int releaseLanguageId, bool expected)
     {
         // Ids: 1 English, 2 French (the original language), 4 German, -1 Any, -2 Original.
         ReleaseCandidate candidate = Candidate(MediaType.Movie) with
         {
-            Profile = new QualityProfile { Language = Language.FindById(profileLanguageId) },
             Languages = [Language.FindById(releaseLanguageId)],
             OriginalLanguage = Language.French,
         };
 
-        Assert.Equal(expected, DownloadSpecifications.WantedLanguage(candidate, Context()) is null);
+        Assert.Equal(expected, DownloadSpecifications.WantedLanguage(candidate, Context() with { WantedLanguage = Language.FindById(wantedLanguageId) }) is null);
+    }
+
+    // Parsed titles: MULTi adds the original track (and French when no dub is named), VOSTFR is the original with French subtitles,
+    // an untagged release is in the original language.
+    [Theory]
+    [InlineData("Movie.Title.2020.MULTi.1080p.BluRay.x264-GRP", "English", "French", true)]
+    [InlineData("Movie.Title.2020.MULTi.1080p.BluRay.x264-GRP", "English", "Original", true)]
+    [InlineData("Movie.Title.2020.MULTi.1080p.BluRay.x264-GRP", "English", "English", true)]
+    [InlineData("Movie.Title.2020.MULTi.1080p.BluRay.x264-GRP", "English", "German", false)]
+    [InlineData("Movie.Title.2020.MULTi.VFF.1080p.BluRay.x264-GRP", "Japanese", "Japanese", true)]
+    [InlineData("Movie.Title.2020.MULTi.VFQ.1080p.WEB.x264-GRP", "English", "French", true)]
+    [InlineData("Movie.Title.2020.MULTi.TRUEFRENCH.1080p.WEB.x264-GRP", "English", "French", true)]
+    [InlineData("Movie.Title.2020.TRUEFRENCH.1080p.WEB.x264-GRP", "English", "Original", false)]
+    [InlineData("Movie.Title.2020.VOSTFR.1080p.WEB.x264-GRP", "Japanese", "French", false)]
+    [InlineData("Movie.Title.2020.VOSTFR.1080p.WEB.x264-GRP", "Japanese", "Original", true)]
+    [InlineData("Movie.Title.2020.1080p.WEB.x264-GRP", "English", "English", true)]
+    [InlineData("Movie.Title.2020.1080p.WEB.x264-GRP", "English", "French", false)]
+    [InlineData("Movie.Title.2020.Eng.Fre.Multi.Subs.1080p.WEB.x264-GRP", "Japanese", "Japanese", false)]
+    public void WantedLanguageOfParsedTitle(string title, string original, string wanted, bool expected)
+    {
+        ReleaseCandidate candidate = Candidate(MediaType.Movie) with
+        {
+            Languages = LanguageParser.ParseLanguages(title),
+            OriginalLanguage = Language.FindByName(original),
+        };
+
+        Assert.Equal(expected, DownloadSpecifications.WantedLanguage(candidate, Context() with { WantedLanguage = Language.FindByName(wanted) }) is null);
     }
 
     [Theory]

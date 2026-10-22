@@ -1,9 +1,9 @@
-using Modularr.Core.Languages;
 using Modularr.Core.Qualities;
 
 namespace Modularr.Core.Decisions;
 
-// Sonarr/Radarr QualityProfile without custom formats; items are ordered worst to best. Also the persisted entity (Items is a JSON column).
+// Sonarr/Radarr QualityProfile without custom formats; items are ordered worst to best. Also the persisted entity (Items is a JSON column)
+// and the API shape. No language: MediaOptions is the one language policy.
 public sealed record QualityProfile
 {
     public int Id { get; init; }
@@ -13,9 +13,6 @@ public sealed record QualityProfile
     // Quality id or group id.
     public int Cutoff { get; init; }
     public IReadOnlyList<QualityProfileQualityItem> Items { get; init; } = [];
-
-    // Radarr profile language; Any disables the language check.
-    public Language Language { get; init; } = Language.Any;
 
     public Quality FirstAllowedQuality()
     {

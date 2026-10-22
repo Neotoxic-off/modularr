@@ -1,5 +1,6 @@
 using Modularr.Core.Decisions;
 using Modularr.Core.Indexers;
+using Modularr.Core.Languages;
 using Modularr.Core.Parsing;
 using Modularr.Core.Parsing.Episodes;
 using Modularr.Core.Parsing.Movies;
@@ -26,12 +27,13 @@ public static class ReleaseDecisions
         ReleaseCandidate candidate = new()
         {
             Release = release,
-            MediaType = series?.SeriesType == SeriesType.Anime ? MediaType.Anime : MediaType.Series,
+            MediaType = series?.MediaType ?? MediaType.Series,
             Profile = profile,
             Quality = parsed?.Quality ?? QualityParser.ParseQuality(release.Title),
             Languages = parsed?.Languages ?? LanguageParser.ParseLanguages(release.Title),
             ReleaseGroup = parsed?.ReleaseGroup ?? ReleaseGroupParser.ParseReleaseGroup(release.Title),
             Runtime = series?.Runtime ?? 0,
+            OriginalLanguage = series?.OriginalLanguage ?? Language.Unknown,
             Episodes = targets,
             FullSeason = parsed?.FullSeason ?? false,
             MultiSeason = parsed?.IsMultiSeason ?? false,
@@ -93,6 +95,7 @@ public static class ReleaseDecisions
             Languages = parsed?.Languages ?? LanguageParser.ParseLanguages(release.Title),
             ReleaseGroup = parsed?.ReleaseGroup ?? ReleaseGroupParser.ParseReleaseGroup(release.Title),
             Runtime = movie?.Runtime ?? 0,
+            OriginalLanguage = movie?.OriginalLanguage ?? Language.Unknown,
             MovieFile = best is null ? null : new ExistingFile(best.Quality, best.ReleaseGroup),
         };
 
