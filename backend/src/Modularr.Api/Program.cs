@@ -15,6 +15,8 @@ WebApplication app = builder.Build();
 app.UseApiErrors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
+// Explicit, after static files: the implicit UseRouting runs first, matches the SPA fallback and static files then skip.
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
