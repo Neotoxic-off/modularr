@@ -23,7 +23,6 @@ public sealed class DownloadImporter(ModularrDbContext db, IOptions<ModularrOpti
         download.State = TrackedDownloadState.Importing;
         PostProcessingVerdict verdict = CompletedDownloadProcessor.Process(outputPath, options.Value.PostProcessing);
 
-        bool remove = false;
         switch (verdict)
         {
             case PostProcessingVerdict.Accepted accepted:
@@ -34,10 +33,8 @@ public sealed class DownloadImporter(ModularrDbContext db, IOptions<ModularrOpti
                 break;
 
             case PostProcessingVerdict.Rejected { Blacklist: true } rejected:
-                await BlocklistAsync(download, rejected.Reason, cancellationToken).ConfigureAwait(false);
-                download.State = TrackedDownloadState.Failed;
-                remove = true;
-                break;
+                await FailAsync(download, rejected.Reason, cancellationToken).ConfigureAwait(false);
+                return true;
 
             // A missing or linked download path: nothing wrong with the release itself, wait for the user.
             default:
@@ -46,7 +43,17 @@ public sealed class DownloadImporter(ModularrDbContext db, IOptions<ModularrOpti
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return remove;
+        return false;
+    }
+
+    // Upstream FailedDownloadService.MarkAsFailed: blocklists the release, records the failure and keeps the reason.
+    public async Task FailAsync(TrackedDownload download, string reason, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(download);
+        await BlocklistAsync(download, reason, cancellationToken).ConfigureAwait(false);
+        download.State = TrackedDownloadState.Failed;
+        download.Message = reason;
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     // shortcut: files keep their release file name and replaced files stay on disk, add renaming and the recycle bin later.

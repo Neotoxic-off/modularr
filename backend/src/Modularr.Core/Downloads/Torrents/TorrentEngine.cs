@@ -1,7 +1,9 @@
 using System.Net;
 using System.Text.Json;
+using Modularr.Core.PostProcessing;
 using MonoTorrent;
 using MonoTorrent.Client;
+using MonoTorrent.PiecePicking;
 
 namespace Modularr.Core.Downloads.Torrents;
 
@@ -15,15 +17,17 @@ public sealed class TorrentEngine : IAsyncDisposable
 
     private readonly ClientEngine _engine;
     private readonly TorrentEngineOptions _options;
+    private readonly PostProcessingOptions _content;
     private readonly Dictionary<string, TorrentTag> _tags;
     private readonly SemaphoreSlim _saveLock = new(1, 1);
     private readonly CancellationTokenSource _stopping = new();
     private readonly Task _seedLimitLoop;
 
-    private TorrentEngine(ClientEngine engine, TorrentEngineOptions options, Dictionary<string, TorrentTag> tags)
+    private TorrentEngine(ClientEngine engine, TorrentEngineOptions options, PostProcessingOptions content, Dictionary<string, TorrentTag> tags)
     {
         _engine = engine;
         _options = options;
+        _content = content;
         _tags = tags;
         _seedLimitLoop = RunSeedLimitLoopAsync(_stopping.Token);
     }
@@ -35,7 +39,8 @@ public sealed class TorrentEngine : IAsyncDisposable
     // Last failure of the background seed-limit check, null once a check succeeds again.
     public Exception? SeedLimitError { get; private set; }
 
-    public static async Task<TorrentEngine> StartAsync(TorrentEngineOptions options)
+    // The content check judges each torrent's file list with the post-processing extension lists.
+    public static async Task<TorrentEngine> StartAsync(TorrentEngineOptions options, PostProcessingOptions? content = null)
     {
         Directory.CreateDirectory(options.StateDirectory);
         string statePath = Path.Combine(options.StateDirectory, EngineStateFile);
@@ -48,11 +53,12 @@ public sealed class TorrentEngine : IAsyncDisposable
             ? JsonSerializer.Deserialize<Dictionary<string, TorrentTag>>(await File.ReadAllBytesAsync(tagsPath)) ?? []
             : [];
 
+        TorrentEngine started = new(engine, options, content ?? new PostProcessingOptions(), tags);
         foreach (TorrentManager manager in engine.Torrents)
         {
             if (tags.GetValueOrDefault(ToId(manager.InfoHashes))?.Stopped != true)
             {
-                await manager.StartAsync();
+                await started.StartCheckedAsync(manager);
             }
             else if (FastResume.TryLoad(engine.Settings.GetFastResumePath(manager.InfoHashes), out FastResume? fastResume))
             {
@@ -62,7 +68,7 @@ public sealed class TorrentEngine : IAsyncDisposable
             }
         }
 
-        return new TorrentEngine(engine, options, tags);
+        return started;
     }
 
     public async Task<string> AddMagnetAsync(string magnetUri, string saveDirectory, string category)
@@ -108,8 +114,8 @@ public sealed class TorrentEngine : IAsyncDisposable
             return false;
         }
 
-        await manager.StartAsync();
-        UpdateTag(id, tag => tag with { Stopped = false });
+        await StartCheckedAsync(manager);
+        UpdateTag(id, tag => tag with { Stopped = tag.Rejection is not null });
         await SaveAsync();
         return true;
     }
@@ -136,6 +142,28 @@ public sealed class TorrentEngine : IAsyncDisposable
         return true;
     }
 
+    // Asks the trackers, DHT and local peer discovery for peers again: the stall check's retry.
+    public async Task<bool> ReannounceAsync(string id)
+    {
+        if (Find(id) is not TorrentManager manager)
+        {
+            return false;
+        }
+
+        await manager.TrackerManager.AnnounceAsync(CancellationToken.None);
+        if (manager.CanUseDht)
+        {
+            await manager.DhtAnnounceAsync();
+        }
+
+        if (manager.CanUseLocalPeerDiscovery)
+        {
+            await manager.LocalPeerAnnounceAsync();
+        }
+
+        return true;
+    }
+
     // Peers normally come from trackers/DHT; this lets a known peer be added directly.
     public async Task<bool> AddPeerAsync(string id, IPEndPoint endPoint) =>
         Find(id) is TorrentManager manager && await manager.AddPeerAsync(new PeerInfo(new Uri($"ipv4://{endPoint}")));
@@ -148,7 +176,7 @@ public sealed class TorrentEngine : IAsyncDisposable
         {
             string id = ToId(manager.InfoHashes);
             // The snapshot can hold a torrent RemoveAsync removed meanwhile.
-            if (!manager.Complete || !_engine.Contains(manager.InfoHashes))
+            if (!IsComplete(manager) || !_engine.Contains(manager.InfoHashes))
             {
                 continue;
             }
@@ -274,6 +302,8 @@ public sealed class TorrentEngine : IAsyncDisposable
         return size > 0 ? (double)(tag.UploadedBytes + manager.Monitor.DataBytesSent) / size : 0;
     }
 
+    private static bool IsComplete(TorrentManager manager) => manager.HasMetadata && manager.PartialProgress >= 100;
+
     private static long TotalSize(TorrentManager manager) => manager.Torrent?.Size ?? manager.MagnetLink?.Size ?? 0;
 
     private async Task<string> AddAsync(InfoHashes infoHashes, Func<Task<TorrentManager>> add, string category)
@@ -290,9 +320,75 @@ public sealed class TorrentEngine : IAsyncDisposable
             _tags[id] = new TorrentTag(category, Stopped: false, CompletedAt: null, UploadedBytes: 0);
         }
 
-        await manager.StartAsync();
+        await StartCheckedAsync(manager);
         await SaveAsync();
         return id;
+    }
+
+    // No payload piece before the content check: it runs at once when the file list is known, else once the metadata arrives.
+    // Every start checks again, as MonoTorrent does not keep the file priorities that skip the unwanted files.
+    private async Task StartCheckedAsync(TorrentManager manager)
+    {
+        if (manager.HasMetadata)
+        {
+            if (await CheckContentAsync(manager))
+            {
+                await manager.StartAsync();
+            }
+        }
+        else
+        {
+            ContentCheckGate gate = new(new StandardPieceRequester(PieceRequesterSettings.Default));
+            await manager.ChangePickerAsync(gate);
+            await manager.StartAsync();
+            _ = CheckOnMetadataAsync(manager, gate);
+        }
+    }
+
+    private async Task CheckOnMetadataAsync(TorrentManager manager, ContentCheckGate gate)
+    {
+        try
+        {
+            await manager.WaitForMetadataAsync(_stopping.Token);
+            if (await CheckContentAsync(manager))
+            {
+                gate.Open();
+            }
+
+            await SaveAsync();
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // Shutdown or a failed priority change: the gate stays closed, the check runs again on the next start
+            // and the stall check fails a torrent that never gets going.
+        }
+    }
+
+    // A rejected torrent is stopped and reported Failed; an accepted one skips the files it does not want.
+    private async Task<bool> CheckContentAsync(TorrentManager manager)
+    {
+        TorrentContentVerdict verdict = TorrentContentCheck.Check([.. manager.Files.Select(f => (f.Path, f.Length))], _content);
+        if (verdict.Rejection is null)
+        {
+            foreach ((ITorrentManagerFile file, bool wanted) in manager.Files.Zip(verdict.Wanted))
+            {
+                if (!wanted)
+                {
+                    await manager.SetFilePriorityAsync(file, Priority.DoNotDownload);
+                }
+            }
+        }
+        else if (manager.State != TorrentState.Stopped)
+        {
+            await manager.StopAsync();
+        }
+
+        UpdateTag(ToId(manager.InfoHashes), t => t with
+        {
+            Rejection = verdict.Rejection,
+            Stopped = t.Stopped || verdict.Rejection is not null,
+        });
+        return verdict.Rejection is null;
     }
 
     private TorrentManager? Find(string id) =>
@@ -321,12 +417,14 @@ public sealed class TorrentEngine : IAsyncDisposable
         string id = ToId(manager.InfoHashes);
         TorrentTag tag = GetTag(id);
         long totalSize = TotalSize(manager);
-        double progress = manager.Progress / 100;
+        // Skipped files never download, so progress and completion only count the wanted ones.
+        double progress = manager.PartialProgress / 100;
         long remainingSize = (long)(totalSize * (1.0 - progress));
         long downloadRate = manager.Monitor.DownloadRate;
         double ratio = Ratio(manager, tag);
-        (DownloadItemStatus status, string? message) =
-            TorrentStatusMapping.Map(manager.State, manager.Complete, _options.DhtEnabled, manager.Error?.Exception?.Message);
+        (DownloadItemStatus status, string? message) = tag.Rejection is string rejection
+            ? (DownloadItemStatus.Failed, rejection)
+            : TorrentStatusMapping.Map(manager.State, IsComplete(manager), _options.DhtEnabled, manager.Error?.Exception?.Message);
 
         return new TorrentStatus
         {
@@ -345,7 +443,11 @@ public sealed class TorrentEngine : IAsyncDisposable
             SavePath = manager.SavePath,
             OutputPath = manager.Files.Count == 1 ? manager.Files[0].DownloadCompleteFullPath : manager.ContainingDirectory,
             Files = [.. manager.Files.Select(f => new TorrentFileStatus(f.Path, f.Length, f.BitField.PercentComplete / 100))],
-            CanBeRemoved = TorrentStatusMapping.CanBeRemoved(manager.State, manager.Complete, ratio, SeedingTime(tag), _options),
+            CanBeRemoved = TorrentStatusMapping.CanBeRemoved(manager.State, IsComplete(manager), ratio, SeedingTime(tag), _options),
+            HasMetadata = manager.HasMetadata,
+            Seeds = manager.Peers.Seeds,
+            Peers = manager.Peers.Leechs,
+            DownloadedBytes = manager.Monitor.DataBytesReceived,
         };
     }
 
@@ -371,5 +473,7 @@ public sealed class TorrentEngine : IAsyncDisposable
     private sealed record TorrentTag(string Category, bool Stopped, DateTimeOffset? CompletedAt, long UploadedBytes)
     {
         public static readonly TorrentTag Untagged = new(string.Empty, Stopped: false, CompletedAt: null, UploadedBytes: 0);
+
+        public string? Rejection { get; init; }
     }
 }

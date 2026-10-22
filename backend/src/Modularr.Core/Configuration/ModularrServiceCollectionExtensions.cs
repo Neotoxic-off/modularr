@@ -69,6 +69,7 @@ public static class ModularrServiceCollectionExtensions
         services.AddScoped<ReleaseSearch>();
         services.AddScoped<DownloadService>();
         services.AddScoped<DownloadImporter>();
+        services.AddScoped<FailedDownloadService>();
         services.AddHostedService<DownloadMonitor>();
 
         return services;

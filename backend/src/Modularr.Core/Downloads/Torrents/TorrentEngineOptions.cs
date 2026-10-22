@@ -31,4 +31,29 @@ public sealed record TorrentEngineOptions
 
     [Range(typeof(TimeSpan), "00:00:00", "3650.00:00:00")]
     public TimeSpan? SeedTimeLimit { get; init; }
+
+    // Stall check: a download hitting one of these limits is re-announced StallRetries times, then failed, blocklisted and
+    // replaced by the next best release.
+    [Range(typeof(TimeSpan), "00:01:00", "30.00:00:00")]
+    public TimeSpan MetadataTimeout { get; init; } = TimeSpan.FromMinutes(15);
+
+    [Range(typeof(TimeSpan), "00:01:00", "30.00:00:00")]
+    public TimeSpan NoPeersTimeout { get; init; } = TimeSpan.FromHours(1);
+
+    [Range(typeof(TimeSpan), "00:01:00", "30.00:00:00")]
+    public TimeSpan NoProgressTimeout { get; init; } = TimeSpan.FromHours(2);
+
+    // Bytes per second averaged over SlowSpeedWindow, 0 disables the check.
+    [Range(0, int.MaxValue)]
+    public int MinimumAverageSpeed { get; init; } = 5 * 1024;
+
+    [Range(typeof(TimeSpan), "00:01:00", "30.00:00:00")]
+    public TimeSpan SlowSpeedWindow { get; init; } = TimeSpan.FromHours(6);
+
+    [Range(0, 100)]
+    public int StallRetries { get; init; } = 2;
+
+    // Automatic re-grabs in a row for one series or movie after failed downloads, so a bad search result cannot loop.
+    [Range(0, 100)]
+    public int MaxAutomaticRegrabs { get; init; } = 3;
 }

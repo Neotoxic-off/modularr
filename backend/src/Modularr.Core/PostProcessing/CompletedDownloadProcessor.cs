@@ -107,18 +107,22 @@ public static class CompletedDownloadProcessor
             }
         }
 
-        return (dangerous, executables, disallowed, videos) switch
-        {
-            ({ Count: > 0 }, _, _, _) => Reject($"Caution: Found potentially dangerous file with extension: {Extensions(dangerous)}"),
-            (_, { Count: > 0 }, _, _) => Reject($"Caution: Found executable file with extension: {Extensions(executables)}"),
-            (_, _, { Count: > 0 }, _) => Reject($"Found file with disallowed extension: {Extensions(disallowed)}"),
-            (_, _, _, { Count: 0 }) => Reject("No video file found"),
-            _ => new PostProcessingVerdict.Accepted(videos, subtitles),
-        };
+        return RejectionReason(dangerous, executables, disallowed, hasVideo: videos.Count > 0) is string reason
+            ? new PostProcessingVerdict.Rejected(reason, Blacklist: true)
+            : new PostProcessingVerdict.Accepted(videos, subtitles);
     }
 
-    private static PostProcessingVerdict.Rejected Reject(string reason) => new(reason, Blacklist: true);
+    // Shared with the pre-download content check, so a release is rejected with the same reason before and after download.
+    public static string? RejectionReason(IReadOnlyList<string> dangerous, IReadOnlyList<string> executables, IReadOnlyList<string> disallowed, bool hasVideo) =>
+        (dangerous, executables, disallowed, hasVideo) switch
+        {
+            ({ Count: > 0 }, _, _, _) => $"Caution: Found potentially dangerous file with extension: {Extensions(dangerous)}",
+            (_, { Count: > 0 }, _, _) => $"Caution: Found executable file with extension: {Extensions(executables)}",
+            (_, _, { Count: > 0 }, _) => $"Found file with disallowed extension: {Extensions(disallowed)}",
+            (_, _, _, false) => "No video file found",
+            _ => null,
+        };
 
-    private static string Extensions(List<string> files) =>
+    private static string Extensions(IReadOnlyList<string> files) =>
         string.Join(", ", files.Select(f => Path.GetExtension(f) is { Length: > 0 } extension ? extension : Path.GetFileName(f)).Distinct(StringComparer.OrdinalIgnoreCase));
 }

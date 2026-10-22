@@ -126,14 +126,15 @@ public static class ApiEndpoints
 
     private static object ToDto(Movie m) => new { m.Id, m.TmdbId, m.ImdbId, m.Title, m.Year, m.Runtime, m.Monitored, m.Path, m.QualityProfileId };
 
-    private static object ToDto(TrackedDownload d) => new { d.Id, d.InfoHash, d.ReleaseTitle, d.Indexer, d.State, d.SeriesId, d.MovieId, d.EpisodeIds };
+    private static object ToDto(TrackedDownload d) => new { d.Id, d.InfoHash, d.ReleaseTitle, d.Indexer, d.State, d.Message, d.SeriesId, d.MovieId, d.EpisodeIds, d.Regrabs };
 
     private static object ToDto(DownloadItem item) => new
     {
         item.Download.Id, item.Download.InfoHash, item.Download.ReleaseTitle, item.Download.Indexer, item.Download.State,
-        item.Download.SeriesId, item.Download.MovieId, item.Download.EpisodeIds,
+        item.Download.SeriesId, item.Download.MovieId, item.Download.EpisodeIds, item.Download.Regrabs,
         status = item.Torrent?.Status,
-        message = item.Torrent?.Message,
+        // A failed download's torrent is removed, so its reason is the one kept on the download.
+        message = item.Torrent?.Message ?? item.Download.Message,
         progress = item.Torrent?.Progress,
         size = item.Torrent?.TotalSize,
         remaining = item.Torrent?.RemainingSize,

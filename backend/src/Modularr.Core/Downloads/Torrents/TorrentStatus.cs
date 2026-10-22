@@ -37,6 +37,15 @@ public sealed record TorrentStatus
 
     // Stopped after reaching the seed limit, so the files can be moved and the torrent removed.
     public required bool CanBeRemoved { get; init; }
+
+    // What the stall check watches: a magnet without metadata, connected seeds and leechers, payload bytes received this session.
+    public bool HasMetadata { get; init; }
+
+    public int Seeds { get; init; }
+
+    public int Peers { get; init; }
+
+    public long DownloadedBytes { get; init; }
 }
 
 public sealed record TorrentFileStatus(string Path, long Size, double Progress);
