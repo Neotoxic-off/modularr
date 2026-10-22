@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import type { FormEvent, ReactNode } from "react";
 import { api, errorMessage, UNAUTHORIZED } from "@/lib/api";
 import type { AuthState, User } from "@/lib/api";
-import { Alert, Button, Field, Input, Spinner } from "@/components/ui";
+import { Alert, Button, Field, Input, Logo, Spinner } from "@/components/ui";
 
 interface Session {
   user: User;
@@ -39,8 +39,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
     setState((s) => s && { ...s, user: null });
   }, []);
 
-  if (error) return <Centered><Alert>API injoignable : {error}</Alert></Centered>;
-  if (!state) return <Centered><Spinner /></Centered>;
+  if (error) return <Centered><Alert>Can’t reach the Modularr server: {error}</Alert></Centered>;
+  if (!state) return <Centered><Spinner className="text-accent" /></Centered>;
   if (!state.user) return <Login setup={state.setupRequired} onSignedIn={(user) => setState({ setupRequired: false, user })} />;
 
   return <SessionContext value={{ user: state.user, logout }}>{children}</SessionContext>;
@@ -66,25 +66,29 @@ function Login({ setup, onSignedIn }: { setup: boolean; onSignedIn: (user: User)
   }
 
   return (
-    <Centered>
-      <form onSubmit={submit} className="w-full max-w-sm space-y-5 rounded-2xl border border-line bg-surface p-7 shadow-2xl">
-        <div>
-          <p className="text-xl font-semibold tracking-tight">modularr</p>
-          <p className="mt-1 text-sm text-muted">{setup ? "Crée le compte administrateur." : "Connecte-toi pour continuer."}</p>
+    <div className="relative grid min-h-screen place-items-center overflow-hidden p-4">
+      <div aria-hidden="true" className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-accent-strong/20 blur-[120px]" />
+      <form onSubmit={submit} className="relative w-full max-w-sm animate-rise space-y-5 rounded-2xl border border-line bg-surface/90 p-7 shadow-2xl shadow-black/60 backdrop-blur">
+        <div className="space-y-4">
+          <Logo />
+          <div>
+            <h1 className="font-display text-2xl font-semibold tracking-tight">{setup ? "Create your admin account" : "Welcome back"}</h1>
+            <p className="mt-1 text-sm text-muted">{setup ? "This account manages settings, users and the library." : "Sign in to continue to your library."}</p>
+          </div>
         </div>
         {error && <Alert>{error}</Alert>}
-        <Field label="Utilisateur">
+        <Field label="Username">
           <Input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoFocus required />
         </Field>
-        <Field label="Mot de passe" hint={setup ? "8 caractères minimum." : undefined}>
+        <Field label="Password" hint={setup ? "At least 8 characters." : undefined}>
           <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
             autoComplete={setup ? "new-password" : "current-password"} minLength={setup ? 8 : undefined} required />
         </Field>
-        <Button variant="primary" className="w-full" disabled={busy}>
-          {busy ? <Spinner /> : setup ? "Créer le compte" : "Se connecter"}
+        <Button variant="primary" size="lg" className="w-full" disabled={busy}>
+          {busy ? <Spinner /> : setup ? "Create account" : "Sign in"}
         </Button>
       </form>
-    </Centered>
+    </div>
   );
 }
 

@@ -2,11 +2,13 @@
 
 export type Kind = "movie" | "series" | "anime";
 export type Role = "Admin" | "User";
+export type Category = "Movie" | "Series" | "Anime";
 
 export interface User {
   id: number;
   username: string;
   role: Role;
+  created: string;
 }
 
 export interface AuthState {
@@ -15,8 +17,8 @@ export interface AuthState {
 }
 
 // A movie (tmdbId) or show (tvdbId) from /lookup and /discover.
-export interface LookupItem {
-  kind: "Movie" | "Series" | "Anime";
+export interface DiscoveryItem {
+  kind: Category;
   tmdbId: number | null;
   tvdbId: number | null;
   imdbId: string | null;
@@ -32,34 +34,100 @@ export interface LookupItem {
   inLibrary: boolean;
 }
 
-export interface LibraryItem {
+export interface DiscoverList {
+  items: DiscoveryItem[];
+  error: string | null;
+}
+
+interface ItemBase {
   id: number;
-  tvdbId?: number;
-  tmdbId?: number;
   title: string;
   year: number;
-  seriesType?: "Standard" | "Daily" | "Anime";
+  runtime: number;
+  monitored: boolean;
   path: string;
-  poster?: string | null;
-  overview?: string | null;
-  episodes?: number;
-  episodesWithFile?: number;
+  qualityProfileId: number;
+  poster: string | null;
+  backdrop: string | null;
+  overview: string | null;
+  rating: number | null;
+  genres: string[];
+  certification: string | null;
+  originalLanguage: string;
+  language: string | null;
+  wantedLanguage: string;
+  lastSearch: { time: string; result: string } | null;
+}
+
+export interface Movie extends ItemBase {
+  tmdbId: number;
+  imdbId: string | null;
+}
+
+export interface Series extends ItemBase {
+  tvdbId: number;
+  seriesType: "Standard" | "Daily" | "Anime";
+  added: string;
+  seasons: { number: number; monitored: boolean }[];
+  episodes: number;
+  episodesWithFile: number;
+}
+
+export type LibraryItem = Movie | Series;
+
+export interface Episode {
+  id: number;
+  seasonNumber: number;
+  episodeNumber: number;
+  absoluteEpisodeNumber: number | null;
+  airDate: string | null;
+  title: string | null;
+  monitored: boolean;
+  hasFile: boolean;
+}
+
+export interface SeriesDetail {
+  series: Series;
+  seasons: { number: number; monitored: boolean; episodes: number; episodesWithFile: number }[];
+  episodes: Episode[];
+}
+
+export interface MovieDetail {
+  movie: Movie;
+  hasFile: boolean;
+}
+
+export interface ItemPatch {
+  qualityProfileId?: number;
+  monitored?: boolean;
+  language?: string | null;
+}
+
+export interface AddOptions {
+  qualityProfileId?: number | null;
+  language?: string | null;
+  searchNow?: boolean;
+  monitor?: "All" | "Future" | "None";
 }
 
 export interface Release {
   id: string;
   title: string;
   indexer: string;
-  size?: number | null;
-  seeders?: number | null;
+  publishDate: string;
+  size: number | null;
+  seeders: number | null;
+  peers: number | null;
 }
 
 export interface Decision {
   release: Release;
   quality: string;
   languages: string[];
+  releaseGroup: string | null;
   approved: boolean;
-  rejections: { reason: string; message: string }[];
+  temporarilyRejected: boolean;
+  rejections: { reason: string; message: string; type: string }[];
 }
 
 export interface SearchResult {
@@ -78,15 +146,19 @@ export interface Download {
   releaseTitle: string;
   indexer: string;
   state: DownloadState;
+  seriesId: number | null;
+  movieId: number | null;
   category: "series" | "movies";
   added: string;
-  status?: "Queued" | "Paused" | "Downloading" | "Completed" | "Failed" | "Warning" | null;
-  message?: string | null;
-  progress?: number | null;
-  size?: number | null;
-  downloadRate?: number | null;
-  uploadRate?: number | null;
-  eta?: number | null;
+  status: "Queued" | "Paused" | "Downloading" | "Completed" | "Failed" | "Warning" | null;
+  message: string | null;
+  progress: number | null;
+  size: number | null;
+  remaining: number | null;
+  downloadRate: number | null;
+  uploadRate: number | null;
+  ratio: number | null;
+  eta: number | null;
 }
 
 export interface Indexer {
@@ -95,14 +167,62 @@ export interface Indexer {
   language: string;
   privacy: string;
   enabled: boolean;
-  health: { activeUrl: string; failures: number; lastError?: string | null };
+  health: { activeUrl: string; failures: number; lastError: string | null; lastCheck: string | null };
 }
 
 export interface IndexerList {
   total: number;
   enabled: number;
-  lastSyncError?: string | null;
+  lastSyncError: string | null;
   indexers: Indexer[];
+}
+
+export interface Quality {
+  id: number;
+  name: string;
+  source: string;
+  resolution: number;
+}
+
+export interface Language {
+  id: number;
+  name: string;
+}
+
+// id 0 for a single quality, >= 1000 for a group of qualities.
+export interface ProfileItem {
+  id: number;
+  name: string | null;
+  quality: number | null;
+  items: ProfileItem[];
+  allowed: boolean;
+}
+
+export interface Profile {
+  id: number;
+  name: string;
+  upgradeAllowed: boolean;
+  cutoff: number;
+  items: ProfileItem[];
+}
+
+export interface MediaDefaults {
+  profileId: number;
+  language: string | null;
+}
+
+export interface LanguageRule {
+  category: Category | null;
+  originalLanguage: string | null;
+  language: string;
+}
+
+export interface MediaSettings {
+  movies: MediaDefaults;
+  series: MediaDefaults;
+  anime: MediaDefaults;
+  defaultLanguage: string;
+  exceptions: LanguageRule[];
 }
 
 export interface Paths {
@@ -118,7 +238,7 @@ export interface Folder {
   directories: { name: string; path: string }[];
 }
 
-// Fired on any 401 so the auth gate drops back to the login screen.
+// Fired on any 401 so the auth gate drops back to the sign-in screen.
 export const UNAUTHORIZED = "modularr:unauthorized";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -131,15 +251,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const body = (await response.json().catch(() => null)) as { error?: string } | null;
     throw new Error(body?.error ?? `${response.status} ${response.statusText}`);
   }
-  return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
+  return response.status === 204 || response.status === 202 ? (undefined as T) : ((await response.json()) as T);
 }
 
 const send = <T>(method: string, path: string, body?: unknown) =>
   request<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) });
 
 // Anime lives in the series library; the backend types it from the "Anime" genre.
-const apiType = (kind: Kind) => (kind === "movie" ? "movie" : "series");
-const libraryPath = (kind: Kind) => (kind === "movie" ? "/movies" : "/series");
+export const libraryPath = (kind: Kind) => (kind === "movie" ? "/movies" : "/series");
+
+export const isSeries = (item: LibraryItem): item is Series => "tvdbId" in item;
+
+export const kindOf = (item: LibraryItem): Kind => (!isSeries(item) ? "movie" : item.seriesType === "Anime" ? "anime" : "series");
+
+export const kindOfDiscovery = (item: DiscoveryItem): Kind => (item.kind === "Movie" ? "movie" : item.kind === "Series" ? "series" : "anime");
+
+export const titleHref = (kind: Kind, id: number) => `/title/?type=${kind === "movie" ? "movie" : "series"}&id=${id}`;
 
 export const api = {
   authState: () => request<AuthState>("/auth/state"),
@@ -147,24 +274,36 @@ export const api = {
   login: (username: string, password: string) => send<User>("POST", "/auth/login", { username, password }),
   logout: () => send<void>("POST", "/auth/logout"),
   changePassword: (currentPassword: string, newPassword: string) =>
-    send<void>("POST", "/auth/password", { currentPassword, newPassword }),
+    send<User>("POST", "/auth/password", { currentPassword, newPassword }),
 
   users: () => request<User[]>("/users"),
   createUser: (username: string, password: string, role: Role) => send<User>("POST", "/users", { username, password, role }),
   updateUser: (id: number, patch: { role?: Role; password?: string }) => send<User>("PATCH", `/users/${id}`, patch),
   deleteUser: (id: number) => send<void>("DELETE", `/users/${id}`),
 
-  lookup: (kind: Kind, term: string) =>
-    request<LookupItem[]>(`/lookup?type=${apiType(kind)}&term=${encodeURIComponent(term)}`),
-  library: (kind: Kind) => request<LibraryItem[]>(libraryPath(kind)),
-  add: (kind: Kind, item: LookupItem) =>
-    send<LibraryItem>("POST", libraryPath(kind), kind === "movie" ? { tmdbId: item.tmdbId } : { tvdbId: item.tvdbId }),
+  lookup: (term: string, signal?: AbortSignal) =>
+    request<DiscoveryItem[]>(`/lookup?type=all&term=${encodeURIComponent(term)}`, { signal }),
+  discover: (kind: Kind, list: string) => request<DiscoverList>(`/discover/${kind === "movie" ? "movies" : kind}?list=${list}`),
+
+  movies: () => request<Movie[]>("/movies"),
+  movie: (id: number) => request<MovieDetail>(`/movies/${id}`),
+  series: () => request<Series[]>("/series"),
+  seriesDetail: (id: number) => request<SeriesDetail>(`/series/${id}`),
+  add: (item: DiscoveryItem, options: AddOptions = {}) =>
+    item.kind === "Movie"
+      ? send<Movie>("POST", "/movies", { tmdbId: item.tmdbId, ...options })
+      : send<Series>("POST", "/series", { tvdbId: item.tvdbId, ...options }),
+  update: (kind: Kind, id: number, patch: ItemPatch) => send<LibraryItem>("PATCH", `${libraryPath(kind)}/${id}`, patch),
   remove: (kind: Kind, id: number, deleteFiles: boolean) =>
     send<void>("DELETE", `${libraryPath(kind)}/${id}?deleteFiles=${deleteFiles}`),
-  search: (kind: Kind, item: LibraryItem) =>
-    request<SearchResult>(kind === "movie" ? `/search?type=movie&tmdbId=${item.tmdbId}` : `/search?type=series&tvdbId=${item.tvdbId}`),
-  grab: (kind: Kind, item: LibraryItem, release: Release) =>
-    send<Download>("POST", "/releases/grab", kind === "movie" ? { release, movieId: item.id } : { release, seriesId: item.id }),
+  autoSearch: (kind: Kind, id: number, season?: number) =>
+    send<void>("POST", `${libraryPath(kind)}/${id}/search${season === undefined ? "" : `?season=${season}`}`),
+  releases: (item: LibraryItem, season?: number) =>
+    request<SearchResult>(isSeries(item)
+      ? `/search?type=series&tvdbId=${item.tvdbId}${season === undefined ? "" : `&season=${season}`}`
+      : `/search?type=movie&tmdbId=${item.tmdbId}`),
+  grab: (item: LibraryItem, release: Release) =>
+    send<{ id: number }>("POST", "/releases/grab", isSeries(item) ? { release, seriesId: item.id } : { release, movieId: item.id }),
 
   downloads: () => request<Download[]>("/downloads"),
   pause: (id: number) => send<void>("POST", `/downloads/${id}/pause`),
@@ -174,14 +313,21 @@ export const api = {
 
   indexers: () => request<IndexerList>("/indexers"),
 
+  qualities: () => request<Quality[]>("/qualities"),
+  languages: () => request<Language[]>("/languages"),
+  profiles: () => request<Profile[]>("/profiles"),
+  createProfile: (profile: Profile) => send<Profile>("POST", "/profiles", profile),
+  saveProfile: (profile: Profile) => send<Profile>("PUT", `/profiles/${profile.id}`, profile),
+  deleteProfile: (id: number) => send<void>("DELETE", `/profiles/${id}`),
+
+  media: () => request<MediaSettings>("/settings/media"),
+  saveMedia: (media: MediaSettings) => send<MediaSettings>("PUT", "/settings/media", media),
   paths: () => request<Paths>("/settings/paths"),
   savePaths: (paths: Paths) => send<Paths>("PUT", "/settings/paths", paths),
   folders: (path: string | null) => request<Folder>(`/filesystem${path ? `?path=${encodeURIComponent(path)}` : ""}`),
 };
 
-export const isAnime = (genres: readonly string[] | undefined) => genres?.some((g) => g.toLowerCase() === "anime") ?? false;
-
-const units = ["o", "Ko", "Mo", "Go", "To"];
+const units = ["B", "KB", "MB", "GB", "TB"];
 
 export function formatSize(bytes?: number | null): string {
   if (bytes == null) return "—";
@@ -191,9 +337,23 @@ export function formatSize(bytes?: number | null): string {
 
 export function formatEta(seconds?: number | null): string {
   if (seconds == null) return "—";
-  if (seconds < 60) return `${Math.round(seconds)} s`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
-  return `${Math.floor(seconds / 3600)} h ${Math.round((seconds % 3600) / 60)} min`;
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  return `${Math.floor(seconds / 3600)}h ${Math.round((seconds % 3600) / 60)}m`;
+}
+
+export function formatRuntime(minutes: number): string | null {
+  if (!minutes) return null;
+  return minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+}
+
+const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+export function formatAgo(iso: string): string {
+  const minutes = Math.round((new Date(iso).getTime() - Date.now()) / 60000);
+  if (Math.abs(minutes) < 60) return relative.format(minutes, "minute");
+  if (Math.abs(minutes) < 1440) return relative.format(Math.round(minutes / 60), "hour");
+  return relative.format(Math.round(minutes / 1440), "day");
 }
 
 export const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));

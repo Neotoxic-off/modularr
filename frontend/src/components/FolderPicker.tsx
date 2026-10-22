@@ -20,30 +20,31 @@ export function FolderPicker({ start, onPick, onClose }: { start: string; onPick
   }, [path, start]);
 
   return (
-    <Modal onClose={onClose} title={<><h2 className="font-semibold">Choisir un dossier</h2><p className="truncate font-mono text-xs text-muted">{folder?.path ?? "/"}</p></>}>
-      {error && <div className="p-4"><Alert>{error}</Alert></div>}
+    <Modal onClose={onClose} title="Choose a folder" description={<span className="font-mono text-xs break-all">{folder?.path ?? "Drives"}</span>}
+      footer={<>
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button variant="primary" disabled={!folder?.path} onClick={() => folder?.path && onPick(folder.path)}>Use this folder</Button>
+      </>}>
+      {error && <div className="px-5 pb-3"><Alert>{error}</Alert></div>}
       {!folder ? <div className="p-5"><Spinner /></div> : (
-        <ul className="max-h-[50vh] overflow-y-auto py-1">
+        <ul className="max-h-[50vh] overflow-y-auto border-t border-line py-1">
           {folder.path !== null && (
             <li>
-              <button onClick={() => setPath(folder.parent)} className="flex w-full items-center gap-3 px-5 py-2 text-sm text-muted hover:bg-raised">
-                <Icon name="up" />..
+              <button onClick={() => setPath(folder.parent)} className="flex w-full cursor-pointer items-center gap-3 px-5 py-2 text-sm text-muted hover:bg-raised">
+                <Icon name="up" size={16} />Parent folder
               </button>
             </li>
           )}
+          {folder.directories.length === 0 && <li className="px-5 py-3 text-sm text-muted">No subfolders.</li>}
           {folder.directories.map((d) => (
             <li key={d.path}>
-              <button onClick={() => setPath(d.path)} className="flex w-full items-center gap-3 px-5 py-2 text-left text-sm hover:bg-raised">
-                <Icon name="folder" className="shrink-0 text-accent" /><span className="truncate">{d.name}</span>
+              <button onClick={() => setPath(d.path)} className="flex w-full cursor-pointer items-center gap-3 px-5 py-2 text-left text-sm hover:bg-raised">
+                <Icon name="folder" size={16} className="shrink-0 text-accent" /><span className="truncate">{d.name}</span>
               </button>
             </li>
           ))}
         </ul>
       )}
-      <footer className="flex justify-end gap-2 border-t border-line px-5 py-3">
-        <Button variant="ghost" onClick={onClose}>Annuler</Button>
-        <Button variant="primary" disabled={!folder?.path} onClick={() => folder?.path && onPick(folder.path)}>Choisir ce dossier</Button>
-      </footer>
     </Modal>
   );
 }
