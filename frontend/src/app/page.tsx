@@ -1,7 +1,5 @@
-export default function Home() {
-  return (
-    <main className="flex flex-1 items-center justify-center">
-      <h1 className="text-3xl font-semibold">Modularr</h1>
-    </main>
-  );
+import { MediaPage } from "@/components/MediaPage";
+
+export default function MoviesPage() {
+  return <MediaPage kind="movie" />;
 }
