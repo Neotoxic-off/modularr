@@ -34,6 +34,8 @@ public sealed class ModularrOptionsTests : IDisposable
         Assert.Equal(Path.Combine(_configDirectory, "torrents"), options.Torrents.StateDirectory);
         Assert.Equal(Path.Combine(_configDirectory, "indexers"), options.Indexers.DefinitionsDirectory);
         Assert.Equal(6881, options.Torrents.ListenPort);
+        Assert.Equal("https://skyhook.sonarr.tv/v2/tvdb/", options.Metadata.SkyHookUrl);
+        Assert.Equal("https://api.radarr.video/v1/", options.Metadata.RadarrApiUrl);
         Assert.Same(MediaFileExtensions.VideoExtensions, options.PostProcessing.VideoExtensions);
         Assert.Same(PostProcessingOptions.DefaultSubtitleExtensions, options.PostProcessing.SubtitleExtensions);
     }
@@ -74,6 +76,8 @@ public sealed class ModularrOptionsTests : IDisposable
     [InlineData("""{ "Torrents": { "SeedRatioLimit": -1 } }""")]
     [InlineData("""{ "Paths": { "Series": "" } }""")]
     [InlineData("""{ "PostProcessing": { "SubtitleExtensions": ["srt"] } }""")]
+    [InlineData("""{ "Metadata": { "SkyHookUrl": "not a url" } }""")]
+    [InlineData("""{ "Metadata": { "RadarrApiUrl": "" } }""")]
     public void RejectsInvalidValues(string json)
     {
         Assert.Throws<OptionsValidationException>(() => Load(json));

@@ -1,0 +1,1331 @@
+{
+  "TmdbId": 70981,
+  "ImdbId": "tt1446714",
+  "Title": "Prometheus",
+  "Overview": "A team of explorers discover a clue to the origins of mankind on Earth, leading them on a journey to the darkest corners of the universe. There, they must fight a terrifying battle to save the future of the human race.",
+  "OriginalTitle": "Prometheus",
+  "OriginalLanguage": "en",
+  "TitleSlug": "70981",
+  "Runtime": 124,
+  "Popularity": 23.6264,
+  "Year": 2012,
+  "Premier": "2012-04-11T00:00:00Z",
+  "InCinema": "2012-05-30T00:00:00Z",
+  "PhysicalRelease": "2012-09-25T00:00:00Z",
+  "DigitalRelease": "2012-06-07T00:00:00Z",
+  "Images": [
+    {
+      "CoverType": "Poster",
+      "Url": "https://image.tmdb.org/t/p/original/qsYQflQhOuhDpQ0W2aOcwqgDAeI.jpg"
+    },
+    {
+      "CoverType": "Fanart",
+      "Url": "https://image.tmdb.org/t/p/original/qDG5SlGkWNsjSJWiGTBMFI8DpzA.jpg"
+    }
+  ],
+  "Ratings": [
+    {
+      "Count": 13738,
+      "Value": 6.614,
+      "Origin": "Tmdb",
+      "Type": "User"
+    }
+  ],
+  "MovieRatings": {
+    "Tmdb": {
+      "Count": 13738,
+      "Value": 6.614,
+      "Type": "User"
+    },
+    "Imdb": {
+      "Count": 708865,
+      "Value": 7,
+      "Type": "User"
+    },
+    "Metacritic": {
+      "Count": 0,
+      "Value": 64,
+      "Type": "User"
+    },
+    "RottenTomatoes": {
+      "Count": 0,
+      "Value": 73,
+      "Type": "User"
+    },
+    "Trakt": {
+      "Count": 23660,
+      "Value": 7.11902,
+      "Type": "User"
+    }
+  },
+  "Genres": [
+    "Science Fiction",
+    "Mystery",
+    "Horror"
+  ],
+  "Keywords": [
+    "2090s",
+    "alien",
+    "android",
+    "archaeological dig",
+    "cave drawing",
+    "cosmic horror",
+    "creation",
+    "creature",
+    "emergency surgery",
+    "genetic mutation",
+    "god complex",
+    "lovecraftian",
+    "objective",
+    "origins of life",
+    "prometheus",
+    "sci-fi horror",
+    "space",
+    "spin off",
+    "stasis"
+  ],
+  "AlternativeTitles": [
+    {
+      "Title": "Prometeo",
+      "Type": "Tmdb",
+      "Language": "es"
+    },
+    {
+      "Title": "Prometheus 3D",
+      "Type": "Tmdb",
+      "Language": "en"
+    },
+    {
+      "Title": "Prometeo",
+      "Type": "Tmdb",
+      "Language": "en"
+    },
+    {
+      "Title": "Alien: Prometheus",
+      "Type": "Tmdb",
+      "Language": "en"
+    },
+    {
+      "Title": "\uD504\uB85C\uBA54\uD14C\uC6B0\uC2A4",
+      "Type": "Tmdb",
+      "Language": "ko"
+    },
+    {
+      "Title": "\u05D4\u05E0\u05D5\u05E1\u05E2 \u05D4\u05E9\u05DE\u05D9\u05E0\u05D9: \u05E4\u05E8\u05D5\u05DE\u05EA\u05D9\u05D0\u05D5\u05E1",
+      "Type": "Tmdb",
+      "Language": "en"
+    },
+    {
+      "Title": "\uD504\uB85C\uBA54\uD14C\uC6B0\uC2A4-\uD655\uC7A5",
+      "Type": "Tmdb",
+      "Language": "ko"
+    },
+    {
+      "Title": "Prometeusz",
+      "Type": "Tmdb",
+      "Language": "en"
+    },
+    {
+      "Title": "H\u00E0nh Tr\u00ECnh \u0110\u1EBFn H\u00E0nh Tinh Ch\u1EBFt",
+      "Type": "Tmdb",
+      "Language": "en"
+    },
+    {
+      "Title": "\u5F02\u5F62\uFF1A\u666E\u7F57\u7C73\u4FEE\u65AF",
+      "Type": "Tmdb",
+      "Language": "zh"
+    },
+    {
+      "Title": "Paradise",
+      "Type": "Tmdb",
+      "Language": "en"
+    },
+    {
+      "Title": "\u7570\u5F62\uFF1A\u666E\u7F85\u7C73\u4FEE\u65AF",
+      "Type": "Tmdb",
+      "Language": "zh"
+    },
+    {
+      "Title": "\u666E\u7F85\u7C73\u4FEE\u65AF",
+      "Type": "Tmdb",
+      "Language": "zh"
+    },
+    {
+      "Title": "\u7570\u5F62",
+      "Type": "Tmdb",
+      "Language": "zh"
+    },
+    {
+      "Title": "Tomb of the Gods",
+      "Type": "Tmdb",
+      "Language": "en"
+    },
+    {
+      "Title": "Prometey",
+      "Type": "Tmdb",
+      "Language": "en"
+    },
+    {
+      "Title": "Promet\u0117jas",
+      "Type": "Tmdb",
+      "Language": "lt"
+    }
+  ],
+  "Translations": [
+    {
+      "Title": "Prometheus",
+      "Overview": "A team of explorers discover a clue to the origins of mankind on Earth, leading them on a journey to the darkest corners of the universe. There, they must fight a terrifying battle to save the future of the human race.",
+      "Language": "en-US"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Nell\u0027anno 2089 due scienziati portano a compimento le ricerche di una vita scoprendo che alcuni artefatti, ritrovati in diversi punti della Terra e tutti risalenti a migliaia di anni prima, riportano la medesima immagine di creature giganti che indicano un determinato pianeta. Ricostruito quale sia il pianeta in questione e trovati i fondi da un miliardario morente, i due si imbarcano assieme a un equipaggio misto di scienziati e piloti verso quel pianeta per andare a scoprire quel che ritengono essere l\u0027origine della vita sulla Terra. L\u00EC troveranno i resti di una civilt\u00E0 aliena assieme a ci\u00F2 che l\u0027ha quasi estinta.",
+      "Language": "it-IT"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Lorsque Elisabeth Shaw d\u00E9couvre un myst\u00E9rieux lien entre plusieurs artefacts au cours de ses recherches, elle est persuad\u00E9e qu\u0027il s\u0027agit d\u0027un indice remettant en cause l\u0027origine de l\u0027humanit\u00E9 sur Terre. Une \u00E9quipe de scientifiques supervis\u00E9e par Meredith Vickers et l\u0027andro\u00EFde David se lance alors dans un voyage spatial fascinant aux confins de l\u0027univers, vers un monde inconnu. L\u00E0-bas, un affrontement terrifiant qui d\u00E9cidera de l\u0027avenir de l\u0027humanit\u00E9 les attend\u2026",
+      "Language": "fr-FR"
+    },
+    {
+      "Title": "Prometheus - Dunkle Zeichen",
+      "Overview": "Wir schreiben das sp\u00E4te 21. Jahrhundert. \u00DCberall auf der Welt wurden bei den unterschiedlichsten uralten Kulturen, wie den Azteken oder Mesopotamiern, Zeichnungen gefunden, die auf eine Art Sternenkarte hinweisen. Eine Gruppe von Wissenschaftlern unter Leitung von Dr. Elizabeth Shaw soll im Auftrag des Weyland-Konzerns, gegr\u00FCndet vom Vision\u00E4r Peter Weyland, diesen Zeichen nachgehen, die Shaw als eine Art Einladung deutet. Die Mission, die von Meredith Vickers f\u00FCr den Weyland-Konzern organisiert und \u00FCberwacht wird, f\u00FChrt das Team und die Crew von Captain Janek an den Rand des Universums und in eine Welt jenseits der Vorstellungskraft. Was sie schlie\u00DFlich finden, ist nicht nur die m\u00F6gliche Wiege der Menschheit, sondern auch der wahrscheinliche Untergang der menschlichen Rasse.",
+      "Language": "de-DE"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "En grupp vetenskapsm\u00E4n och utforskare ger sig ut p\u00E5 en intergalaktisk resa som s\u00E4tter deras fysiska och mentala gr\u00E4nser p\u00E5 prov. N\u00E4r de strands\u00E4tts p\u00E5 en avl\u00E4gsen planet g\u00F6r de en uppt\u00E4ckt som kan avsl\u00F6ja svaren p\u00E5 m\u00E4nsklighetens st\u00F6rsta fr\u00E5gor och livets st\u00F6rsta mysterium.",
+      "Language": "sv-SE"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Egy tud\u00F3sokb\u00F3l \u00E1ll\u00F3 exped\u00EDci\u00F3 az ember f\u00F6ldi \u00E9let\u00E9nek eredet\u00E9re utal\u00F3 nyomokat tal\u00E1l. Ezeket k\u00F6vetve indulnak kutat\u00F3\u00FAtjukra, mely az univerzum legt\u00E1volabbi, legvesz\u00E9lyesebb vid\u00E9k\u00E9re vezet. Olyan t\u00E1jra jutnak, \u00E9s olyan ellens\u00E9gekkel kell szemben\u00E9zni\u00FCk, amilyenr\u0151l ember eddig nem is \u00E1lmodott. M\u00E9g a r\u00E9m\u00E1lmaikban sem. Egy sz\u00F6rny\u0171 csata v\u00E1r r\u00E1juk: ha alul maradnak, akkor az eg\u00E9sz emberis\u00E9g vel\u00FCk pusztul.",
+      "Language": "hu-HU"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Uma equipa de exploradores descobre uma pista sobre as origens da humanidade na Terra, o que os leva numa viagem pelo Universo, em que t\u00EAm de travar uma batalha para salvar o futuro da ra\u00E7a humana.",
+      "Language": "pt-PT"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Un grupo de cient\u00EDficos y exploradores emprende un viaje espacial a un remoto planeta, en el que sus l\u00EDmites f\u00EDsicos y mentales ser\u00E1n puestos a prueba. El motivo de la misi\u00F3n es que los humanos creen que all\u00E1 podr\u00E1n encontrar las respuestas a las preguntas m\u00E1s profundas y al mayor de los misterios: el origen de la vida en la Tierra.",
+      "Language": "es-ES"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Een team van ontdekkingsreizigers gaat op een reis door het universum waarbij ze een ontdekking doen die leidt naar de oorsprong van het ontstaan van de mensheid. Hierdoor belanden ze in de gevaarlijkste uithoeken van het universum. Daar zullen ze een angstaanjagend gevecht moeten doorstaan om de toekomst van de mensheid te redden.",
+      "Language": "nl-NL"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Bu mitolojik d\u00FCnyan\u0131n i\u00E7inde bir grup ka\u015Fif, D\u00FCnya \u00FCzerindeki insano\u011Flunun k\u00F6kenine dair bir ipucu ke\u015Ffediyor. Bu ipucu gruptakileri evrenin en karanl\u0131k k\u00F6\u015Felerine heyecanl\u0131 bir yolculuk yapmaya zorluyor. Ancak yolculu\u011Fun sonunda insan \u0131rk\u0131n\u0131n gelece\u011Fini kurtarmak i\u00E7in korkun\u00E7 bir sava\u015Fa kat\u0131lmalar\u0131 gerekiyor.",
+      "Language": "tr-TR"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Et hold forskere rejser gennem universet i rumskibet Prometheus p\u00E5 en tur, der har til form\u00E5l at udforske fremmede livsformer i rummet. Da de finder en m\u00F8rk og mystisk hule (og om muligt en ny livsform), er lykken gjort, men den viser sig at v\u00E6re kort.  Forskerholdet ender nu som strandet p\u00E5 en fremmed planet i det m\u00F8rkeste hj\u00F8rne af universet, og imens de m\u00E5 k\u00E6mpe for deres overlevelse, g\u00E5r det op for dem, at r\u00E6dslerne ikke blot er en trussel mod dem selv, men en trussel mod hele menneskeheden.",
+      "Language": "da-DK"
+    },
+    {
+      "Title": "\u041F\u0440\u043E\u043C\u0435\u0442\u0435\u0439",
+      "Overview": "\u0412 \u043F\u043E\u0438\u0441\u043A\u0430\u0445 \u0441\u0430\u043A\u0440\u0430\u043B\u044C\u043D\u043E\u0433\u043E \u0437\u043D\u0430\u043D\u0438\u044F \u0433\u0440\u0443\u043F\u043F\u0430 \u0443\u0447\u0435\u043D\u044B\u0445 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u0442\u0441\u044F \u0432 \u0441\u0430\u043C\u044B\u0435 \u0442\u0435\u043C\u043D\u044B\u0435 \u0438 \u043D\u0435\u0438\u0437\u0432\u0435\u0434\u0430\u043D\u043D\u044B\u0435 \u0447\u0435\u0440\u0442\u043E\u0433\u0438 \u0432\u0441\u0435\u043B\u0435\u043D\u043D\u043E\u0439. \u0418\u043C\u0435\u043D\u043D\u043E \u0442\u0430\u043C, \u0432 \u043E\u0442\u0434\u0430\u043B\u0435\u043D\u043D\u044B\u0445 \u043C\u0438\u0440\u0430\u0445, \u043D\u0430\u0445\u043E\u0434\u044F\u0441\u044C \u043D\u0430 \u043F\u0440\u0435\u0434\u0435\u043B\u0435 \u0441\u0432\u043E\u0438\u0445 \u0443\u043C\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0445 \u0438 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u0435\u0439, \u0438\u043C \u043F\u0440\u0435\u0434\u0441\u0442\u043E\u0438\u0442 \u0432\u0441\u0442\u0443\u043F\u0438\u0442\u044C \u0432 \u0431\u0435\u0437\u0436\u0430\u043B\u043E\u0441\u0442\u043D\u0443\u044E \u0441\u0445\u0432\u0430\u0442\u043A\u0443 \u0437\u0430 \u0431\u0443\u0434\u0443\u0449\u0435\u0435 \u0432\u0441\u0435\u0433\u043E \u0447\u0435\u043B\u043E\u0432\u0435\u0447\u0435\u0441\u0442\u0432\u0430.",
+      "Language": "ru-RU"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "T\u00FDm badatel\u016F objev\u00ED kl\u00ED\u010D k po\u010D\u00E1tk\u016Fm lidstva na Zemi a vyd\u00E1 se na cestu do nejtemn\u011Bj\u0161\u00EDch kout\u016F vesm\u00EDru, kde mus\u00ED vybojovat bitvu o z\u00E1chranu budoucnosti lidsk\u00E9 rasy.",
+      "Language": "cs-CZ"
+    },
+    {
+      "Title": "\u05E4\u05E8\u05D5\u05DE\u05EA\u05D9\u05D0\u05D5\u05E1",
+      "Overview": "\u05D1\u05E1\u05D5\u05E3 \u05D4\u05DE\u05D0\u05D4 \u05D4-21, \u05DE\u05E4\u05EA \u05DB\u05D5\u05DB\u05D1\u05D9\u05DD \u05DE\u05EA\u05D2\u05DC\u05D9\u05EA \u05D1\u05D9\u05E0\u05D5\u05EA \u05D0\u05D9\u05D5\u05E8\u05D9\u05D4\u05DF \u05E9\u05DC \u05EA\u05E8\u05D1\u05D5\u05D9\u05D5\u05EA \u05D4\u05D0\u05E6\u05D8\u05E7\u05D9\u05DD, \u05D4\u05DE\u05E1\u05D5\u05E4\u05D5\u05D8\u05DE\u05D9\u05DD \u05D5\u05D4\u05DE\u05D2\u05D3\u05DC\u05E0\u05D9\u05DD. \u05E6\u05D5\u05D5\u05EA \u05E1\u05E4\u05D9\u05E0\u05EA \u05D4\u05D7\u05DC\u05DC \u05E4\u05E8\u05D5\u05DE\u05EA\u05D0\u05D5\u05E1 \u05E0\u05E9\u05DC\u05D7 \u05DC\u05DE\u05E9\u05D9\u05DE\u05EA \u05DE\u05D7\u05E7\u05E8 \u05DC\u05E2\u05E7\u05D5\u05D1 \u05D0\u05D7\u05E8 \u05D4\u05DE\u05E4\u05D4 \u05D1\u05DE\u05D8\u05E8\u05D4 \u05DC\u05D2\u05DC\u05D5\u05EA \u05D0\u05EA \u05DE\u05E7\u05D5\u05E8 \u05D4\u05D0\u05E0\u05D5\u05E9\u05D5\u05EA. \u05DB\u05D0\u05E9\u05E8 \u05D4\u05DD \u05D7\u05D5\u05E7\u05E8\u05D9\u05DD \u05E6\u05D9\u05D5\u05D5\u05D9\u05DC\u05D9\u05D6\u05E6\u05D9\u05D4 \u05D7\u05D9\u05D9\u05D6\u05E8\u05D9\u05EA \u05DE\u05EA\u05E7\u05D3\u05DE\u05EA, \u05D4\u05DD \u05E0\u05EA\u05E7\u05DC\u05D9\u05DD \u05D1\u05D0\u05D9\u05D5\u05DD \u05DC\u05E2\u05E6\u05DD \u05E7\u05D9\u05D5\u05DE\u05D4 \u05E9\u05DC \u05D4\u05D0\u05E0\u05D5\u05E9\u05D5\u05EA. \u05D4\u05E1\u05E8\u05D8 \u05EA\u05D5\u05DB\u05E0\u05DF \u05DB\u05E1\u05E8\u05D8 \u05DE\u05E7\u05D3\u05D9\u05DD \u05DC\u05E1\u05E8\u05D8 \u05D4\u05E0\u05D5\u05E1\u05E2 \u05D4\u05E9\u05DE\u05D9\u05E0\u05D9 \u05DE\u05E9\u05E0\u05EA 1979, \u05D0\u05E3 \u05D4\u05D5\u05D0 \u05D1\u05D1\u05D9\u05DE\u05D5\u05D9\u05D5 \u05E9\u05DC \u05E1\u05E7\u05D5\u05D8.",
+      "Language": "he-IL"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Arkeologit ovat l\u00F6yt\u00E4neet eri sivilisaatioiden tekemi\u00E4 kaiverruksia ja luolamaalauksia, joissa palvotaan samaa t\u00E4htikuviota ja j\u00E4ttil\u00E4ism\u00E4isi\u00E4 hahmoja. Kaivauksia Skotlannissa johtavat Elizabeth Shaw ja h\u00E4nen miehens\u00E4 Charlie vakuuttuvat, ett\u00E4 kyseess\u00E4 on ulkoavaruuden olentojen j\u00E4tt\u00E4m\u00E4 viesti ihmiskunnalle. Pariskunta  ep\u00E4ilee, ett\u00E4 olennot olisivat ihmisen kehityksen takana - luolamaalaus puhuu evoluution ja avaruusolentojen muinaisen yhteyden puolesta.  T\u00E4htikuvio paikallistetaan ja sen luokse l\u00E4hetet\u00E4\u00E4n teollisuusbiljon\u00E4\u00E4ri Peter Weylandin  rahoittama tutkimusalus Prometheus. Arkeologiparin ohella miehist\u00F6n ytimeen kuuluvat yhti\u00F6n etua raivokkaasti valvova Meredith Vickers sek\u00E4 Weylandin itsens\u00E4 suunnittelema super\u00E4lyk\u00E4s, ihmist\u00E4 t\u00E4ysin muistuttava David-androidi, jonka inhimillisyys ei kuitenkaan kata kaikkia tunnetiloja. Prometheus vie tutkimusryhm\u00E4n universumin pimeimp\u00E4\u00E4n ja syrj\u00E4isimp\u00E4\u00E4n kolkkaan, jossa heit\u00E4 odottaa taistelu koko ihmiskunnan tulevaisuuden puolesta.",
+      "Language": "fi-FI"
+    },
+    {
+      "Title": "\u666E\u7F57\u7C73\u4FEE\u65AF",
+      "Overview": "21\u4E16\u7EAA\u672B\uFF0C\u4EBA\u7C7B\u7684\u79D1\u6280\u6C34\u5E73\u5DF2\u9AD8\u5EA6\u53D1\u8FBE\uFF0C\u514B\u9686\u4EBA\u6280\u672F\u548C\u5B87\u5B99\u822A\u884C\u65E9\u5DF2\u5B9E\u73B0\uFF0C\u4E0D\u518D\u662F\u68A6\u60F3\u3002\u4E0E\u6B64\u540C\u65F6\uFF0C\u8BB8\u591A\u79D1\u5B66\u5BB6\u4ECD\u5B5C\u5B5C\u4E0D\u5026\u8FFD\u7D22\u7740\u4EBA\u7C7B\u8D77\u6E90\u7684\u79D8\u5BC6\u4E0E\u771F\u76F8\u3002\u901A\u8FC7\u5BF9\u8BB8\u591A\u53E4\u8001\u6587\u660E\u7684\u8003\u5BDF\u4E0E\u5BF9\u6BD4\uFF0C\u79D1\u5B66\u5BB6\u4F0A\u4E3D\u838E\u767D\u00B7\u8096\u548C\u67E5\u7406\u00B7\u8D6B\u6D1B\u7EF4\u53D1\u73B0\uFF0C\u4EBA\u7C7B\u53EF\u80FD\u662F\u6765\u81EA\u4E00\u4E2A\u9065\u8FDC\u661F\u7CFB\u7684\u5916\u661F\u4EBA\u521B\u9020\u7684\u3002\u5728\u7EF4\u5170\u5FB7\u516C\u53F8\u7684\u8D44\u52A9\u4E0B\uFF0C\u4ED6\u4EEC\u4E58\u5750\u7EF4\u514B\u4E1D\u6240\u638C\u7BA1\u7684\u5B87\u5B99\u98DE\u8239\u666E\u7F57\u7C73\u4FEE\u65AF\u53F7\u524D\u5F80\u90A3\u9897\u672A\u77E5\u7684\u661F\u7403\u3002\u7ECF\u8FC7\u5BF9\u5F53\u5730\u7684\u8003\u5BDF\uFF0C\u5730\u7403\u4EBA\u7684\u8BBE\u60F3\u6210\u529F\u5F97\u5230\u5370\u8BC1\u3002\u53EF\u662F\u4ED6\u4EEC\u8D38\u7136\u63A2\u67E5\u201C\u795E\u7684\u79D8\u5BC6\u201D\u7684\u884C\u4E3A\uFF0C\u4E5F\u5C06\u81EA\u5DF1\u5F15\u5165\u4E07\u52AB\u4E0D\u590D\u7684\u6DF1\u6E0A\u2026\u2026",
+      "Language": "zh-CN"
+    },
+    {
+      "Title": "\u041F\u0440\u043E\u043C\u0435\u0442\u0435\u0439",
+      "Overview": "\u0415\u043A\u0438\u043F \u043E\u0442 \u0438\u0437\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u0438 \u0440\u0430\u0437\u043A\u0440\u0438\u0432\u0430 \u043A\u043B\u044E\u0447\u0430 \u0437\u0430 \u043F\u0440\u043E\u0438\u0437\u0445\u043E\u0434\u0430 \u043D\u0430 \u0447\u043E\u0432\u0435\u043A\u0430 \u043D\u0430 \u0417\u0435\u043C\u044F\u0442\u0430, \u043A\u043E\u0435\u0442\u043E \u0433\u0438 \u043F\u043E\u0432\u0435\u0436\u0434\u0430 \u043F\u0440\u0435\u0437 \u0435\u0434\u043D\u043E \u0432\u044A\u043B\u043D\u0443\u0432\u0430\u0449\u043E \u043F\u044A\u0442\u0435\u0448\u0435\u0441\u0442\u0432\u0438\u0435 \u043A\u044A\u043C \u043D\u0430\u0439-\u043C\u0440\u0430\u0447\u043D\u0438\u0442\u0435 \u043C\u0435\u0441\u0442\u0430 \u0432\u044A\u0432 \u0432\u0441\u0435\u043B\u0435\u043D\u0430\u0442\u0430. \u0422\u0430\u043C \u0442\u0435 \u0442\u0440\u044F\u0431\u0432\u0430 \u0434\u0430 \u0441\u0435 \u0432\u043F\u0443\u0441\u043D\u0430\u0442 \u0432 \u0441\u0442\u0440\u0430\u0448\u043D\u0430 \u0431\u0438\u0442\u043A\u0430, \u0437\u0430 \u0434\u0430 \u0441\u043F\u0430\u0441\u044F\u0442 \u0431\u044A\u0434\u0435\u0449\u0435\u0442\u043E \u043D\u0430 \u0447\u043E\u0432\u0435\u0448\u043A\u0430\u0442\u0430 \u0440\u0430\u0441\u0430.",
+      "Language": "bg-BG"
+    },
+    {
+      "Title": "\u10DE\u10E0\u10DD\u10DB\u10D4\u10D7\u10D4",
+      "Overview": "\u10DB\u10D9\u10D5\u10DA\u10D4\u10D5\u10D0\u10E0\u10D4\u10D1\u10D8\u10E1 \u10EF\u10D2\u10E3\u10E4\u10DB\u10D0 \u10D0\u10E6\u10DB\u10DD\u10D0\u10E9\u10D8\u10DC\u10D0 \u10D9\u10D0\u10EA\u10DD\u10D1\u10E0\u10D8\u10DD\u10D1\u10D8\u10E1 \u10EC\u10D0\u10E0\u10DB\u10DD\u10E5\u10DB\u10DC\u10D8\u10E1 \u10D2\u10D0\u10E1\u10D0\u10E6\u10D4\u10D1\u10E1 \u10E0\u10D8\u10E1 \u10D2\u10D0\u10DB\u10DD\u10EA \u10DB\u10D0\u10D7 \u10E1\u10D0\u10DB\u10E7\u10D0\u10E0\u10DD\u10E1 \u10D1\u10DC\u10D4\u10DA \u10D9\u10E3\u10D7\u10EE\u10D4\u10D4\u10D1\u10E8\u10D8 \u10DB\u10DD\u10D2\u10D6\u10D0\u10E3\u10E0\u10DD\u10D1\u10D0 \u10E3\u10EC\u10D4\u10D5\u10D7. \u10D8\u10E5 \u10D9\u10D8 \u10DB\u10D0\u10D7 \u10DB\u10DD\u10E3\u10EC\u10D4\u10D5\u10D7 \u10E8\u10D4\u10DB\u10D0\u10EB\u10E0\u10EC\u10E3\u10DC\u10D4\u10D1\u10D4\u10DA\u10D8 \u10D1\u10E0\u10EB\u10DD\u10DA\u10D0 \u10E0\u10D0\u10D7\u10D0 \u10D2\u10D0\u10D3\u10D0\u10D0\u10E0\u10E9\u10D8\u10DC\u10DD\u10DC \u10D9\u10D0\u10EA\u10DD\u10D1\u10E0\u10D8\u10DD\u10D1\u10D8\u10E1 \u10DB\u10DD\u10DB\u10D0\u10D5\u10D0\u10DA\u10D8.",
+      "Language": "ka-GE"
+    },
+    {
+      "Title": "Prometeusz",
+      "Overview": "Mamy rok 2089, zesp\u00F3\u0142 archeolog\u00F3w pod kierownictwem Elizabeth Shaw (Noomi Rapace) odkrywa tajemnicze piktogramy, kt\u00F3re s\u0105 wed\u0142ug nich dzie\u0142em staro\u017Cytnej cywilizacji. By dowiedzie\u0107 si\u0119 wi\u0119cej o autorach znak\u00F3w, wyruszaj\u0105 supernowoczesnym statkiem kosmicznym o nazwie \u0022Prometeusz\u0022 do odleg\u0142ego zak\u0105tka naszego wszech\u015Bwiata. Ot\u00F3\u017C ca\u0142\u0105 wypraw\u0119 finansuje korporacja Weyland Industries, kt\u00F3r\u0105 na statku reprezentuje bezwzgl\u0119dna Meredith Vickers (Charlize Theron). Naukowcy wierz\u0105, \u017Ce uda im si\u0119 nawi\u0105za\u0107 pokojowe kontakty z Obcymi, ale okazuj\u0119 si\u0119, \u017Ce tw\u00F3rcy znak\u00F3w s\u0105 bardzo niebezpieczni. Shaw i jej towarzysze b\u0119d\u0105 musieli stoczy\u0107 walk\u0119 o w\u0142asne \u017Cycie i przysz\u0142o\u015B\u0107 ca\u0142ej ludzkiej rasy.",
+      "Language": "pl-PL"
+    },
+    {
+      "Title": "\u03A0\u03C1\u03BF\u03BC\u03B7\u03B8\u03AD\u03B1\u03C2",
+      "Overview": "\u039C\u03B9\u03B1 \u03BF\u03BC\u03AC\u03B4\u03B1 \u03B5\u03C0\u03B9\u03C3\u03C4\u03B7\u03BC\u03CC\u03BD\u03C9\u03BD \u03BA\u03B1\u03B9 \u03B5\u03BE\u03B5\u03C1\u03B5\u03C5\u03BD\u03B7\u03C4\u03CE\u03BD \u03BE\u03B5\u03BA\u03B9\u03BD\u03BF\u03CD\u03BD \u03AD\u03BD\u03B1 \u03C3\u03C5\u03BD\u03B1\u03C1\u03C0\u03B1\u03C3\u03C4\u03B9\u03BA\u03CC \u03C4\u03B1\u03BE\u03AF\u03B4\u03B9, \u03BA\u03B1\u03C4\u03AC \u03C4\u03BF \u03BF\u03C0\u03BF\u03AF\u03BF \u03B8\u03B1 \u03C4\u03B5\u03C3\u03C4\u03AC\u03C1\u03BF\u03C5\u03BD \u03C4\u03B1 \u03C6\u03C5\u03C3\u03B9\u03BA\u03AC \u03BA\u03B1\u03B9 \u03C0\u03BD\u03B5\u03C5\u03BC\u03B1\u03C4\u03B9\u03BA\u03AC \u03C4\u03BF\u03C5\u03C2 \u03CC\u03C1\u03B9\u03B1, \u03B5\u03BD\u03CE \u03B8\u03B1 \u03B2\u03C1\u03B5\u03B8\u03BF\u03CD\u03BD \u03C3\u03B5 \u03AD\u03BD\u03B1\u03BD \u03BC\u03B1\u03BA\u03C1\u03B9\u03BD\u03CC \u03BA\u03CC\u03C3\u03BC\u03BF, \u03CC\u03C0\u03BF\u03C5 \u03B8\u03B1 \u03B1\u03BD\u03B1\u03BA\u03B1\u03BB\u03CD\u03C8\u03BF\u03C5\u03BD \u03C4\u03B9\u03C2 \u03B1\u03C0\u03B1\u03BD\u03C4\u03AE\u03C3\u03B5\u03B9\u03C2 \u03C3\u03C4\u03B1 \u03C0\u03B9\u03BF \u03C3\u03B7\u03BC\u03B1\u03BD\u03C4\u03B9\u03BA\u03AC \u03B5\u03C1\u03C9\u03C4\u03AE\u03BC\u03B1\u03C4\u03B1 \u03BA\u03B1\u03B9 \u03C3\u03C4\u03BF \u03B1\u03C0\u03CC\u03BB\u03C5\u03C4\u03BF \u03BC\u03C5\u03C3\u03C4\u03AE\u03C1\u03B9\u03BF \u03C4\u03B7\u03C2 \u03B6\u03C9\u03AE\u03C2.",
+      "Language": "el-GR"
+    },
+    {
+      "Title": "H\u00E0nh Tr\u00ECnh \u0110\u1EBFn H\u00E0nh Tinh Ch\u1EBFt",
+      "Overview": "N\u1ED9i dung phim n\u00F3i v\u1EC1 c\u00E1c nh\u00E0 kh\u1EA3o c\u1ED5 ph\u00E1t hi\u1EC7n ra nh\u1EEFng manh m\u1ED1i v\u1EC1 ngu\u1ED3n g\u1ED1c c\u1EE7a lo\u00E0i ng\u01B0\u1EDDi. Nh\u1EEFng manh m\u1ED1i n\u00E0y d\u1EABn h\u1ECD t\u00ECm t\u1EDBi nh\u1EEFng g\u00F3c t\u1ED1i t\u0103m nh\u1EA5t, t\u1EADn c\u00F9ng c\u1EE7a v\u0169 tr\u1EE5. T\u1EA1i \u0111\u00F3, h\u1ECD ph\u1EA3i \u0111\u1ED1i m\u1EB7t v\u1EDBi m\u1ED9t cu\u1ED9c chi\u1EBFn \u0111\u1EA7y khi\u1EBFp s\u1EE3 \u0111\u1EC3 c\u1EE9u t\u01B0\u01A1ng lai c\u1EE7a nh\u00E2n lo\u1EA1i. Prometheus 3D c\u00F3 s\u1EF1 tham gia c\u1EE7a d\u00E0n di\u1EC5n vi\u00EAn t\u00E0i n\u0103ng: Michael Fassbender, Charlize Theron, Idris Elba, Logan Marshall-Green v\u00E0 Guy Pearce. C\u00F9ng ch\u1EDD \u0111\u1EE3i \u0111\u1EBFn ng\u00E0y 8.6.2012 \u0111\u1EC3 tr\u1EA3i nghi\u1EC7m v\u00E0 t\u1EF1 c\u1EA3m  nh\u1EADn b\u1ED9 phim th\u00FA v\u1ECB n\u00E0y nh\u01B0 th\u1EBF n\u00E0o.",
+      "Language": "vi-VN"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Dvaja mlad\u00ED, \u00FAspe\u0161n\u00ED archeol\u00F3govia Eisabeth Shaw (Noomi Rapace) a Charie Holloway (Logan Marshall-Green) objavili na r\u00F4znych miestach Zeme nieko\u013Eko jaskynn\u00FDch piktogramov z d\u00E1vnych civiliz\u00E1ci\u00ED a postupne sa im podarilo rozl\u00FA\u0161ti\u0165, \u017Ee v\u0161etky piktogramy smeruj\u00FA na jedno jedin\u00E9 miesto vo vzdialenom vesm\u00EDre. S t\u00FDmom \u010Fal\u0161\u00EDch b\u00E1date\u013Eov sa tak na palube kozmickej lodi Prometheus vyd\u00E1vaj\u00FA na cestu, na konci ktorej chc\u00FA n\u00E1js\u0165 odpovede na najz\u00E1kladnej\u0161ie ot\u00E1zky \u013Eudsk\u00E9ho bytia. Ka\u017Ed\u00FD z nich m\u00E1 v\u0161ak rozdielnu motiv\u00E1ciu, pre\u010Do sa exped\u00EDcie z\u00FA\u010Dastni\u0165. Elisabeth ver\u00ED, \u017Ee \u013Eudstvo bolo stvoren\u00E9 vy\u0161\u0161ou mocou a chce sa stretn\u00FA\u0165 so stvorite\u013Emi a pochopi\u0165 p\u00F4vod \u013Eudskej existencie, zatia\u013E \u010Do Holloway sa viac sna\u017E\u00ED uvies\u0165 veci na prav\u00FA mieru. Nikto z pos\u00E1dky v\u0161ak nie je pripraven\u00FD na nepredstavite\u013En\u00FA hr\u00F4zu, ktor\u00E1 na nich \u010Dak\u00E1 a netu\u0161ia, \u017Ee pr\u00E1ve oni bud\u00FA musie\u0165 zvies\u0165 desiv\u00FD s\u00FAboj o z\u00E1chranu bud\u00FAcnosti \u013Eudskej rasy.",
+      "Language": "sk-SK"
+    },
+    {
+      "Title": "\u30D7\u30ED\u30E1\u30C6\u30A6\u30B9",
+      "Overview": "\u79D1\u5B66\u8005\u30A8\u30EA\u30B6\u30D9\u30B9\u304C\u3001\u5730\u7403\u4E0A\u306E\u6642\u4EE3\u3082\u5834\u6240\u3082\u7570\u306A\u308B\u8907\u6570\u306E\u53E4\u4EE3\u907A\u8DE1\u304B\u3089\u5171\u901A\u306E\u30B5\u30A4\u30F3\u3092\u767A\u898B\u3057\u305F\u3002\u305D\u308C\u3092\u77E5\u7684\u751F\u547D\u4F53\u304B\u3089\u306E\u3068\u5206\u6790\u3057\u305F\u5F7C\u5973\u306F\u3001\u5DE8\u5927\u4F01\u696D\u30A6\u30A7\u30A4\u30E9\u30F3\u30C9\u793E\u304C\u51FA\u8CC7\u3057\u305F\u5B87\u5B99\u8239\u30D7\u30ED\u30E1\u30C6\u30A6\u30B9\u53F7\u3067\u5730\u7403\u3092\u65C5\u7ACB\u3064\u30022\u5E74\u4EE5\u4E0A\u306E\u822A\u6D77\u3092\u7D4C\u3066\u672A\u77E5\u306E\u60D1\u661F\u306B\u305F\u3069\u308A\u7740\u3044\u305F\u30A8\u30EA\u30B6\u30D9\u30B9\u306F\u3001\u51B7\u5FB9\u306A\u5973\u6027\u76E3\u7763\u5B98\u30F4\u30A3\u30C3\u30AB\u30FC\u30BA\u3001\u7CBE\u5DE7\u306A\u30A2\u30F3\u30C9\u30ED\u30A4\u30C9\u306E\u30C7\u30F4\u30A3\u30C3\u30C9\u3089\u3068\u3068\u3082\u306B\u7802\u6F20\u306E\u5927\u5730\u306B\u305D\u3073\u3048\u7ACB\u3064\u907A\u8DE1\u306E\u3088\u3046\u306A\u5EFA\u9020\u7269\u306E\u8ABF\u67FB\u3092\u958B\u59CB\u3059\u308B\u3002\u3084\u304C\u3066\u907A\u8DE1\u306E\u5965\u306B\u8DB3\u3092\u8E0F\u307F\u5165\u308C\u305F\u30A8\u30EA\u30B6\u30D9\u30B9\u306F\u3001\u5730\u7403\u4E0A\u306E\u79D1\u5B66\u306E\u5E38\u8B58\u3067\u306F\u8A08\u308A\u77E5\u308C\u306A\u3044\u9A5A\u6115\u306E\u771F\u5B9F\u3092\u76EE\u306E\u5F53\u305F\u308A\u306B\u3059\u308B\u306E\u3060\u3063\u305F\u2026\u2026\u3002",
+      "Language": "ja-JP"
+    },
+    {
+      "Title": "\u0E42\u0E1E\u0E23\u0E21\u0E35\u0E18\u0E35\u0E2D\u0E38\u0E2A",
+      "Overview": "\u0E17\u0E35\u0E21\u0E19\u0E31\u0E01\u0E27\u0E34\u0E17\u0E22\u0E32\u0E28\u0E32\u0E2A\u0E15\u0E23\u0E4C\u0E41\u0E25\u0E30\u0E1C\u0E39\u0E49\u0E2A\u0E33\u0E23\u0E27\u0E08\u0E1A\u0E19\u0E22\u0E32\u0E19\u0E42\u0E1E\u0E23\u0E21\u0E35\u0E18\u0E35\u0E2D\u0E38\u0E2A \u0E44\u0E21\u0E48\u0E21\u0E35\u0E08\u0E38\u0E14\u0E2B\u0E21\u0E32\u0E22\u0E43\u0E14\u0E17\u0E35\u0E48\u0E22\u0E34\u0E48\u0E07\u0E43\u0E2B\u0E0D\u0E48\u0E44\u0E1B\u0E01\u0E27\u0E48\u0E32\u0E01\u0E32\u0E23\u0E40\u0E14\u0E34\u0E19\u0E17\u0E32\u0E07\u0E44\u0E1B\u0E2B\u0E32\u0E04\u0E33\u0E15\u0E2D\u0E1A\u0E43\u0E19\u0E02\u0E49\u0E2D\u0E2A\u0E07\u0E2A\u0E31\u0E22\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E01\u0E31\u0E1A\u0E2A\u0E34\u0E48\u0E07\u0E21\u0E35\u0E0A\u0E35\u0E27\u0E34\u0E15\u0E17\u0E35\u0E48\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E25\u0E36\u0E01\u0E0B\u0E36\u0E49\u0E07 \u0E19\u0E31\u0E01\u0E27\u0E34\u0E17\u0E22\u0E32\u0E28\u0E32\u0E2A\u0E15\u0E23\u0E4C\u0E2B\u0E19\u0E38\u0E48\u0E21\u0E21\u0E2A\u0E32\u0E27\u0E1C\u0E39\u0E49\u0E2D\u0E31\u0E08\u0E09\u0E23\u0E34\u0E22\u0E30\u0E17\u0E31\u0E49\u0E07\u0E2A\u0E2D\u0E07 \u0E0A\u0E2D\u0E27\u0E4C (\u0E19\u0E39\u0E21\u0E35 \u0E23\u0E32\u0E40\u0E1E\u0E0B) \u0E41\u0E25\u0E30 \u0E2E\u0E2D\u0E25\u0E42\u0E25\u0E40\u0E27\u0E22\u0E4C (\u0E42\u0E25\u0E41\u0E01\u0E19 \u0E21\u0E32\u0E23\u0E4C\u0E41\u0E0A\u0E25-\u0E01\u0E23\u0E35\u0E19) \u0E0B\u0E36\u0E48\u0E07\u0E21\u0E35\u0E41\u0E23\u0E07\u0E08\u0E39\u0E07\u0E43\u0E08\u0E15\u0E23\u0E07\u0E01\u0E31\u0E19\u0E02\u0E49\u0E32\u0E21\u0E01\u0E31\u0E19\u0E40\u0E1B\u0E47\u0E19\u0E1C\u0E39\u0E49\u0E19\u0E33\u0E01\u0E32\u0E23\u0E40\u0E14\u0E34\u0E19\u0E17\u0E32\u0E07 \u0E0A\u0E2D\u0E27\u0E4C\u0E40\u0E1B\u0E47\u0E19\u0E1C\u0E39\u0E49\u0E21\u0E35\u0E04\u0E27\u0E32\u0E21\u0E28\u0E23\u0E31\u0E17\u0E18\u0E32 \u0E40\u0E18\u0E2D\u0E2D\u0E22\u0E32\u0E01\u0E1E\u0E1A\u0E01\u0E31\u0E1A \u201C\u0E1E\u0E23\u0E30\u0E40\u0E08\u0E49\u0E32\u201D \u0E43\u0E19\u0E41\u0E1A\u0E1A\u0E17\u0E35\u0E48\u0E43\u0E01\u0E25\u0E49\u0E40\u0E04\u0E35\u0E22\u0E07\u0E01\u0E31\u0E1A\u0E08\u0E34\u0E19\u0E15\u0E19\u0E32\u0E01\u0E32\u0E23\u0E02\u0E2D\u0E07\u0E40\u0E18\u0E2D\u0E14\u0E49\u0E32\u0E19\u0E28\u0E32\u0E2A\u0E19\u0E32\u0E17\u0E35\u0E48\u0E40\u0E01\u0E48\u0E32\u0E41\u0E01\u0E48 \u0E02\u0E13\u0E30\u0E17\u0E35\u0E48\u0E2E\u0E2D\u0E25\u0E42\u0E25\u0E40\u0E27\u0E22\u0E4C\u0E01\u0E33\u0E25\u0E31\u0E07\u0E21\u0E2D\u0E07\u0E2B\u0E32\u0E02\u0E49\u0E2D\u0E2B\u0E31\u0E01\u0E25\u0E49\u0E32\u0E07\u0E04\u0E27\u0E32\u0E21\u0E04\u0E34\u0E14\u0E17\u0E32\u0E07\u0E28\u0E32\u0E2A\u0E19\u0E32\u0E1E\u0E27\u0E01\u0E19\u0E35\u0E49 \u0E08\u0E32\u0E01\u0E20\u0E32\u0E23\u0E01\u0E34\u0E08\u0E02\u0E2D\u0E07\u0E1E\u0E27\u0E01\u0E40\u0E02\u0E32\u0E43\u0E19\u0E10\u0E32\u0E19\u0E30\u0E02\u0E2D\u0E07\u0E19\u0E31\u0E01\u0E42\u0E1A\u0E23\u0E32\u0E13\u0E04\u0E14\u0E35 \u0E1E\u0E27\u0E01\u0E40\u0E02\u0E32\u0E44\u0E14\u0E49\u0E1E\u0E1A\u0E01\u0E31\u0E1A\u0E23\u0E48\u0E2D\u0E07\u0E23\u0E2D\u0E22\u0E1E\u0E34\u0E04\u0E42\u0E17\u0E23\u0E41\u0E01\u0E23\u0E21\u0E43\u0E19\u0E16\u0E49\u0E33\u0E02\u0E2D\u0E07\u0E2D\u0E32\u0E23\u0E22\u0E18\u0E23\u0E23\u0E21\u0E42\u0E1A\u0E23\u0E32\u0E13\u0E08\u0E32\u0E01\u0E17\u0E31\u0E48\u0E27\u0E42\u0E25\u0E01 \u0E17\u0E31\u0E49\u0E07\u0E2B\u0E21\u0E14\u0E40\u0E08\u0E32\u0E30\u0E08\u0E07\u0E44\u0E1B\u0E17\u0E35\u0E48\u0E2A\u0E16\u0E32\u0E19\u0E17\u0E35\u0E48\u0E41\u0E2B\u0E48\u0E07\u0E40\u0E14\u0E35\u0E22\u0E27\u0E01\u0E31\u0E19\u0E43\u0E19\u0E08\u0E31\u0E01\u0E23\u0E27\u0E32\u0E25\u0E2D\u0E31\u0E19\u0E44\u0E01\u0E25\u0E25\u0E31\u0E1A\u0E15\u0E32 \u0E08\u0E36\u0E07\u0E21\u0E35\u0E01\u0E32\u0E23\u0E42\u0E19\u0E49\u0E21\u0E19\u0E49\u0E32\u0E27\u0E1A\u0E23\u0E34\u0E29\u0E31\u0E17 Weyland Industries \u0E43\u0E2B\u0E49\u0E21\u0E32\u0E08\u0E31\u0E14\u0E2A\u0E23\u0E23\u0E17\u0E38\u0E19\u0E2A\u0E33\u0E2B\u0E23\u0E31\u0E1A\u0E20\u0E32\u0E23\u0E01\u0E34\u0E08\u0E19\u0E35\u0E49",
+      "Language": "th-TH"
+    },
+    {
+      "Title": "\uD504\uB85C\uBA54\uD14C\uC6B0\uC2A4",
+      "Overview": "\uB9AC\uD50C\uB9AC\uAC00 \uB178\uC2A4\uD2B8\uB85C\uBAA8\uD638\uB97C \uD0C0\uACE0 \uC5D0\uC77C\uB9AC\uC5B8\uACFC \uC811\uCD09\uD558\uAE30 30\uC5EC\uB144 \uC804, \uACFC\uD559\uC790 \uC5D8\uB9AC\uC790\uBCA0\uC2A4 \uC1FC\uC640 \uCC30\uB9AC \uD560\uB7EC\uC6E8\uC774\uAC00 \uC2A4\uCF54\uD2C0\uB79C\uB4DC\uC5D0\uC11C \uC120\uC0AC\uC2DC\uB300 \uBCBD\uD654\uB97C \uBC1C\uACAC\uD55C\uB2E4. \uC774 \uBCBD\uD654\uAC00 \uC778\uB958\uB97C \uCC3D\uC870\uD55C \uC678\uACC4\uC778\uB4E4\uC758 \uC704\uCE58\uB97C \uB098\uD0C0\uB0B4\uB294 \uC9C0\uB3C4\uB77C\uB294 \uAC78 \uAE68\uB2EC\uC740 \uADF8\uB4E4\uC740 \uC6E8\uC77C\uB79C\uB4DC\uC0AC\uAC00 \uAFB8\uB9B0 \uD300\uACFC \uD568\uAED8 \uD0D0\uC0AC\uC120 \uD504\uB85C\uBA54\uD14C\uC6B0\uC2A4\uD638\uB97C \uD0C0\uACE0 \uC6B0\uC8FC\uB85C \uB098\uC544\uAC04\uB2E4. \uD0D0\uC0AC\uB300\uB294 \uD589\uC131\uC5D0 \uCC29\uB959\uD558\uC790\uB9C8\uC790 \uC678\uACC4\uC778\uB4E4\uC774 \uB0A8\uAE34 \uAC70\uB300\uD55C \uD53C\uB77C\uBBF8\uB4DC\uD615 \uC720\uC801\uC744 \uBC1C\uACAC\uD558\uACE0, \uB0B4\uBD80\uC5D0\uC11C \uC8FD\uC740 \uC678\uACC4\uC778\uB4E4\uC758 \uC2DC\uCCB4\uC640 \uB9C8\uC8FC\uCE5C\uB2E4. \uC5D8\uB9AC\uC790\uBCA0\uC2A4\uB294 \uC8FD\uC740 \uC678\uACC4\uC778\uC758 DNA\uAC00 \uC778\uAC04\uC758 \uAC83\uACFC \uB611\uAC19\uB2E4\uB294 \uAC83\uC744 \uBC1D\uD600\uB0B4\uB294\uB370...",
+      "Language": "ko-KR"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "O echip\u0103 de exploratori descoper\u0103 un indiciu asupra originii omenirii de pe P\u0103m\u00E2nt, ce \u00EEi conduce \u00EEntr-o c\u0103l\u0103torie spre cele mai \u00EEntunecate col\u021Buri ale universului. Acolo trebuie s\u0103 duc\u0103 o lupt\u0103 terifiant\u0103 pentru a salva viitorul rasei umane.",
+      "Language": "ro-RO"
+    },
+    {
+      "Title": "\u666E\u7F85\u7C73\u4FEE\u65AF",
+      "Overview": "\u4E00\u7FA4\u5730\u7403\u79D1\u5B78\u5BB6\u6839\u64DA\u53E4\u6587\u660E\u58C1\u756B\u7684\u6307\u5F15\uFF0C\u524D\u5F80\u9059\u9060\u7684\u661F\u7CFB\u9032\u884C\u592A\u7A7A\u63A2\u6E2C\uFF0C\u4ED6\u5011\u610F\u5916\u767C\u73FE\u6975\u53EF\u80FD\u662F\u4EBA\u985E\u751F\u547D\u8D77\u6E90\u7684\u7DDA\u7D22\uFF0C\u4F46\u9019\u537B\u8B93\u4ED6\u5011\u8D70\u5165\u5B87\u5B99\u6700\u9ED1\u6697\u7684\u6DF1\u6DF5...\u3002\u70BA\u4E86\u4EBA\u985E\u7684\u5B58\u4EA1\uFF0C\u9019\u7FA4\u8EAB\u8655\u7570\u661F\u7684\u63A2\u96AA\u5BB6\uFF0C\u5FC5\u9808\u514B\u670D\u5DE8\u5927\u7684\u6050\u61FC\uFF0C\u6311\u6230\u4EBA\u985E\u610F\u5FD7\u529B\u8207\u8010\u529B\u7684\u6975\u9650\uFF0C\u963B\u6B62\u5730\u7403\u906D\u5230\u6BC0\u6EC5\u7684\u53EF\u80FD...  \u5728\u5E0C\u81D8\u795E\u8A71\u4E2D\uFF0C\u300C\u666E\u7F85\u7C73\u4FEE\u65AF Prometheus\u300D\u662F\u7B2C\u4E00\u4F4D\u5728\u5929\u754C\u5077\u53D6\u706B\u7A2E\u4F86\u5230\u4EBA\u4E16\u9020\u798F\u4EBA\u7FA4\u7684\u5929\u795E\uFF0C\u4E5F\u56E0\u6B64\u70BA\u4E16\u754C\u5E36\u4F86\u5149\u660E\uFF0C\u4F46\u4ED6\u540C\u60C5\u4EBA\u985E\u7684\u884C\u70BA\u5247\u63DB\u4F86\u88AB\u5B99\u65AF\u5929\u795E\u7684\u7121\u76E1\u61F2\u7F70\u3002\u300C\u666E\u7F85\u7C73\u4FEE\u65AF\u300D\u4E5F\u85C9\u6B64\u96B1\u55BB\u4E16\u754C\u8D77\u6E90\u7684\u795E\u79D8\u4E16\u754C\uFF0C\u5728\u63A2\u7D22\u7684\u904E\u7A0B\u7576\u4E2D\uFF0C\u5C07\u53EF\u80FD\u5F15\u8D77\u6BC0\u6EC5\u6027\u7684\u6D69\u5927\u5371\u6A5F...",
+      "Language": "zh-TW"
+    },
+    {
+      "Title": "Promet\u0117jas",
+      "Overview": "Re\u017Eisierius Ridley Scott, i\u0161gars\u0117j\u0119s filmais \u201ESvetimas\u0022 (orig. \u201EAlien\u0022, 1979) ir \u201EB\u0117gantis skustuvo a\u0161menimis\u0022 (orig. \u201EBlade Runner\u0022, 1982) gr\u012F\u017Eta prie mokslin\u0117s fantastikos i\u0161tak\u0173.Grup\u0117 mokslinink\u0173 leid\u017Eiasi \u012F pavojing\u0105 kelion\u0119 \u2013 tyrin\u0117ti slap\u010Diausi\u0173 ir pavojingiausi\u0173 Visatos u\u017Ekabori\u0173. Jie dar ne\u017Eino, kad \u0161i kelion\u0117 taps j\u0173 fizini\u0173 ir psichologini\u0173 galimybi\u0173 i\u0161bandymu.Nublok\u0161ti \u012F kit\u0105 pasaul\u012F jie ie\u0161ko atsakym\u0173 \u012F slap\u010Diausius \u017Emonij\u0105 kamuojan\u010Dius klausimus ir siekia \u012Fminti pagrindin\u0119 pasaulio suk\u016Brimo paslapt\u012F. Svetimame jiems pasaulyje mokslininkai privalo stoti \u012F pavojing\u0105 kov\u0105 u\u017E \u017Emogi\u0161kosios ras\u0117s ateit\u012F, stengdamiesi u\u017Ekirsti keli\u0105 sunaikinimui. Novatori\u0161ka mitologija, \u012Fsp\u016Bdingi specialieji efektai, 3D formatas \u0161io \u017Eanro genijaus R.Scotto rankose pavirs \u012F film\u0105, kuris \u012F kino istorij\u0105 bus \u012Fra\u0161ytas did\u017Eiosiomis raid\u0117mis.",
+      "Language": "lt-LT"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Uma equipe de cientistas embarca em uma jornada espacial para descobrir a verdade sobre a origem da ra\u00E7a humana. No planeta de destino, eles encontram criaturas poderosas e revela\u00E7\u00F5es assustadoras.",
+      "Language": "pt-BR"
+    },
+    {
+      "Title": "\u041F\u0440\u043E\u043C\u0435\u0442\u0435\u0439",
+      "Overview": "\u041A\u043E\u043C\u0430\u043D\u0434\u0430 \u0434\u043E\u0441\u043B\u0456\u0434\u043D\u0438\u043A\u0456\u0432 \u0437\u043D\u0430\u0445\u043E\u0434\u0438\u0442\u044C \u043D\u0430 \u0417\u0435\u043C\u043B\u0456 \u043A\u043B\u044E\u0447\u0456 \u0434\u043E \u0440\u043E\u0437\u043A\u0440\u0438\u0442\u0442\u044F \u0442\u0430\u0454\u043C\u043D\u0438\u0446\u0456 \u043F\u043E\u0445\u043E\u0434\u0436\u0435\u043D\u043D\u044F \u043B\u044E\u0434\u0441\u0442\u0432\u0430, \u0449\u043E \u0432\u043A\u0430\u0437\u0443\u044E\u0442\u044C \u0457\u043C \u0443 \u043F\u043E\u0448\u0443\u043A\u0430\u0445 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439 \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u0438\u0442\u0438\u0441\u044F \u0432 \u0437\u0430\u0445\u043E\u043F\u043B\u044E\u044E\u0447\u0443 \u043A\u043E\u0441\u043C\u0456\u0447\u043D\u0443 \u043F\u043E\u0434\u043E\u0440\u043E\u0436 \u0434\u043E \u043D\u0430\u0439\u0442\u0435\u043C\u043D\u0456\u0448\u0438\u0445 \u043A\u0443\u0442\u043E\u0447\u043A\u0456\u0432 \u0432\u0441\u0435\u0441\u0432\u0456\u0442\u0443. \u0422\u0430\u043C, \u0432 \u043D\u0435\u0437\u0432\u0456\u0434\u0430\u043D\u0438\u0445 \u0441\u0432\u0456\u0442\u0430\u0445, \u0457\u043C \u0434\u043E\u0432\u043E\u0434\u0438\u0442\u044C\u0441\u044F \u0432\u0441\u0442\u0443\u043F\u0438\u0442\u0438 \u0432 \u0436\u043E\u0440\u0441\u0442\u043E\u043A\u0443 \u0431\u0438\u0442\u0432\u0443 \u0437\u0430 \u043C\u0430\u0439\u0431\u0443\u0442\u043D\u0454 \u043B\u044E\u0434\u0441\u044C\u043A\u043E\u0457 \u0440\u0430\u0441\u0438\u2026",
+      "Language": "uk-UA"
+    },
+    {
+      "Title": "Prometej",
+      "Overview": "Mitolo\u0161ki dokazi o izvoru \u010Dlove\u0161tva na Zemlji usmerijo posadko raziskovalcev proti neraziskanim koti\u010Dkom vesolja. Tam pa jih \u010Daka boj za prihodnost \u010Dlove\u0161ke rase. Naletijo na nezemeljsko raso vesoljskih popotnikov, ki naj bi bili stvaritelji \u010Dlove\u0161tva in ustvarjalci \u017Eivljenja na Zemlji. Za posadko vesoljske ladje \u0022Prometej\u0022 na svoji milijarde dolarjev vredni misiji so to torej ni\u010D manj kot bogovi. Tako kot pri mitolo\u0161kem Prometeju pa je izzivanje bogov zelo tvegano po\u010Detje.",
+      "Language": "sl-SI"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Une \u00E9quipe men\u00E9e par les scientifiques Elizabeth Shaw et Charlie Holloway d\u00E9barque sur une plan\u00E8te lointaine apr\u00E8s un voyage de deux ans, pendant lequel l\u0027andro\u00EFde David a pris soin de l\u0027\u00E9quipage plac\u00E9 en \u00E9tat d\u0027hibernation \u00E0 bord du vaisseau Prometheus. Croyant trouver les responsables de la vie sur Terre, les scientifiques d\u00E9butent leurs recherches dans un sanctuaire abandonn\u00E9 o\u00F9 ils d\u00E9couvrent d\u0027\u00E9tranges cr\u00E9atures extraterrestres. Lorsque des membres d\u0027\u00E9quipage son attaqu\u00E9s, les responsables de l\u0027exp\u00E9dition r\u00E9alisent que leurs recherches pourraient mener \u00E0 leur perte. Et David semble aussi avoir une mission \u00E0 accomplir de son c\u00F4t\u00E9.",
+      "Language": "fr-CA"
+    },
+    {
+      "Title": "\u041F\u0440\u043E\u043C\u0435\u0442\u0435\u0458",
+      "Overview": "\u041E\u0440\u0438\u0433\u0438\u043D\u0430\u043B\u043D\u0430 \u043C\u0438\u0442\u043E\u043B\u043E\u0433\u0438\u0458\u0430 \u0443 \u043A\u043E\u0458\u043E\u0458 \u0442\u0438\u043C \u0438\u0441\u0442\u0440\u0430\u0436\u0438\u0432\u0430\u0447\u0430 \u043D\u0430\u043B\u0430\u0437\u0438 \u0434\u043E\u043A\u0430\u0437 \u043E \u043F\u043E\u0440\u0435\u043A\u043B\u0443 \u0447\u043E\u0432\u0435\u0447\u0430\u043D\u0441\u0442\u0432\u0430 \u043D\u0430 \u0417\u0435\u043C\u0459\u0438 \u043A\u043E\u0458\u0438 \u0438\u0445 \u0432\u043E\u0434\u0438 \u043D\u0430 \u043F\u0443\u0442\u043E\u0432\u0430\u045A\u0435 \u0443 \u043D\u0430\u0458\u043C\u0440\u0430\u0447\u043D\u0438\u0458\u0435 \u0434\u0435\u043B\u043E\u0432\u0435 \u0441\u0432\u0435\u043C\u0438\u0440\u0430. \u0422\u0430\u043C\u043E \u043C\u043E\u0440\u0430\u0458\u0443 \u0434\u0430 \u0441\u0435 \u0431\u043E\u0440\u0435 \u0434\u0430 \u0431\u0438 \u0441\u043F\u0430\u0441\u0438\u043B\u0438 \u0431\u0443\u0434\u0443\u045B\u043D\u043E\u0441\u0442 \u0459\u0443\u0434\u0441\u043A\u0435 \u0440\u0430\u0441\u0435. \u0422\u043E\u043A\u043E\u043C \u043F\u0443\u0442\u043E\u0432\u0430\u045A\u0430 \u043D\u0430 \u043A\u043E\u0458\u0435 \u0441\u0443 \u043A\u0440\u0435\u043D\u0443\u043B\u0438 \u0434\u0430 \u0431\u0438 \u0443\u043F\u043E\u0437\u043D\u0430\u043B\u0438 \u043E\u043D\u0435 \u043A\u043E\u0458\u0435 \u043D\u0435\u043A\u0438 \u043D\u0430\u0443\u0447\u043D\u0438\u0446\u0438 \u0438\u0437 \u0442\u0438\u043C\u0430 \u043D\u0430\u0437\u0438\u0432\u0430\u0458\u0443 \u0441\u0432\u043E\u0458\u0438\u043C \u0442\u0432\u043E\u0440\u0446\u0438\u043C\u0430, \u0431\u0438\u045B\u0438\u043C\u0430 \u043A\u043E\u0458\u0430 \u0441\u0443 \u043C\u043E\u0436\u0434\u0430 \u0441\u0442\u0432\u043E\u0440\u0438\u043B\u0430 \u0436\u0438\u0432\u043E\u0442 \u043D\u0430 \u043D\u0430\u0448\u043E\u0458 \u043F\u043B\u0430\u043D\u0435\u0442\u0438, \u043F\u043E\u0441\u0430\u0434\u0430 \u0441\u0432\u0435\u043C\u0438\u0440\u0441\u043A\u043E\u0433 \u0431\u0440\u043E\u0434\u0430 \u201E\u041F\u0440\u043E\u043C\u0435\u0442\u0435\u0458\u201C \u0438 \u0432\u0435\u043B\u0438\u043A\u0430 \u043A\u043E\u0440\u043F\u043E\u0440\u0430\u0446\u0438\u0458\u0430 \u043A\u043E\u0458\u0430 \u0458\u0435 \u0443\u043B\u043E\u0436\u0438\u043B\u0430 \u0442\u0440\u0438\u043B\u0438\u043E\u043D \u0434\u043E\u043B\u0430\u0440\u0430 \u0443 \u043E\u0432\u0443 \u043C\u0438\u0441\u0438\u0458\u0443 \u0443 \u043F\u043E\u0442\u043F\u0443\u043D\u043E\u0441\u0442\u0438 \u0438\u0437\u0430\u0437\u0438\u0432\u0430\u0458\u0443 \u0431\u043E\u0433\u043E\u0432\u0435. \u0418\u0437 \u0438\u0441\u043A\u0443\u0441\u0442\u0432\u0430 \u043E\u0441\u043E\u0431\u0435 \u043F\u043E \u043A\u043E\u0458\u043E\u0458 \u0458\u0435 \u0431\u0440\u043E\u0434 \u0438 \u0434\u043E\u0431\u0438\u043E \u0438\u043C\u0435, \u0437\u043D\u0430\u043C\u043E \u0434\u0430 \u0458\u0435 \u0438\u0437\u0430\u0437\u0438\u0432\u0430\u045A\u0435 \u0431\u043E\u0433\u043E\u0432\u0430 \u0432\u0435\u043E\u043C\u0430, \u0432\u0435\u043E\u043C\u0430 \u043B\u043E\u0448\u0430 \u0438\u0434\u0435\u0458\u0430.",
+      "Language": "sr-RS"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Et team med oppdagelsesreisende oppdager en tegn om menneskets opprinnelse p\u00E5 jorden, som f\u00F8rer dem p\u00E5 en reise til universets m\u00F8rkeste hj\u00F8rner. Der m\u00E5 de kjempe en skremmende kamp for \u00E5 redde menneskehetens fremtid.",
+      "Language": "nb-NO"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "\u00C5ret er 2089. To arkeologer oppdager en mulig ledetr\u00E5d til menneskets opprinnelse p\u00E5 jorden. Det mystiske funnet leder dem til universets m\u00F8rkeste avkroker, hvor de fire \u00E5r senere v\u00E5kner opp p\u00E5 en planet befolket av intelligente vesener - og blir n\u00F8dt til \u00E5 kjempe ikke bare for sine egne liv, men for \u00E5 redde hele menneskehetens fremtid.",
+      "Language": "no-NO"
+    },
+    {
+      "Title": "Prometejs",
+      "Overview": "Mekl\u0113jot sakr\u0101l\u0101s zin\u0101\u0161anas, grupa zin\u0101tnieku dodas uz vistum\u0161\u0101kajiem un nezin\u0101m\u0101kajiem Visuma nost\u016Briem. Tie\u0161i tur, t\u0101laj\u0101s pasaul\u0113s, atrodoties uz savu pr\u0101ta un fizisko sp\u0113ju robe\u017Eas, vi\u0146iem n\u0101ksies iesaist\u012Bties ne\u017E\u0113l\u012Bg\u0101 c\u012B\u0146\u0101 par visas cilv\u0113ces n\u0101kotni...",
+      "Language": "lv-LV"
+    },
+    {
+      "Title": "Prometeo",
+      "Overview": "Un equipo de exploradores descubre una pista a los or\u00EDgenes de humanidad en la Tierra, conduci\u00E9ndolos en un viaje a las esquinas m\u00E1s oscuras del universo. All\u00ED, deben luchar una batalla aterradora para salvar el futuro de la raza humana.",
+      "Language": "es-MX"
+    },
+    {
+      "Title": "\u666E\u7F85\u7C73\u4FEE\u65AF",
+      "Overview": "\u6642\u9593\u63A8\u81F3\u7576\u5E74\u63A2\u96AA\u968A\u8207\u7570\u5F62\u9996\u6B21\u76F8\u9047\u7684 30 \u5E74\u524D\uFF0C\u592A\u7A7A\u8239\u300C\u666E\u7F85\u7C73\u4FEE\u65AF\u865F\u300D\u6B63\u5728\u9060\u8D74\u5916\u592A\u7A7A\u63A2\u7D22\u4EBA\u985E\u8D77\u6E90\u7684\u79D8\u5BC6\u3002\u4ED6\u5011\u76F8\u4FE1\u5728\u9059\u9060\u7684\u661F\u7CFB\u4E4B\u4E2D\uFF0C\u4E00\u4E9B\u9AD8\u7B49\u300C\u7570\u7A2E\u751F\u7269\u300D\u53C3\u8207\u5275\u9020\u4EBA\u985E\u8A08\u5283\uFF0C\u800C\u9019\u500B\u525B\u88AB\u767C\u73FE\u7684\u661F\u7CFB\uFF0C\u76F8\u4FE1\u8207\u4EBA\u985E\u9032\u5316\uFF0C\u6709\u83AB\u5927\u95DC\u4FC2\u3002\u592A\u7A7A\u8239\u4F01\u696D\u8001\u95C6\u5F7C\u5F97\u5049\u862D\uFF08\u4F73\u76AE\u91CC\u65AF\uFF09\u9042\u6D3E\u51FA\u63A2\u96AA\u968A\u51FA\u5F81\uFF0C\u4F5C\u51FA\u70BA\u671F\u5169\u5E74\u7684\u592A\u7A7A\u98DB\u884C\uFF0C\u5973\u8003\u53E4\u5B78\u5BB6\u4F0A\u8389\u838E\u4F2F\uFF08\u9732\u7F8E\u6167\u67CF\u7D72\uFF09\u6EFF\u61F7\u5E0C\u671B\u5730\u8207\u7537\u53CB\u8377\u862D\uFF08\u52DE\u6839\u746A\u7D20\u5805\uFF09\u4E00\u8D77\u4E0A\u8239\uFF0C\u4E26\u8207\u6A5F\u68B0\u4EBA\u5927\u885E\uFF08\u9EA5\u53EF\u6CD5\u65AF\u73ED\u5FB7\uFF09\u53CA\u4F01\u696D\u4EE3\u8868\u746A\u8389\u8FEA\u8299\uFF08\u67E5\u7406\u7D72\u6CF0\u6717\uFF09\u9F4A\u9F4A\u8E0F\u4E0A\u5F81\u9014\u3002\u600E\u6599\uFF0C\u5728\u6D69\u701A\u5B87\u5B99\u4E2D\u7B49\u5F85\u8457\u4ED6\u5011\u7684\uFF0C\u537B\u662F\u524D\u6240\u672A\u6709\u5147\u96E3\u548C\u5371\u6A5F\uFF1B\u4E0D\u4F46\u5F71\u97FF\u5230\u5404\u4EBA\u6027\u547D\u5B89\u5371\uFF0C\u66F4\u96AA\u4E9B\u6C38\u9060\u89E3\u4E0D\u958B\u4EBA\u985E\u767C\u8DE1\u7684\u9A5A\u4EBA\u8B0E\u5718\u2026",
+      "Language": "zh-HK"
+    },
+    {
+      "Title": "\u0628\u06CC\u06AF\u0627\u0646\u0647 \u06F5 : \u067E\u0631\u0648\u0645\u062A\u0626\u0648\u0633",
+      "Overview": "\u062A\u06CC\u0645\u06CC \u0627\u0632 \u062F\u0627\u0646\u0634\u0645\u0646\u062F\u0627\u0646 \u0628\u0631\u0627\u06CC \u062A\u062D\u0642\u06CC\u0642 \u062F\u0631 \u0645\u0648\u0631\u062F \u0645\u0646\u0634\u0627\u0621 \u062D\u06CC\u0627\u062A \u0627\u0646\u0633\u0627\u0646 \u0628\u0627 \u0633\u0641\u06CC\u0646\u0647 \u0627\u06CC \u0628\u0646\u0627\u0645 \u00AB\u067E\u0631\u0648\u0645\u062A\u0626\u0648\u0633\u00BB \u062F\u0631 \u06A9\u0627\u0626\u0646\u0627\u062A \u0633\u0641\u0631 \u0645\u06CC \u06A9\u0646\u0646\u062F. \u0637\u0648\u0644\u06CC \u0646\u0645\u06CC \u06A9\u0634\u062F \u06A9\u0647 \u0627\u06CC\u0646 \u062A\u06CC\u0645 \u062F\u0631 \u062F\u0646\u06CC\u0627\u06CC\u06CC \u0628\u06CC\u06AF\u0627\u0646\u0647 \u06AF\u0631\u0641\u062A\u0627\u0631 \u0645\u06CC \u0634\u0648\u0646\u062F\u060C \u0648 \u062F\u0631 \u0647\u0646\u06AF\u0627\u0645 \u062A\u0644\u0627\u0634 \u0628\u0631\u0627\u06CC \u0641\u0631\u0627\u0631 \u0627\u0632 \u0622\u0646\u060C \u062F\u0631 \u0645\u06CC\u0627\u0628\u0646\u062F \u06A9\u0647 \u0646\u0647 \u062A\u0646\u0647\u0627 \u062C\u0627\u0646 \u0622\u0646 \u0647\u0627\u060C \u0628\u0644\u06A9\u0647 \u06A9\u0644 \u0628\u0634\u0631 \u062F\u0631 \u062E\u0637\u0631 \u0627\u0633\u062A\u2026",
+      "Language": "fa-IR"
+    },
+    {
+      "Title": "\u0628\u0631\u0648\u0645\u064A\u062B\u064A\u0648\u0633",
+      "Overview": "\u064A\u0643\u062A\u0634\u0641 \u0641\u0631\u064A\u0642 \u0645\u0646 \u0627\u0644\u0645\u0633\u062A\u0643\u0634\u0641\u064A\u0646 \u062F\u0644\u064A\u0644\u064B\u0627 \u0639\u0644\u0649 \u0623\u0635\u0648\u0644 \u0627\u0644\u0628\u0634\u0631\u064A\u0629 \u0639\u0644\u0649 \u0627\u0644\u0623\u0631\u0636\u060C \u0645\u0645\u0627 \u064A\u0642\u0648\u062F\u0647\u0645 \u0641\u064A \u0631\u062D\u0644\u0629 \u0625\u0644\u0649 \u0623\u062D\u0644\u0643 \u0623\u0631\u0643\u0627\u0646 \u0627\u0644\u0643\u0648\u0646. \u0648\u0647\u0646\u0627\u0643\u060C \u064A\u062A\u0639\u064A\u0646 \u0639\u0644\u064A\u0647\u0645 \u062E\u0648\u0636 \u0645\u0639\u0631\u0643\u0629 \u0645\u0631\u0639\u0628\u0629 \u0644\u0625\u0646\u0642\u0627\u0630 \u0645\u0633\u062A\u0642\u0628\u0644 \u0627\u0644\u062C\u0646\u0633 \u0627\u0644\u0628\u0634\u0631\u064A.",
+      "Language": "ar-SA"
+    },
+    {
+      "Title": "Prometej",
+      "Overview": "Ekipa znanstvenika i istra\u017Eiva\u010Da na Prometeju nalazi se ni vi\u0161e ni manje nego na putu da otkrije odgovore na najdublja \u017Eivotna pitanja. Ekspediciju vode dva briljantna mlada znanstvenika, Shaw (Noomi Rapace) i Holloway (Logan Marshall-Green) sa suprotnim motivima. Shaw je vjernica: \u017Eeli upoznati te \u201Cbogove\u201D kako bi se pribli\u017Eila svojim tradicionalnim vjerskim pogledima, dok Holloway \u017Eeli razotkriti tu vrstu duhovnosti. U svojem radu kao arheolozi otkrili su tragove na \u0161piljskim piktogramima iz starih civilizacija diljem svijeta, pri \u010Demu svi ukazuju na isto mjesto u dalekom svemiru, i uvjerili su korporaciju Weyland Industries da financira misiju. Nitko od znanstvenika nije bio pripremljen za nezamislive terore na koje \u0107e nai\u0107i.",
+      "Language": "hr-HR"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Un grup de cient\u00EDfics empr\u00E8n un viatge espacial de m\u00E9s de dos anys a la nau Prometheus cap a un remot planeta, amb l\u2019objectiu de trobar resposta sobre l\u0027origen de la vida a la terra, per\u00F2 aviat s\u0027adonen que no estan sols.",
+      "Language": "ca-ES"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Inimkonna algusest p\u00E4rineva vihje avastamine viib teadlased universumi k\u00F5ige salap\u00E4rasematesse urgastesse. Ekspeditsiooni juhivad kaks noort ja erakordselt taibukat teadlast. Shaw loodab leida n\u00F6 heatahtliku rassi, kes t\u00E4idaks tema ootused jumalikkuse kehastusele. Holloway eesm\u00E4rgiks on aga paljastada kogu spiritualismiga seotu. Kumbki teadlastest ega nende kaaslastest pole aga valmis terroriks, mis neid ees ootab.",
+      "Language": "et-EE"
+    },
+    {
+      "Title": "Prometheus",
+      "Overview": "Nj\u00EB ekip eksploruesish zbulojn\u00EB gjurm\u00EBt e origjin\u00EBs s\u00EB njer\u00EBzimit n\u00EB Tok\u00EB, q\u00EB i \u00E7ojn\u00EB ata n\u00EB nj\u00EB udh\u00EBtim n\u00EB qoshet m\u00EB t\u00EB err\u00EBta t\u00EB universit. Atje, ata duhet t\u00EB luftojn\u00EB nj\u00EB betej\u00EB t\u00EB tmerrshme p\u00EBr t\u00EB shp\u00EBtuar t\u00EB ardhmen e rac\u00EBs njer\u00EBzore.",
+      "Language": "sq-AL"
+    }
+  ],
+  "Recommendations": [
+    {
+      "TmdbId": 348,
+      "Title": "Alien"
+    },
+    {
+      "TmdbId": 1091,
+      "Title": "The Thing"
+    },
+    {
+      "TmdbId": 945961,
+      "Title": "Alien: Romulus"
+    },
+    {
+      "TmdbId": 126889,
+      "Title": "Alien: Covenant"
+    },
+    {
+      "TmdbId": 8413,
+      "Title": "Event Horizon"
+    },
+    {
+      "TmdbId": 1116201,
+      "Title": "Iron Lung"
+    },
+    {
+      "TmdbId": 395,
+      "Title": "AVP: Alien vs. Predator"
+    },
+    {
+      "TmdbId": 60935,
+      "Title": "The Thing"
+    },
+    {
+      "TmdbId": 819876,
+      "Title": "Crimes of the Future"
+    },
+    {
+      "TmdbId": 378018,
+      "Title": "The Void"
+    }
+  ],
+  "Credits": {
+    "Cast": [
+      {
+        "Name": "Noomi Rapace",
+        "Order": 0,
+        "Character": "Elizabeth Shaw",
+        "TmdbId": 87722,
+        "CreditId": "52fe481dc3a368484e0e9d7b",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/m0J6ZqEyNljqF1DXBoC9DcMStHP.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Michael Fassbender",
+        "Order": 1,
+        "Character": "David",
+        "TmdbId": 17288,
+        "CreditId": "52fe481dc3a368484e0e9d6b",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/xvbnUiB2ZBR3QIt595OzNy657Vw.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Charlize Theron",
+        "Order": 2,
+        "Character": "Meredith Vickers",
+        "TmdbId": 6885,
+        "CreditId": "52fe481dc3a368484e0e9d6f",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/gd7ShD0yt4bsR2STeQ19KQ6hvXL.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Idris Elba",
+        "Order": 3,
+        "Character": "Janek",
+        "TmdbId": 17605,
+        "CreditId": "52fe481dc3a368484e0e9d73",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/be1bVF7qGX91a6c5WeRPs5pKXln.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Guy Pearce",
+        "Order": 4,
+        "Character": "Peter Weyland",
+        "TmdbId": 529,
+        "CreditId": "52fe481dc3a368484e0e9d77",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/vTqk6Nh3WgqPubkS23eOlMAwmwa.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Logan Marshall-Green",
+        "Order": 5,
+        "Character": "Charlie Holloway",
+        "TmdbId": 130253,
+        "CreditId": "52fe481dc3a368484e0e9d7f",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/vOV76X3Dd8LsBxrTLdHybFLU8w8.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Sean Harris",
+        "Order": 6,
+        "Character": "Fifield",
+        "TmdbId": 16702,
+        "CreditId": "52fe481dc3a368484e0e9e1d",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/jouyaTu0UuZMNBrADRRkCQX1VX1.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Rafe Spall",
+        "Order": 7,
+        "Character": "Millburn",
+        "TmdbId": 28847,
+        "CreditId": "52fe481dc3a368484e0e9d83",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/zcqUqAvO7RQnitcCNNfTVPaiQtS.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Emun Elliott",
+        "Order": 8,
+        "Character": "Chance",
+        "TmdbId": 228968,
+        "CreditId": "52fe481dc3a368484e0e9d8b",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/A0PGkWHpgbus4t76hKSTqoey8HP.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Benedict Wong",
+        "Order": 9,
+        "Character": "Ravel",
+        "TmdbId": 30082,
+        "CreditId": "52fe481dc3a368484e0e9d8f",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/yYfLyrC2CE6vBWSJfkpuVKL2POM.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Kate Dickie",
+        "Order": 10,
+        "Character": "Ford",
+        "TmdbId": 71083,
+        "CreditId": "52fe481dc3a368484e0e9d87",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/mlFYUmZycpRa7TGgDTfP0xanE1Q.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Branwell Donaghey",
+        "Order": 11,
+        "Character": "Mercenary 1",
+        "TmdbId": 1074615,
+        "CreditId": "52fe481dc3a368484e0e9e03",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/gC0idonPVZ5LlHCDis7MDuAAbBa.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Vladimir \u0022Furdo\u0022 Furdik",
+        "Order": 12,
+        "Character": "Mercenary 2",
+        "TmdbId": 1074616,
+        "CreditId": "52fe481dc3a368484e0e9e07",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/1661o64vCOQyFMswIMZBB3MsOb8.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "C.C. Smiff",
+        "Order": 13,
+        "Character": "Mercenary 3",
+        "TmdbId": 1074617,
+        "CreditId": "594ea963c3a368327903ac34",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/glhejpqIphvfpeOagIvxC1gHJyo.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Shane Steyn",
+        "Order": 14,
+        "Character": "Mercenary 4",
+        "TmdbId": 1074618,
+        "CreditId": "52fe481dc3a368484e0e9e25",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/f1xpvlYGIKKfEVlB1UrYr1luPO9.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Ian Whyte",
+        "Order": 15,
+        "Character": "Last Engineer",
+        "TmdbId": 946696,
+        "CreditId": "52fe481dc3a368484e0e9e29",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/svlJyDgPbTHoGjbQKU4S2J6g5hi.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "John Lebar",
+        "Order": 16,
+        "Character": "Ghost Engineer",
+        "TmdbId": 938419,
+        "CreditId": "52fe481dc3a368484e0e9e2d",
+        "Images": []
+      },
+      {
+        "Name": "Daniel James Peterson",
+        "Order": 17,
+        "Character": "Sacrifice Engineer",
+        "TmdbId": 1831995,
+        "CreditId": "593d695d925141058f020e3f",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/nuMD8VMZsawSREbT72zdNtgPPzM.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Patrick Wilson",
+        "Order": 18,
+        "Character": "Shaw\u0027s Father",
+        "TmdbId": 17178,
+        "CreditId": "52fe481dc3a368484e0e9d99",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/oym6H2QD9esk4yABjCHaUoNAOa8.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Lucy Hutchinson",
+        "Order": 19,
+        "Character": "Young Shaw",
+        "TmdbId": 564941,
+        "CreditId": "52fe481dc3a368484e0e9e31",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/4LSXzDg18tdFaB1SPITKixHL1jZ.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Giannina Facio",
+        "Order": 20,
+        "Character": "Shaw\u0027s Mother",
+        "TmdbId": 58787,
+        "CreditId": "52fe481dc3a368484e0e9e35",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/8ndgZB1rkkee3jwFB9Lx7i2ebJT.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Anil Biltoo",
+        "Order": 21,
+        "Character": "Linguist Teacher",
+        "TmdbId": 1272932,
+        "CreditId": "52fe481dc3a368484e0e9e39",
+        "Images": []
+      },
+      {
+        "Name": "Louisa Staples",
+        "Order": 22,
+        "Character": "Greeting Message Violinist",
+        "TmdbId": 1272933,
+        "CreditId": "52fe481dc3a368484e0e9e3d",
+        "Images": []
+      },
+      {
+        "Name": "James Embree",
+        "Order": 23,
+        "Character": "Mechanic 1",
+        "TmdbId": 1390394,
+        "CreditId": "54784a95c3a36849bd00024a",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/wfoYAGY9KF8LZSvvZ6FqLdvCyEb.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Florian Robin",
+        "Order": 24,
+        "Character": "Mechanic 2",
+        "TmdbId": 2143672,
+        "CreditId": "64fb922fffc9de0ee1749ffe",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/iRXSyqY65hq8lZHSZNDEyx8JX4Y.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Matthew Burgess",
+        "Order": 25,
+        "Character": "Mechanic 3",
+        "TmdbId": 4261496,
+        "CreditId": "64fb9238f8595800adc90d9c",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/hUAmnwEh37GMGMxzpIRZG5hrITe.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Eugene O\u0027Hare",
+        "Order": 26,
+        "Character": "Mechanic 4",
+        "TmdbId": 1762541,
+        "CreditId": "64fb9241ffc9de0ee174a005",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/e3ScZAjqQUyj2P09eCL1cU8EqQr.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Richard Thomson",
+        "Order": 27,
+        "Character": "Archaeological Assistant",
+        "TmdbId": 1321379,
+        "CreditId": "64fb926dffc9de0eded1fdf2",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/vHu7vSgxKQarJzk6B7KdUCRVN3z.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Philip McGinley",
+        "Order": 28,
+        "Character": "Archaeological Assistant",
+        "TmdbId": 1251769,
+        "CreditId": "64fb927affc9de0eded1fdf8",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/9desdU4jIFT0Y03oTFi9MQaNhf9.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Jenny Rainsford",
+        "Order": 29,
+        "Character": "Archaeological Assistant",
+        "TmdbId": 1648727,
+        "CreditId": "64fb9284f85958011ca02cf0",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/pVwR9hsEiHzVTo9giCjR3vIfa8W.jpg"
+          }
+        ]
+      }
+    ],
+    "Crew": [
+      {
+        "Name": "Ridley Scott",
+        "Order": 0,
+        "Job": "Director",
+        "Department": "Directing",
+        "TmdbId": 578,
+        "CreditId": "52fe481dc3a368484e0e9d95",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/zABJmN9opmqD4orWl3KSdCaSo7Q.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Damon Lindelof",
+        "Order": 1,
+        "Job": "Writer",
+        "Department": "Writing",
+        "TmdbId": 28974,
+        "CreditId": "52fe481dc3a368484e0e9e19",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/9V75oRAKiI0chdg1wGh1wPqaXsG.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Jon Spaihts",
+        "Order": 2,
+        "Job": "Writer",
+        "Department": "Writing",
+        "TmdbId": 564940,
+        "CreditId": "52fe481dc3a368484e0e9e0d",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/n5JF0cYCWe8AUqb4Sto042rnG4e.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Ridley Scott",
+        "Order": 3,
+        "Job": "Producer",
+        "Department": "Production",
+        "TmdbId": 578,
+        "CreditId": "52fe481dc3a368484e0e9ddb",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/zABJmN9opmqD4orWl3KSdCaSo7Q.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "David Giler",
+        "Order": 4,
+        "Job": "Producer",
+        "Department": "Production",
+        "TmdbId": 915,
+        "CreditId": "55385f6892514138a9001233",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/mKsyy0SS0YNWBgDQp2Hse3i9g2h.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Walter Hill",
+        "Order": 5,
+        "Job": "Producer",
+        "Department": "Production",
+        "TmdbId": 1723,
+        "CreditId": "52fe481dc3a368484e0e9ded",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/3CiICrmhaYnirmOMHEaFXYTbsnT.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Damon Lindelof",
+        "Order": 6,
+        "Job": "Executive Producer",
+        "Department": "Production",
+        "TmdbId": 28974,
+        "CreditId": "52fe481dc3a368484e0e9e13",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/9V75oRAKiI0chdg1wGh1wPqaXsG.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Mark Huffam",
+        "Order": 7,
+        "Job": "Executive Producer",
+        "Department": "Production",
+        "TmdbId": 8401,
+        "CreditId": "52fe481dc3a368484e0e9df9",
+        "Images": []
+      },
+      {
+        "Name": "Michael Costigan",
+        "Order": 8,
+        "Job": "Executive Producer",
+        "Department": "Production",
+        "TmdbId": 40374,
+        "CreditId": "52fe481dc3a368484e0e9df3",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/3yUHDqJ067xrzLvSJHMMLQN6egP.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Michael Ellenberg",
+        "Order": 9,
+        "Job": "Executive Producer",
+        "Department": "Production",
+        "TmdbId": 1018939,
+        "CreditId": "52fe481dc3a368484e0e9dff",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/vO2x4h82Pdga3ggUcOX90CLUaKQ.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Dariusz Wolski",
+        "Order": 10,
+        "Job": "Director of Photography",
+        "Department": "Camera",
+        "TmdbId": 120,
+        "CreditId": "52fe481dc3a368484e0e9da5",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/qnNirhrjkbi6RGdP4FZeljbjzkU.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Dan O\u0027Bannon",
+        "Order": 11,
+        "Job": "Characters",
+        "Department": "Writing",
+        "TmdbId": 5045,
+        "CreditId": "5c9130fc9251410f939ecd72",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/cg7v9I6bgfJTacud7KHG6cTXBcY.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Simon Hayes",
+        "Order": 12,
+        "Job": "Production Sound Mixer",
+        "Department": "Sound",
+        "TmdbId": 1327029,
+        "CreditId": "65e34451b7a154018678cbe1",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/owIunnVBY4U5txToVfoQcayaJh0.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Nina Gold",
+        "Order": 13,
+        "Job": "Casting",
+        "Department": "Production",
+        "TmdbId": 16363,
+        "CreditId": "52fe481dc3a368484e0e9db1",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/emeKuabMDN3C8x8ibby7FNtjRgu.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Ronald Shusett",
+        "Order": 14,
+        "Job": "Characters",
+        "Department": "Writing",
+        "TmdbId": 5046,
+        "CreditId": "5c9131040e0a2663c751f9a5",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/fNfdVzGnrp1PKfdhCdUWOvp36J9.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Max Keene",
+        "Order": 15,
+        "Job": "First Assistant Director",
+        "Department": "Directing",
+        "TmdbId": 1528429,
+        "CreditId": "66c2fc87f61f7e593afbfdd6",
+        "Images": []
+      },
+      {
+        "Name": "Daniele Massaccesi",
+        "Order": 16,
+        "Job": "Camera Operator",
+        "Department": "Camera",
+        "TmdbId": 8673,
+        "CreditId": "54784647c3a36849bd0001ce",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/wVDsmCu1FCcB9LwpvHbisJSJS0p.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Daniele Massaccesi",
+        "Order": 17,
+        "Job": "Steadicam Operator",
+        "Department": "Camera",
+        "TmdbId": 8673,
+        "CreditId": "5478465392514104d8004691",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/wVDsmCu1FCcB9LwpvHbisJSJS0p.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Dan O\u0027Connell",
+        "Order": 18,
+        "Job": "Foley",
+        "Department": "Sound",
+        "TmdbId": 1338372,
+        "CreditId": "547841b9c3a3687a2000261e",
+        "Images": []
+      },
+      {
+        "Name": "Rob Inch",
+        "Order": 19,
+        "Job": "Stunt Coordinator",
+        "Department": "Crew",
+        "TmdbId": 40713,
+        "CreditId": "54784565c3a3687a200026a1",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/ihuAlrMLqovvyoNq42MJ4ZauvJz.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "John T. Cucci",
+        "Order": 20,
+        "Job": "Foley",
+        "Department": "Sound",
+        "TmdbId": 1367493,
+        "CreditId": "5478419292514161360053b2",
+        "Images": []
+      },
+      {
+        "Name": "H. R. Giger",
+        "Order": 21,
+        "Job": "Art Direction",
+        "Department": "Art",
+        "TmdbId": 9136,
+        "CreditId": "6066c9f80ff15a00587a2a65",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/1PzfrXpbtaLnyRJpoXUKFl2gwts.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Ron Bartlett",
+        "Order": 22,
+        "Job": "Sound Re-Recording Mixer",
+        "Department": "Sound",
+        "TmdbId": 16177,
+        "CreditId": "547849fb92514160e3008dfc",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/AmFG81joHLkvnh4Io20TdCCBk8P.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Annie Penn",
+        "Order": 23,
+        "Job": "Script Supervisor",
+        "Department": "Directing",
+        "TmdbId": 1390388,
+        "CreditId": "547848929251416a270002f5",
+        "Images": []
+      },
+      {
+        "Name": "Perry Evans",
+        "Order": 24,
+        "Job": "Gaffer",
+        "Department": "Lighting",
+        "TmdbId": 1390367,
+        "CreditId": "547845c7925141231c0015f1",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/7zwBAcgSBLObRICHcUReHTJUPYe.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Rowley Irlam",
+        "Order": 25,
+        "Job": "Stunts",
+        "Department": "Crew",
+        "TmdbId": 1388878,
+        "CreditId": "66f85af01a9c9188fecc2dfb",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/Ai0TlD5HbmfFtSlcg38qOp25dJY.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Jason Lei Howden",
+        "Order": 26,
+        "Job": "Rotoscoping Artist",
+        "Department": "Visual Effects",
+        "TmdbId": 1422673,
+        "CreditId": "68da236142f426a59abb0d71",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/4SybBzMHKYfU6jKByLn7n4pFCFX.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Arthur Max",
+        "Order": 27,
+        "Job": "Production Design",
+        "Department": "Art",
+        "TmdbId": 944,
+        "CreditId": "52fe481dc3a368484e0e9dbd",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/kIh83DFSNqWQuHsR0CiKw3Qjf2n.jpg"
+          }
+        ]
+      },
+      {
+        "Name": "Chris Lyons",
+        "Order": 28,
+        "Job": "Special Effects Makeup Artist",
+        "Department": "Costume \u0026 Make-Up",
+        "TmdbId": 1635006,
+        "CreditId": "69a7bcb60883811f6274fe22",
+        "Images": []
+      },
+      {
+        "Name": "Avy Kaufman",
+        "Order": 29,
+        "Job": "Casting",
+        "Department": "Production",
+        "TmdbId": 2952,
+        "CreditId": "52fe481dc3a368484e0e9db7",
+        "Images": [
+          {
+            "CoverType": "Headshot",
+            "Url": "https://image.tmdb.org/t/p/original/9hh0HIAmLgPqMTn1keJvh1MF1DR.jpg"
+          }
+        ]
+      }
+    ]
+  },
+  "Studio": "Dune Entertainment",
+  "YoutubeTrailerId": "cJMIzdf1eo8",
+  "Certifications": [
+    {
+      "Country": "AU",
+      "Certification": "MA 15\u002B"
+    },
+    {
+      "Country": "BE",
+      "Certification": "18"
+    },
+    {
+      "Country": "BG",
+      "Certification": "D"
+    },
+    {
+      "Country": "BR",
+      "Certification": "14"
+    },
+    {
+      "Country": "CH",
+      "Certification": "16"
+    },
+    {
+      "Country": "CZ",
+      "Certification": "15\u002B"
+    },
+    {
+      "Country": "DE",
+      "Certification": "16"
+    },
+    {
+      "Country": "DK",
+      "Certification": "15"
+    },
+    {
+      "Country": "ES",
+      "Certification": "16"
+    },
+    {
+      "Country": "FI",
+      "Certification": "K-16"
+    },
+    {
+      "Country": "FR",
+      "Certification": "12"
+    },
+    {
+      "Country": "GB",
+      "Certification": "15"
+    },
+    {
+      "Country": "GR",
+      "Certification": "\u039A-15"
+    },
+    {
+      "Country": "HU",
+      "Certification": "16"
+    },
+    {
+      "Country": "IE",
+      "Certification": "15A"
+    },
+    {
+      "Country": "IT",
+      "Certification": "VM14"
+    },
+    {
+      "Country": "KR",
+      "Certification": "19"
+    },
+    {
+      "Country": "MX",
+      "Certification": "B-15"
+    },
+    {
+      "Country": "NL",
+      "Certification": "16"
+    },
+    {
+      "Country": "NO",
+      "Certification": "18"
+    },
+    {
+      "Country": "NZ",
+      "Certification": "R16"
+    },
+    {
+      "Country": "PL",
+      "Certification": "16"
+    },
+    {
+      "Country": "PT",
+      "Certification": "M/16"
+    },
+    {
+      "Country": "RO",
+      "Certification": "18"
+    },
+    {
+      "Country": "SE",
+      "Certification": "15"
+    },
+    {
+      "Country": "SK",
+      "Certification": "15"
+    },
+    {
+      "Country": "US",
+      "Certification": "R"
+    }
+  ],
+  "Status": null,
+  "Collection": {
+    "TmdbId": 135416,
+    "Name": "Prometheus Collection",
+    "Images": null,
+    "Overview": null,
+    "Translations": null,
+    "Parts": null
+  },
+  "Homepage": "https://www.20thcenturystudios.com/movies/prometheus"
+}

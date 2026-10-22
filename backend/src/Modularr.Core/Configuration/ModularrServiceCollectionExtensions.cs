@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Downloads.Torrents;
+using Modularr.Core.Metadata;
 using Modularr.Core.PostProcessing;
 
 namespace Modularr.Core.Configuration;
@@ -27,6 +28,9 @@ public static class ModularrServiceCollectionExtensions
 
         services.AddSingleton<TorrentEngineHost>();
         services.AddHostedService(provider => provider.GetRequiredService<TorrentEngineHost>());
+
+        services.AddHttpClient<SeriesMetadataClient>();
+        services.AddHttpClient<MovieMetadataClient>();
 
         return services;
     }
