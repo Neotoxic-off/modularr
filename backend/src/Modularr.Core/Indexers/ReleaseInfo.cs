@@ -7,6 +7,9 @@ public sealed record ReleaseInfo
     public required string Id { get; init; }
     public required string Title { get; init; }
     public required string Indexer { get; init; }
+
+    // Lower is preferred when releases are otherwise equal (Sonarr/Radarr indexer priority, 1-50).
+    public int IndexerPriority { get; init; } = 25;
     public DateTimeOffset PublishDate { get; init; }
     public long? Size { get; init; }
     public string? DownloadUrl { get; init; }

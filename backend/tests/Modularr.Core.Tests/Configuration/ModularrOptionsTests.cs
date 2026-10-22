@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Configuration;
+using Modularr.Core.Decisions;
 using Modularr.Core.MediaFiles;
 using Modularr.Core.PostProcessing;
 
@@ -36,6 +37,8 @@ public sealed class ModularrOptionsTests : IDisposable
         Assert.Equal(6881, options.Torrents.ListenPort);
         Assert.Same(MediaFileExtensions.VideoExtensions, options.PostProcessing.VideoExtensions);
         Assert.Same(PostProcessingOptions.DefaultSubtitleExtensions, options.PostProcessing.SubtitleExtensions);
+        Assert.Equal(ProperDownloadType.PreferAndUpgrade, options.Decisions.DownloadPropersAndRepacks);
+        Assert.Equal(1, options.Decisions.MinimumSeeders);
     }
 
     [Fact]
@@ -74,6 +77,8 @@ public sealed class ModularrOptionsTests : IDisposable
     [InlineData("""{ "Torrents": { "SeedRatioLimit": -1 } }""")]
     [InlineData("""{ "Paths": { "Series": "" } }""")]
     [InlineData("""{ "PostProcessing": { "SubtitleExtensions": ["srt"] } }""")]
+    [InlineData("""{ "Decisions": { "MinimumSeeders": -1 } }""")]
+    [InlineData("""{ "Decisions": { "SeasonPackUpgradeThreshold": 101 } }""")]
     public void RejectsInvalidValues(string json)
     {
         Assert.Throws<OptionsValidationException>(() => Load(json));

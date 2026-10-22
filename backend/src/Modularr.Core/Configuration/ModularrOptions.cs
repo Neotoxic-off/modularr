@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Modularr.Core.Decisions;
 using Modularr.Core.Downloads.Torrents;
 using Modularr.Core.Indexers;
 using Modularr.Core.PostProcessing;
@@ -22,4 +23,7 @@ public sealed class ModularrOptions
 
     [ValidateObjectMembers]
     public IndexerOptions Indexers { get; set; } = new();
+
+    [ValidateObjectMembers]
+    public DecisionOptions Decisions { get; set; } = new();
 }
