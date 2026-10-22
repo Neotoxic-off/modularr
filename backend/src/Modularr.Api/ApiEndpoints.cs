@@ -19,7 +19,7 @@ namespace Modularr.Api;
 // HTTP shape only: every endpoint hands over to a Core service and projects the result.
 public static class ApiEndpoints
 {
-    // No profile: the category default; no language: the language policy; the search runs in the background.
+    // No profile: the category default; no language: the language policy; the search runs in the background unless SearchNow is false.
     public sealed record AddSeriesRequest(int TvdbId, int? QualityProfileId = null, Language? Language = null, bool SearchNow = true, SeriesMonitor Monitor = SeriesMonitor.All);
 
     public sealed record AddMovieRequest(int TmdbId, int? QualityProfileId = null, Language? Language = null, bool SearchNow = true);
@@ -40,15 +40,7 @@ public static class ApiEndpoints
         api.MapGet("/series", async (LibraryService library, ItemDtos dtos, CancellationToken ct) => (await library.ListSeriesAsync(ct)).Select(dtos.Of));
         api.MapGet("/series/{id:int}", async (int id, LibraryService library, ItemDtos dtos, CancellationToken ct) => dtos.Detail(await library.GetSeriesAsync(id, ct)));
         api.MapPost("/series", async (AddSeriesRequest request, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
-        {
-            Series series = await library.AddSeriesAsync(request.TvdbId, request.QualityProfileId, request.Language, request.Monitor, ct);
-            if (request.SearchNow && request.Monitor != SeriesMonitor.None)
-            {
-                dtos.Searches.Enqueue(new SearchJob(series.Id, MovieId: null));
-            }
-
-            return dtos.Of(series);
-        });
+            dtos.Of(await library.AddSeriesAsync(request.TvdbId, request.QualityProfileId, request.Language, request.Monitor, request.SearchNow, ct)));
         api.MapPatch("/series/{id:int}", async (int id, ItemUpdate update, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
             dtos.Of(await library.UpdateSeriesAsync(id, update, ct)));
         api.MapPost("/series/{id:int}/search", async (int id, int? season, ModularrDbContext db, SearchRunner searches, CancellationToken ct) =>
@@ -64,15 +56,7 @@ public static class ApiEndpoints
             return new { movie = dtos.Of(movie), hasFile };
         });
         api.MapPost("/movies", async (AddMovieRequest request, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
-        {
-            Movie movie = await library.AddMovieAsync(request.TmdbId, request.QualityProfileId, request.Language, ct);
-            if (request.SearchNow)
-            {
-                dtos.Searches.Enqueue(new SearchJob(SeriesId: null, movie.Id));
-            }
-
-            return dtos.Of(movie);
-        });
+            dtos.Of(await library.AddMovieAsync(request.TmdbId, request.QualityProfileId, request.Language, request.SearchNow, ct)));
         api.MapPatch("/movies/{id:int}", async (int id, ItemUpdate update, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
             dtos.Of(await library.UpdateMovieAsync(id, update, ct)));
         api.MapPost("/movies/{id:int}/search", async (int id, ModularrDbContext db, SearchRunner searches, CancellationToken ct) =>
@@ -230,8 +214,6 @@ public static class ApiEndpoints
     // effective one, lastSearch the latest background search since startup.
     public sealed class ItemDtos(IOptionsMonitor<ModularrOptions> options, SearchRunner searches)
     {
-        public SearchRunner Searches => searches;
-
         public object Of(Series s) => new
         {
             s.Id, s.TvdbId, s.Title, s.Year, s.SeriesType, s.Runtime, s.Monitored, s.Path, s.QualityProfileId, s.Added, s.Poster, s.Backdrop, s.Overview,

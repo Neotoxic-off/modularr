@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
 using Modularr.Core.Downloads.Torrents;
 using Modularr.Core.Persistence;
@@ -54,14 +55,24 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
             {
                 await CheckAsync(id, cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception) when (!cancellationToken.IsCancellationRequested)
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
                 // Any failure (disk, database, torrent engine) blocks this download for a manual retry instead of failing every poll;
                 // a download already failed (and blocklisted) stays failed when only its replacement search broke.
-                await using AsyncServiceScope scope = scopes.CreateAsyncScope();
-                await scope.ServiceProvider.GetRequiredService<ModularrDbContext>().TrackedDownloads.Where(d => d.Id == id && d.State != TrackedDownloadState.Failed)
-                    .ExecuteUpdateAsync(setters => setters.SetProperty(d => d.State, TrackedDownloadState.ImportBlocked), cancellationToken).ConfigureAwait(false);
+                await BlockAsync(id, ex.Message, cancellationToken).ConfigureAwait(false);
             }
+        }
+    }
+
+    private async Task BlockAsync(int id, string reason, CancellationToken cancellationToken)
+    {
+        await using AsyncServiceScope scope = scopes.CreateAsyncScope();
+        ModularrDbContext db = scope.ServiceProvider.GetRequiredService<ModularrDbContext>();
+        if (await db.TrackedDownloads.FirstOrDefaultAsync(d => d.Id == id && d.State != TrackedDownloadState.Failed, cancellationToken).ConfigureAwait(false) is TrackedDownload download)
+        {
+            download.State = TrackedDownloadState.ImportBlocked;
+            scope.ServiceProvider.GetRequiredService<ActivityLog>().Add(Activity.For(download, ActivityKind.ImportFailed, ActivityLevel.Error, reason));
+            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -73,6 +84,7 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
         TrackedDownload download = await db.TrackedDownloads.SingleAsync(d => d.Id == id, cancellationToken).ConfigureAwait(false);
         TorrentStatus? torrent = torrents.Engine.Get(download.InfoHash);
         FailedDownloadService failed = scope.ServiceProvider.GetRequiredService<FailedDownloadService>();
+        ActivityLog activities = scope.ServiceProvider.GetRequiredService<ActivityLog>();
         switch (torrent)
         {
             case null:
@@ -100,11 +112,19 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
                 break;
 
             default:
+                if (torrent.HasMetadata && !await db.Activities.AnyAsync(a => a.DownloadId == id && a.Kind == ActivityKind.DownloadStarted, cancellationToken).ConfigureAwait(false))
+                {
+                    await activities.RecordAsync(Activity.For(download, ActivityKind.DownloadStarted, ActivityLevel.Info, "Metadata received, downloading"), cancellationToken).ConfigureAwait(false);
+                }
+
                 StallCheck check = StallDetector.Evaluate(_stalls.GetValueOrDefault(id), torrent, DateTimeOffset.UtcNow, options.Value.Torrents);
                 _stalls[id] = check.State;
-                if (check.Action == StallAction.Retry)
+                if (check is { Action: StallAction.Retry, Reason: string stalled })
                 {
                     await torrents.Engine.ReannounceAsync(download.InfoHash).ConfigureAwait(false);
+                    await activities.RecordAsync(
+                        Activity.For(download, ActivityKind.DownloadStalled, ActivityLevel.Warning, $"{stalled}, retry {check.State.Retries} of {options.Value.Torrents.StallRetries}"),
+                        cancellationToken).ConfigureAwait(false);
                 }
                 else if (check is { Action: StallAction.GiveUp, Reason: string reason })
                 {

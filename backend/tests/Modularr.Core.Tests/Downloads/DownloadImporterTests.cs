@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
 using Modularr.Core.Downloads;
 using Modularr.Core.Persistence;
@@ -61,6 +62,9 @@ public sealed class DownloadImporterTests : IDisposable
         Assert.Equal(Path.Combine(movie.Path, "Inception.2010.1080p.BluRay.x264-GRP.mkv"), imported.Path);
         Assert.Equal((movie.Id, Quality.Bluray1080p, "GRP"), (imported.MovieId!.Value, imported.Quality.Quality, imported.ReleaseGroup));
         Assert.Equal(HistoryEventType.Imported, db.History.Single().EventType);
+        Activity activity = db.Activities.Single();
+        Assert.Equal((ActivityKind.Imported, tracked.Id, movie.Id), (activity.Kind, activity.DownloadId!.Value, activity.MovieId!.Value));
+        Assert.Equal($"Imported to {imported.Path}", activity.Message);
     }
 
     [Fact]
@@ -81,6 +85,7 @@ public sealed class DownloadImporterTests : IDisposable
         Assert.Equal(TrackedDownloadState.Failed, db.TrackedDownloads.Single().State);
         Assert.Equal(HistoryEventType.Failed, db.History.Single().EventType);
         Assert.Empty(db.MediaFiles);
+        Assert.Equal([ActivityKind.Blocklisted, ActivityKind.DownloadFailed], db.Activities.OrderBy(a => a.Id).Select(a => a.Kind));
     }
 
     [Fact]
@@ -95,6 +100,7 @@ public sealed class DownloadImporterTests : IDisposable
         using ModularrDbContext db = _database.NewContext();
         Assert.Equal(TrackedDownloadState.ImportBlocked, db.TrackedDownloads.Single().State);
         Assert.Empty(db.MediaFiles);
+        Assert.Equal((ActivityKind.ImportFailed, ActivityLevel.Error), db.Activities.Select(a => new ValueTuple<ActivityKind, ActivityLevel>(a.Kind, a.Level)).Single());
     }
 
     public void Dispose()
@@ -110,6 +116,6 @@ public sealed class DownloadImporterTests : IDisposable
     {
         using ModularrDbContext db = _database.NewContext();
         TrackedDownload download = await db.TrackedDownloads.SingleAsync(d => d.Id == tracked.Id, TestContext.Current.CancellationToken);
-        return await new DownloadImporter(db, Options.Create(new ModularrOptions())).ImportAsync(download, outputPath, TestContext.Current.CancellationToken);
+        return await new DownloadImporter(db, new ActivityLog(db, new ActivityFeed()), Options.Create(new ModularrOptions())).ImportAsync(download, outputPath, TestContext.Current.CancellationToken);
     }
 }

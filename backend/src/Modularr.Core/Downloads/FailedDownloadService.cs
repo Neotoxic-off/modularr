@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
 using Modularr.Core.Decisions;
 using Modularr.Core.Downloads.Torrents;
@@ -15,6 +16,7 @@ public sealed class FailedDownloadService(
     DownloadImporter importer,
     AutoSearch search,
     TorrentEngineHost torrents,
+    ActivityLog activities,
     IOptions<ModularrOptions> options)
 {
     public async Task FailAsync(TrackedDownload download, string reason, CancellationToken cancellationToken)
@@ -43,11 +45,15 @@ public sealed class FailedDownloadService(
             return;
         }
 
-        foreach (TrackedDownload next in await search.GrabBestAsync(request, download.SeriesId, download.MovieId, wanted: null, cancellationToken).ConfigureAwait(false))
+        GrabResult result = await search.GrabBestAsync(request, download.SeriesId, download.MovieId, wanted: null, cancellationToken).ConfigureAwait(false);
+        foreach (TrackedDownload next in result.Grabbed)
         {
             next.Regrabs = download.Regrabs + 1;
         }
 
+        activities.Add(result.Grabbed.Count > 0
+            ? Activity.For(download, ActivityKind.Regrabbed, ActivityLevel.Info, $"Replaced by {string.Join(", ", result.Grabbed.Select(d => d.ReleaseTitle))}")
+            : Activity.For(download, ActivityKind.NothingFound, ActivityLevel.Warning, $"No replacement: {result.Releases} release(s) found, {result.Approved} approved"));
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 

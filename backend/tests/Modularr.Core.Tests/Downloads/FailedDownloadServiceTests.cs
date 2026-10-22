@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
 using Modularr.Core.Decisions;
 using Modularr.Core.Downloads;
@@ -27,7 +28,7 @@ public sealed class FailedDownloadServiceTests : IDisposable
         using (ModularrDbContext db = _database.NewContext())
         {
             TrackedDownload download = await db.TrackedDownloads.SingleAsync(TestContext.Current.CancellationToken);
-            await new DownloadImporter(db, Options.Create(new ModularrOptions())).FailAsync(download, "No seeds or peers for 01:00:00", TestContext.Current.CancellationToken);
+            await new DownloadImporter(db, new ActivityLog(db, new ActivityFeed()), Options.Create(new ModularrOptions())).FailAsync(download, "No seeds or peers for 01:00:00", TestContext.Current.CancellationToken);
         }
 
         using ModularrDbContext check = _database.NewContext();
@@ -37,6 +38,8 @@ public sealed class FailedDownloadServiceTests : IDisposable
         Assert.Equal(("AB", "YTS", movie.Id, "No seeds or peers for 01:00:00"), (blocked.InfoHash, blocked.Indexer, blocked.MovieId!.Value, blocked.Reason));
         HistoryItem history = check.History.Single();
         Assert.Equal((HistoryEventType.Failed, "No seeds or peers for 01:00:00"), (history.EventType, history.Data["reason"]));
+        Assert.All(check.Activities, a => Assert.Equal(("No seeds or peers for 01:00:00", tracked.Id), (a.Message, a.DownloadId!.Value)));
+        Assert.Equal([ActivityKind.Blocklisted, ActivityKind.DownloadFailed], check.Activities.OrderBy(a => a.Id).Select(a => a.Kind));
     }
 
     [Fact]

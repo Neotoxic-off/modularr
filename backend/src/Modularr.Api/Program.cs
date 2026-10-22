@@ -23,7 +23,7 @@ app.UseAuthorization();
 app.UseRateLimiter();
 
 // The UI files stay public; the API needs a signed-in user unless an endpoint says otherwise.
-app.MapGroup("/api").RequireAuthorization().MapModularrApi().MapAuthApi();
+app.MapGroup("/api").RequireAuthorization().MapModularrApi().MapActivityApi().MapAuthApi();
 
 // Unknown /api routes must 404, not fall through to the SPA.
 app.MapFallbackToFile("{*path:regex(^(?!api/).*$)}", "index.html");

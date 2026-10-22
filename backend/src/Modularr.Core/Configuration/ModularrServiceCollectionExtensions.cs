@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Accounts;
+using Modularr.Core.Activities;
 using Modularr.Core.Discovery;
 using Modularr.Core.Downloads;
 using Modularr.Core.Downloads.Torrents;
@@ -79,6 +80,10 @@ public static class ModularrServiceCollectionExtensions
         services.AddScoped<FailedDownloadService>();
         services.AddScoped<QualityProfileService>();
         services.AddScoped<AutoSearch>();
+        services.AddSingleton<ActivityFeed>();
+        services.AddScoped<ActivityLog>();
+        services.AddHostedService<ActivityPruner>();
+        services.AddHostedService<DownloadProgressTicker>();
         services.AddSingleton<SearchRunner>();
         services.AddHostedService(provider => provider.GetRequiredService<SearchRunner>());
         services.AddHostedService<DownloadMonitor>();

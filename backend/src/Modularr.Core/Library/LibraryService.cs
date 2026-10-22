@@ -1,12 +1,14 @@
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
 using Modularr.Core.Decisions;
 using Modularr.Core.Languages;
 using Modularr.Core.Metadata;
 using Modularr.Core.Parsing.Movies;
 using Modularr.Core.Persistence;
+using Modularr.Core.Search;
 
 namespace Modularr.Core.Library;
 
@@ -40,7 +42,13 @@ public sealed record ItemUpdate
 }
 
 // Adds series and movies from the metadata sources; the one place metadata records become library entities.
-public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient seriesMetadata, MovieMetadataClient movieMetadata, IOptionsMonitor<ModularrOptions> options)
+public sealed class LibraryService(
+    ModularrDbContext db,
+    SeriesMetadataClient seriesMetadata,
+    MovieMetadataClient movieMetadata,
+    IOptionsMonitor<ModularrOptions> options,
+    SearchRunner searches,
+    ActivityLog activities)
 {
     // Windows' set, so folder names are the same on every OS.
     private static readonly char[] InvalidNameChars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
@@ -66,13 +74,33 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
     }
 
     // Adding an existing series returns it unchanged. No profile: the category default (series or anime) from MediaOptions.
-    public async Task<Series> AddSeriesAsync(int tvdbId, int? qualityProfileId, Language? language, SeriesMonitor monitor, CancellationToken cancellationToken)
+    // A monitored series is searched in the background unless search is false.
+    public async Task<Series> AddSeriesAsync(int tvdbId, int? qualityProfileId, Language? language, SeriesMonitor monitor, bool search, CancellationToken cancellationToken)
     {
-        if (await db.Series.Include(s => s.Episodes).FirstOrDefaultAsync(s => s.TvdbId == tvdbId, cancellationToken).ConfigureAwait(false) is Series existing)
+        Series series = await db.Series.Include(s => s.Episodes).FirstOrDefaultAsync(s => s.TvdbId == tvdbId, cancellationToken).ConfigureAwait(false)
+            ?? await CreateSeriesAsync(tvdbId, qualityProfileId, language, monitor, cancellationToken).ConfigureAwait(false);
+        if (search && series.Monitored)
         {
-            return existing;
+            searches.Enqueue(new SearchJob(series.Id, MovieId: null));
         }
 
+        return series;
+    }
+
+    public async Task<Movie> AddMovieAsync(int tmdbId, int? qualityProfileId, Language? language, bool search, CancellationToken cancellationToken)
+    {
+        Movie movie = await db.Movies.FirstOrDefaultAsync(m => m.TmdbId == tmdbId, cancellationToken).ConfigureAwait(false)
+            ?? await CreateMovieAsync(tmdbId, qualityProfileId, language, cancellationToken).ConfigureAwait(false);
+        if (search && movie.Monitored)
+        {
+            searches.Enqueue(new SearchJob(SeriesId: null, movie.Id));
+        }
+
+        return movie;
+    }
+
+    private async Task<Series> CreateSeriesAsync(int tvdbId, int? qualityProfileId, Language? language, SeriesMonitor monitor, CancellationToken cancellationToken)
+    {
         SeriesInfo info = await seriesMetadata.GetSeriesAsync(tvdbId, cancellationToken: cancellationToken).ConfigureAwait(false);
         MediaType category = TypeOf(info) == SeriesType.Anime ? MediaType.Anime : MediaType.Series;
         int profileId = qualityProfileId ?? options.CurrentValue.Media.For(category).ProfileId;
@@ -81,16 +109,14 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
         series.Language = MediaOptions.EnsureWantable(language);
         db.Series.Add(series);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await activities.RecordAsync(
+            new Activity { Kind = ActivityKind.Added, Level = ActivityLevel.Info, Title = series.Title, Message = $"Added to {category.ToString().ToLowerInvariant()}", SeriesId = series.Id },
+            cancellationToken).ConfigureAwait(false);
         return series;
     }
 
-    public async Task<Movie> AddMovieAsync(int tmdbId, int? qualityProfileId, Language? language, CancellationToken cancellationToken)
+    private async Task<Movie> CreateMovieAsync(int tmdbId, int? qualityProfileId, Language? language, CancellationToken cancellationToken)
     {
-        if (await db.Movies.FirstOrDefaultAsync(m => m.TmdbId == tmdbId, cancellationToken).ConfigureAwait(false) is Movie existing)
-        {
-            return existing;
-        }
-
         int profileId = qualityProfileId ?? options.CurrentValue.Media.Movies.ProfileId;
         await EnsureProfileAsync(profileId, cancellationToken).ConfigureAwait(false);
         MovieInfo info = await movieMetadata.GetMovieAsync(tmdbId, cancellationToken).ConfigureAwait(false);
@@ -98,6 +124,9 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
         movie.Language = MediaOptions.EnsureWantable(language);
         db.Movies.Add(movie);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await activities.RecordAsync(
+            new Activity { Kind = ActivityKind.Added, Level = ActivityLevel.Info, Title = movie.Title, Message = "Added to movies", MovieId = movie.Id },
+            cancellationToken).ConfigureAwait(false);
         return movie;
     }
 
@@ -169,21 +198,31 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
 
     public async Task DeleteSeriesAsync(int id, bool deleteFiles, CancellationToken cancellationToken)
     {
-        IQueryable<Series> series = db.Series.Where(s => s.Id == id);
-        string path = await series.Select(s => s.Path).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
+        Series series = await db.Series.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"Series {id} is not in the library.");
-        DeleteFolder(deleteFiles, path);
-        await series.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        DeleteFolder(deleteFiles, series.Path);
+        await db.Series.Where(s => s.Id == id).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        await activities.RecordAsync(Removed(series.Title, deleteFiles, seriesId: id, movieId: null), cancellationToken).ConfigureAwait(false);
     }
 
     public async Task DeleteMovieAsync(int id, bool deleteFiles, CancellationToken cancellationToken)
     {
-        IQueryable<Movie> movie = db.Movies.Where(m => m.Id == id);
-        string path = await movie.Select(m => m.Path).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
+        Movie movie = await db.Movies.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id, cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"Movie {id} is not in the library.");
-        DeleteFolder(deleteFiles, path);
-        await movie.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        DeleteFolder(deleteFiles, movie.Path);
+        await db.Movies.Where(m => m.Id == id).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        await activities.RecordAsync(Removed(movie.Title, deleteFiles, seriesId: null, movieId: id), cancellationToken).ConfigureAwait(false);
     }
+
+    private static Activity Removed(string title, bool deleteFiles, int? seriesId, int? movieId) => new()
+    {
+        Kind = ActivityKind.Removed,
+        Level = ActivityLevel.Info,
+        Title = title,
+        Message = deleteFiles ? "Removed from the library with its files" : "Removed from the library",
+        SeriesId = seriesId,
+        MovieId = movieId,
+    };
 
     // Never a drive root or a library root (a blank title would make the root the item's folder).
     public static bool IsDeletableFolder(string path, PathOptions paths)

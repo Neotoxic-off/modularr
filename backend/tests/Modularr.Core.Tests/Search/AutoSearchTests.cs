@@ -1,3 +1,4 @@
+using Modularr.Core.Activities;
 using Modularr.Core.Persistence;
 using Modularr.Core.Search;
 using Modularr.Core.Tests.Persistence;
@@ -56,7 +57,7 @@ public sealed class AutoSearchTests
         using ModularrDbContext db = database.NewContext();
 
         // No indexer search or grab is reachable: the in-progress check returns first.
-        Assert.Empty(await new AutoSearch(db, null!, null!).SearchMovieAsync(movie.Id, TestContext.Current.CancellationToken));
+        Assert.Empty(await new AutoSearch(db, null!, null!, new ActivityLog(db, new ActivityFeed())).SearchMovieAsync(movie.Id, TestContext.Current.CancellationToken));
     }
 
     private static Series Show(params (int Season, int Episode, int? FileId, DateOnly AirDate)[] episodes)

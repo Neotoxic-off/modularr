@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Modularr.Core.Activities;
 using Modularr.Core.Persistence;
 using Modularr.Core.Search;
 
@@ -17,7 +18,9 @@ public sealed class SearchRunnerTests
         await using SqliteConnection connection = new("Data Source=:memory:");
         await using ServiceProvider provider = new ServiceCollection()
             .AddDbContext<ModularrDbContext>(builder => builder.UseSqlite(connection).AddInterceptors(new TimeoutInterceptor()))
-            .AddScoped(services => new AutoSearch(services.GetRequiredService<ModularrDbContext>(), null!, null!))
+            .AddSingleton<ActivityFeed>()
+            .AddScoped<ActivityLog>()
+            .AddScoped(services => new AutoSearch(services.GetRequiredService<ModularrDbContext>(), null!, null!, services.GetRequiredService<ActivityLog>()))
             .BuildServiceProvider();
         using SearchRunner runner = new(provider.GetRequiredService<IServiceScopeFactory>());
         await runner.StartAsync(ct);
