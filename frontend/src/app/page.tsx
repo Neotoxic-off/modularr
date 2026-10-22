@@ -73,7 +73,7 @@ function useForYou() {
   return { items, onAdded };
 }
 
-export default function TodayPage() {
+export default function DashboardPage() {
   const { user } = useSession();
   const { progress, subscribe, markRead } = useActivity();
   const summary = useSummary();
@@ -142,9 +142,9 @@ export default function TodayPage() {
               <LibraryTile summary={summary} compact />
               <StorageTile summary={summary} compact />
             </div>
+            {tiles.forYou}
             <TimelineSection feed={feed} library={library} downloads={downloads} onChanged={summary.reload} limit={10} />
             {tiles.justAdded}
-            {tiles.forYou}
           </div>
 
           <div className="space-y-6 max-md:hidden">
@@ -154,6 +154,7 @@ export default function TodayPage() {
               {tiles.airing}
               {tiles.attention}
             </div>
+            {tiles.forYou}
             <div className="grid gap-6 lg:grid-cols-12">
               <div className="min-w-0 lg:col-span-8">
                 <TimelineSection feed={feed} library={library} downloads={downloads} onChanged={summary.reload} />
@@ -161,7 +162,6 @@ export default function TodayPage() {
               <aside className="grid min-w-0 grid-cols-1 content-start gap-4 max-lg:grid-cols-2 lg:col-span-4">
                 {tiles.library}
                 {tiles.storage}
-                <div className="min-w-0 max-lg:col-span-2">{tiles.forYou}</div>
               </aside>
             </div>
           </div>
@@ -469,8 +469,8 @@ function ForYouTile({ items, onAdded, style }: { items: DiscoveryItem[] | null; 
       {items && items.length === 0 ? <p className="text-[13px] text-ink-2">Recommendations are unavailable right now. Search still works.</p> : (
         <div className="rail -mx-5 flex gap-3 overflow-x-auto scroll-px-5 px-5">
           {items
-            ? items.map((item) => <PosterCard key={`${item.kind}${item.tmdbId}${item.tvdbId}`} item={item} onAdded={onAdded} className="w-[118px] shrink-0" />)
-            : Array.from({ length: 6 }, (_, i) => <PosterSkeleton key={i} className="w-[118px] shrink-0" />)}
+            ? items.map((item) => <PosterCard key={`${item.kind}${item.tmdbId}${item.tvdbId}`} item={item} onAdded={onAdded} className="w-[128px] shrink-0 md:w-[148px]" />)
+            : Array.from({ length: 8 }, (_, i) => <PosterSkeleton key={i} className="w-[128px] shrink-0 md:w-[148px]" />)}
         </div>
       )}
     </Tile>

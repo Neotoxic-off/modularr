@@ -23,7 +23,7 @@ const libraryPaths = ["/movies/", "/series/", "/anime/"];
 const isCurrent = (pathname: string, href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
 const pageTitle = (pathname: string) =>
-  pages.find((i) => i.href !== "/" && pathname.startsWith(i.href))?.label ?? (pathname === "/" ? "Today" : "");
+  pages.find((i) => i.href !== "/" && pathname.startsWith(i.href))?.label ?? (pathname === "/" ? "Dashboard" : "");
 
 interface Chrome {
   backdrop?: string | null;
@@ -132,7 +132,7 @@ function Rail({ pathname }: { pathname: string }) {
   return (
     <aside className="sticky top-0 hidden h-dvh shrink-0 p-3 md:block">
       <div className="glass flex h-full w-[72px] flex-col rounded-panel px-3 py-4 xl:w-60">
-        <Link href="/" aria-label="modularr, Today" className="mb-5 flex h-11 items-center rounded-pill px-1.5 max-xl:justify-center max-xl:px-0">
+        <Link href="/" aria-label="modularr, Dashboard" className="mb-5 flex h-11 items-center rounded-pill px-1.5 max-xl:justify-center max-xl:px-0">
           <span className="xl:hidden"><Logo markOnly /></span>
           <span className="max-xl:hidden"><Logo /></span>
         </Link>
@@ -195,7 +195,7 @@ function Header({ pathname, crumb, onSearch, onNotifications }: { pathname: stri
   return (
     <header data-scrolled={scrolled || !!crumb || undefined}
       className="glass sticky top-0 z-30 flex h-[calc(56px+env(safe-area-inset-top))] items-center gap-2 rounded-none border-x-0 border-t-0 px-3 pt-[env(safe-area-inset-top)] transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 md:top-3 md:mt-3 md:h-16 md:rounded-panel md:border md:px-3 md:pl-5 md:not-data-scrolled:border-transparent md:not-data-scrolled:bg-transparent md:not-data-scrolled:shadow-none md:not-data-scrolled:backdrop-blur-none">
-      <Link href="/" aria-label="modularr, Today" className="rounded-pill md:hidden"><Logo /></Link>
+      <Link href="/" aria-label="modularr, Dashboard" className="rounded-pill md:hidden"><Logo /></Link>
       <div className="min-w-0 flex-1 max-md:hidden">
         {crumb ? (
           <p className="flex min-w-0 items-baseline gap-2 font-display text-[24px] leading-none">

@@ -4,7 +4,7 @@ export type NavItem = { href: string; label: string; icon: IconName; shortcut?: 
 
 export const navGroups: readonly { label: string | null; items: readonly NavItem[] }[] = [
   { label: null, items: [
-    { href: "/", label: "Today", icon: "home", shortcut: "t" },
+    { href: "/", label: "Dashboard", icon: "home", shortcut: "t" },
     { href: "/calendar/", label: "Calendar", icon: "calendar", shortcut: "c" },
   ] },
   { label: "Library", items: [
@@ -22,7 +22,7 @@ export const navGroups: readonly { label: string | null; items: readonly NavItem
 export const settingsItem: NavItem = { href: "/settings/", label: "Settings", icon: "settings", shortcut: "s" };
 
 export const tabs: readonly NavItem[] = [
-  { href: "/", label: "Today", icon: "home" },
+  { href: "/", label: "Dashboard", icon: "home" },
   { href: "/movies/", label: "Library", icon: "layers" },
   { href: "/explore/", label: "Explore", icon: "compass" },
   { href: "/downloads/", label: "Downloads", icon: "download", downloads: true },
