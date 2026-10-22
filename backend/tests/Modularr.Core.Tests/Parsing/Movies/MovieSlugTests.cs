@@ -16,10 +16,11 @@ public sealed class MovieSlugTests
     [InlineData("Äccent", "accent")]
     [InlineData("åccent", "accent")]
     [InlineData("acceñt", "accent")]
-    [InlineData("ßtest", "test")]
-    [InlineData("œtest", "test")]
-    [InlineData("Œtest", "test")]
-    [InlineData("Øtest", "test")]
+    // Radarr expected "test": its RemoveAccent drops letters FormD cannot split; the shared RemoveDiacritics (Sonarr) transliterates them.
+    [InlineData("ßtest", "sstest")]
+    [InlineData("œtest", "oetest")]
+    [InlineData("Œtest", "oetest")]
+    [InlineData("Øtest", "otest")]
     public void ReplacesAccents(string input, string result)
     {
         Assert.Equal(result, MovieTitleParser.ToUrlSlug(input));

@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Modularr.Core.MediaFiles;
+using Modularr.Core.Qualities;
 
 namespace Modularr.Core.Parsing;
 
@@ -97,6 +98,22 @@ public static partial class ReleaseTitle
     [GeneratedRegex(@"\.[a-z0-9]{2,4}$", Options)]
     private static partial Regex FileExtensionRegex { get; }
 
+    // Sonarr's list, a superset of Radarr's (adds 1440p, x266 and the spaced 8/10-bit forms).
+    [GeneratedRegex(@"(?:(?:480|540|576|720|1080|1440|2160)[ip]|[xh][\W_]?26[456]|DD\W?5\W1|[<>?*]|848x480|1280x720|1920x1080|3840x2160|4096x2160|(?<![a-f0-9])(?:8|10)[ -]?(?:b(?![a-z0-9])|bit))\s*?", Options)]
+    private static partial Regex SimpleTitleRegex { get; }
+
+    [GeneratedRegex(@"\[[a-z0-9 ._-]+\]$", Options)]
+    private static partial Regex CleanQualityBracketsRegex { get; }
+
+    [GeneratedRegex(@"[^\w\s]")]
+    internal static partial Regex PunctuationRegex { get; }
+
+    [GeneratedRegex(@"\s{2,}")]
+    internal static partial Regex DuplicateSpacesRegex { get; }
+
+    [GeneratedRegex(@"^(?:\[.+?\])+")]
+    internal static partial Regex RequestInfoRegex { get; }
+
     private static readonly FrozenSet<string> UsenetExtensions = FrozenSet.Create(StringComparer.OrdinalIgnoreCase, ".par2", ".nzb");
 
     private static readonly Regex[] HashedReleaseRegexes =
@@ -162,7 +179,7 @@ public static partial class ReleaseTitle
     }.ToFrozenDictionary();
 
     public static string RemoveFileExtension(string title) =>
-        FileExtensionRegex.Replace(title, m => MediaFileExtensions.IsMediaFile(m.Value) || UsenetExtensions.Contains(m.Value) ? "" : m.Value);
+        FileExtensionRegex.Replace(title, m => MediaFileExtensions.VideoExtensions.Contains(m.Value) || UsenetExtensions.Contains(m.Value) ? "" : m.Value);
 
     // Titles made of a hash or an indexer placeholder instead of a release name.
     public static bool IsHashed(string titleWithoutExtension) => HashedReleaseRegexes.Any(r => r.IsMatch(titleWithoutExtension));
@@ -180,6 +197,23 @@ public static partial class ReleaseTitle
 
         return RemoveDiacritics(NormalizeRegex.Replace(PercentRegex.Replace(title, "percent"), "").ToLowerInvariant());
     }
+
+    // The regex "hash" group of anime titles, e.g. [ABCD1234]; 1280x720 is a resolution in the same slot.
+    internal static string? GetReleaseHash(Match match)
+    {
+        Group hash = match.Groups["hash"];
+        if (!hash.Success)
+        {
+            return null;
+        }
+
+        string value = hash.Value.Trim('[', ']', '(', ')');
+        return value == "1280x720" ? null : value;
+    }
+
+    // Title with resolution/codec noise, websites and a trailing [quality] tag removed: the text the title regexes run on.
+    internal static string SimplifyTitle(string releaseTitle) =>
+        CleanQualityBracketsRegex.Replace(RemoveWebsites(SimpleTitleRegex.Replace(releaseTitle, "")), m => QualityParser.ParseQualityName(m.Value).Quality != Quality.Unknown ? "" : m.Value);
 
     internal static string PreSubstitute(string title)
     {
@@ -209,7 +243,7 @@ public static partial class ReleaseTitle
     internal static string StripTorrentSuffix(string title) => TorrentSuffixRegex.Replace(title, "");
 
     // shortcut: FormD plus a small table instead of the full Diacritical.Net map, extend the table when a title shows up unmatched.
-    private static string RemoveDiacritics(string text)
+    internal static string RemoveDiacritics(string text)
     {
         StringBuilder builder = new(text.Length);
         foreach (char c in text.Normalize(NormalizationForm.FormD))

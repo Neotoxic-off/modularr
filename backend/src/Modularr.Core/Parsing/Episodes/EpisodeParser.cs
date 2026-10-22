@@ -3,6 +3,7 @@ using System.Collections.Frozen;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using Modularr.Core.Languages;
 using Modularr.Core.Qualities;
 
 namespace Modularr.Core.Parsing.Episodes;
@@ -31,14 +32,10 @@ public static partial class EpisodeParser
     [GeneratedRegex(@"\b(?:special|ova|ovd|ncop|nced)\b", Options)]
     private static partial Regex AnimeSpecialMarkerRegex { get; }
 
-    [GeneratedRegex(@"(?:(?:480|540|576|720|1080|1440|2160)[ip]|[xh][\W_]?26[456]|DD\W?5\W1|[<>?*]|848x480|1280x720|1920x1080|3840x2160|4096x2160|(?<![a-f0-9])(?:8|10)[ -]?(?:b(?![a-z0-9])|bit))\s*?", Options)]
-    private static partial Regex SimpleTitleRegex { get; }
 
     [GeneratedRegex(@"(?<=[_.-])(?<airdate>(?<!\d)(?<airyear>[1-9]\d{1})(?<airmonth>[0-1][0-9])(?<airday>[0-3][0-9]))(?=[_.-])", Options)]
     private static partial Regex SixDigitAirDateRegex { get; }
 
-    [GeneratedRegex(@"\[[a-z0-9 ._-]+\]$", Options)]
-    private static partial Regex CleanQualityBracketsRegex { get; }
 
     [GeneratedRegex(@"^(?<title>.+?)[-_. ]+?[\(\[]?(?<year>\d{4})[\]\)]?", Options)]
     private static partial Regex YearInTitleRegex { get; }
@@ -49,11 +46,7 @@ public static partial class EpisodeParser
     [GeneratedRegex(@"\(\d+\)$")]
     private static partial Regex PartRegex { get; }
 
-    [GeneratedRegex(@"[^\w\s]")]
-    private static partial Regex PunctuationRegex { get; }
 
-    [GeneratedRegex(@"\s{2,}")]
-    private static partial Regex DuplicateSpacesRegex { get; }
 
     [GeneratedRegex(@"^(?:S|Season|Saison|Series|Stagione|Sezon)[-_. ]*(?<season>(?<!\d+)\d{1,4}(?!\d+))(?:[_. ]+(?!\d+)|$)", Options)]
     private static partial Regex SeasonFolderRegex { get; }
@@ -61,8 +54,6 @@ public static partial class EpisodeParser
     [GeneratedRegex(@"^[ex]?(?<episode>(?<!\d+)\d{1,3}(?!\d+))(?:[ex-](?<episode>(?<!\d+)\d{1,3}(?!\d+)))?(?:[_. ](?!\d+)(?<remaining>.+)|$)", Options)]
     private static partial Regex SimpleEpisodeNumberRegex { get; }
 
-    [GeneratedRegex(@"^(?:\[.+?\])+")]
-    private static partial Regex RequestInfoRegex { get; }
 
     // Season and episode number separated by a space (S02 01), only trusted in file names.
     [GeneratedRegex(@"(?<separator>^|[-_. ])S(?<season>(?<!\d+)\d{1,2}(?!\d+)) (?<episode>(?<!\d+)\d{1,2}(?!\d+))(?!\d+)", Options)]
@@ -148,8 +139,7 @@ public static partial class EpisodeParser
         string releaseTitle = ReleaseTitle.RemoveFileExtension(title).Replace('【', '[').Replace('】', ']');
         releaseTitle = ReleaseTitle.PreSubstitute(releaseTitle);
 
-        string simpleTitle = ReleaseTitle.RemoveWebsites(SimpleTitleRegex.Replace(releaseTitle, ""));
-        simpleTitle = CleanQualityBracketsRegex.Replace(simpleTitle, m => QualityParser.ParseQualityName(m.Value).Quality != Quality.Unknown ? "" : m.Value);
+        string simpleTitle = ReleaseTitle.SimplifyTitle(releaseTitle);
 
         Match sixDigitAirDate = SixDigitAirDateRegex.Match(simpleTitle);
         if (sixDigitAirDate.Success && (sixDigitAirDate.Groups["airmonth"].Value != "00" || sixDigitAirDate.Groups["airday"].Value != "00"))
@@ -186,9 +176,10 @@ public static partial class EpisodeParser
 
             return result with
             {
+                Languages = LanguageParser.ParseLanguages(result.ReleaseTokens),
                 Quality = QualityParser.ParseQuality(title),
                 ReleaseGroup = subGroup.Success && !string.IsNullOrWhiteSpace(subGroup.Value) ? subGroup.Value : ReleaseGroupParser.ParseReleaseGroup(releaseTitle),
-                ReleaseHash = GetReleaseHash(matches[0]),
+                ReleaseHash = ReleaseTitle.GetReleaseHash(matches[0]),
             };
         }
 
@@ -205,7 +196,7 @@ public static partial class EpisodeParser
             return null;
         }
 
-        string seriesTitle = DuplicateSpacesRegex.Replace(AnimeSeasonReleaseMetadataRegex.Replace(releaseTitle, " "), " ").Trim();
+        string seriesTitle = ReleaseTitle.DuplicateSpacesRegex.Replace(AnimeSeasonReleaseMetadataRegex.Replace(releaseTitle, " "), " ").Trim();
 
         // Brackets left over mean the metadata could not be stripped cleanly.
         if (seriesTitle.Length == 0 || seriesTitle.AsSpan().ContainsAny(Brackets))
@@ -220,6 +211,7 @@ public static partial class EpisodeParser
             SeriesTitleInfo = new SeriesTitleInfo(seriesTitle, seriesTitle, 0, []),
             FullSeason = true,
             IsSeasonTitle = true,
+            Languages = LanguageParser.ParseLanguages(releaseTitle),
             Quality = QualityParser.ParseQuality(title),
             ReleaseGroup = ReleaseGroupParser.ParseReleaseGroup(releaseTitle),
         };
@@ -240,9 +232,9 @@ public static partial class EpisodeParser
             title = special.Groups["episodetitle"].Value;
         }
 
-        title = PunctuationRegex.Replace(PartRegex.Replace(title, ""), " ");
+        title = ReleaseTitle.PunctuationRegex.Replace(PartRegex.Replace(title, ""), " ");
 
-        return DuplicateSpacesRegex.Replace(title, " ").Trim().ToLowerInvariant();
+        return ReleaseTitle.DuplicateSpacesRegex.Replace(title, " ").Trim().ToLowerInvariant();
     }
 
     private static bool ValidateBeforeParsing(string title)
@@ -275,7 +267,7 @@ public static partial class EpisodeParser
     {
         invalidDate = false;
         Match first = matches[0];
-        string seriesName = RequestInfoRegex.Replace(first.Groups["title"].Value.Replace('.', ' ').Replace('_', ' '), "").Trim(' ');
+        string seriesName = ReleaseTitle.RequestInfoRegex.Replace(first.Groups["title"].Value.Replace('.', ' ').Replace('_', ' '), "").Trim(' ');
         int lastIndex = EndIndex(first.Groups["title"]);
         _ = int.TryParse(first.Groups["airyear"].Value, CultureInfo.InvariantCulture, out int airYear);
 
@@ -483,18 +475,6 @@ public static partial class EpisodeParser
             : [];
 
         return new SeriesTitleInfo(title, titleWithoutYear, year.Success ? int.Parse(year.Groups["year"].Value, CultureInfo.InvariantCulture) : 0, allTitles);
-    }
-
-    private static string? GetReleaseHash(Match match)
-    {
-        Group hash = match.Groups["hash"];
-        if (!hash.Success)
-        {
-            return null;
-        }
-
-        string value = hash.Value.Trim('[', ']', '(', ')');
-        return value == "1280x720" ? null : value;
     }
 
     private static int EndIndex(Capture capture) => capture.Index + capture.Length;

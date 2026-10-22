@@ -1,3 +1,4 @@
+using Modularr.Core.Languages;
 using Modularr.Core.Parsing;
 using Modularr.Core.Parsing.Episodes;
 using Modularr.Core.Qualities;
@@ -106,5 +107,14 @@ public sealed class EpisodeParserCaseTests
         ParsedEpisodeInfo? result = EpisodeParser.ParseTitle(postTitle);
         Assert.NotNull(result);
         Assert.Equal(titles, result.SeriesTitleInfo.AllTitles);
+    }
+
+    [Theory]
+    [InlineData("[Reza] Series in Russian - S01E08 [WEBRip 1080p HEVC AAC] (Dual Audio) (Tokidoki Bosotto Russiago de Dereru Tonari no Alya-san)", "Unknown")]
+    public void ShouldParseLanguageAfterParsingTitle(string postTitle, string expectedLanguage)
+    {
+        ParsedEpisodeInfo? result = EpisodeParser.ParseTitle(postTitle);
+        Assert.NotNull(result);
+        Assert.Equal(Language.FindByName(expectedLanguage), Assert.Single(result.Languages));
     }
 }

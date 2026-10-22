@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using Modularr.Core.Languages;
 using Modularr.Core.Qualities;
 
 namespace Modularr.Core.Parsing.Movies;
@@ -66,10 +67,6 @@ public static partial class MovieTitleParser
 
     private static readonly Regex[] MovieFolderRegexes = [.. MovieTitleRegexes, YearFirstFolderRegex];
 
-    // md5 and other hashes, NZBGeek obfuscation, and junk names seen on indexers since 2014.
-    [GeneratedRegex(@"^(?:[0-9a-zA-Z]{32}|[a-z0-9]{24}$|[A-Z]{11}\d{3}$|[a-z]{12}\d{3}$|Backup_\d{5,}S\d{2}-\d{2}$|123$|(?i:abc$|abc[-_. ]xyz|b00bs$))")]
-    private static partial Regex HashedReleaseRegex { get; }
-
     [GeneratedRegex(@"(?:^|[-._ ])(p027|p0801)[-._ ]")]
     private static partial Regex ReversedTitleRegex { get; }
 
@@ -94,20 +91,14 @@ public static partial class MovieTitleParser
     [GeneratedRegex(@"^(\d{1,10}|(tt)\d{1,10})$")]
     private static partial Regex NormalizableImdbIdRegex { get; }
 
-    [GeneratedRegex(@"(?:(480|540|576|720|1080|2160)[ip]|[xh][\W_]?26[45]|DD\W?5\W1|[<>?*]|848x480|1280x720|1920x1080|3840x2160|4096x2160|(8|10)b(it)?|10-bit)\s*?(?![a-b0-9])", Options)]
-    private static partial Regex SimpleTitleRegex { get; }
 
     [GeneratedRegex(@"\s*(?:[<>?*|])", Options)]
     private static partial Regex SimpleReleaseTitleRegex { get; }
 
-    [GeneratedRegex(@"\[[a-z0-9 ._-]+\]$", Options)]
-    private static partial Regex CleanQualityBracketsRegex { get; }
 
     [GeneratedRegex(@"(\&|\:|\\|\/)+")]
     private static partial Regex SpecialCharRegex { get; }
 
-    [GeneratedRegex(@"[^\w\s]")]
-    private static partial Regex PunctuationRegex { get; }
 
     [GeneratedRegex(@"^(a|an|the)\s", Options)]
     private static partial Regex ArticleWordRegex { get; }
@@ -115,11 +106,7 @@ public static partial class MovieTitleParser
     [GeneratedRegex(@"\b(part|special|edition|christmas)\b\s?", Options)]
     private static partial Regex SpecialEpisodeWordRegex { get; }
 
-    [GeneratedRegex(@"\s{2,}")]
-    private static partial Regex DuplicateSpacesRegex { get; }
 
-    [GeneratedRegex(@"^(?:\[.+?\])+")]
-    private static partial Regex RequestInfoRegex { get; }
 
     [GeneratedRegex(@"\s")]
     private static partial Regex WhitespaceRegex { get; }
@@ -148,18 +135,14 @@ public static partial class MovieTitleParser
 
         if (ReversedTitleRegex.IsMatch(title))
         {
-            char[] reversed = RemoveFileExtension(title).ToCharArray();
+            char[] reversed = ReleaseTitle.RemoveFileExtension(title).ToCharArray();
             Array.Reverse(reversed);
             title = new string(reversed) + title[reversed.Length..];
         }
 
-        string releaseTitle = RemoveFileExtension(title).Trim('-', '_').Replace('【', '[').Replace('】', ']');
+        string releaseTitle = ReleaseTitle.RemoveFileExtension(title).Trim('-', '_').Replace('【', '[').Replace('】', ']');
 
-        string simpleTitle = SimpleTitleRegex.Replace(releaseTitle, string.Empty);
-        simpleTitle = WebsitePrefixRegex.Replace(simpleTitle, string.Empty);
-        simpleTitle = WebsitePostfixRegex.Replace(simpleTitle, string.Empty);
-        simpleTitle = CleanTorrentSuffixRegex.Replace(simpleTitle, string.Empty);
-        simpleTitle = CleanQualityBracketsRegex.Replace(simpleTitle, m => QualityParser.ParseQualityName(m.Value).Quality != Quality.Unknown ? string.Empty : m.Value);
+        string simpleTitle = ReleaseTitle.SimplifyTitle(releaseTitle);
 
         foreach (Regex regex in isDir ? MovieFolderRegexes : MovieTitleRegexes)
         {
@@ -169,16 +152,18 @@ public static partial class MovieTitleParser
             {
                 string simpleReleaseTitle = ReplaceTitleWithPlaceholder(SimpleReleaseTitleRegex.Replace(releaseTitle, string.Empty), match.Groups["title"]);
                 Group subGroup = match.Groups["subgroup"];
-                Group hash = match.Groups["hash"];
+                string? releaseGroup = subGroup.Success && !string.IsNullOrWhiteSpace(subGroup.Value) ? subGroup.Value : ReleaseGroupParser.ParseReleaseGroup(simpleReleaseTitle);
 
                 return new ParsedMovieInfo
                 {
                     MovieTitles = movieTitles,
                     Year = year,
                     Edition = edition ?? ParseEdition(simpleReleaseTitle),
-                    ReleaseGroup = subGroup.Success && !string.IsNullOrWhiteSpace(subGroup.Value) ? subGroup.Value : ParseReleaseGroup(simpleReleaseTitle),
-                    ReleaseHash = hash.Success && hash.Value.Trim('[', ']') is string hashValue && hashValue != "1280x720" ? hashValue : null,
+                    ReleaseGroup = releaseGroup,
+                    ReleaseHash = ReleaseTitle.GetReleaseHash(match),
                     HardcodedSubs = ParseHardcodedSubs(title),
+                    // The group is hidden too, so a group named like a language (e.g. YTS.LT) is not read as one.
+                    Languages = LanguageParser.ParseLanguages(releaseGroup is null ? simpleReleaseTitle : simpleReleaseTitle.Replace(releaseGroup, "RlsGrp", StringComparison.Ordinal)),
                     Quality = QualityParser.ParseQuality(title),
                     OriginalTitle = originalTitle,
                     ReleaseTitle = releaseTitle,
@@ -261,14 +246,14 @@ public static partial class MovieTitleParser
     public static string CleanMovieTitle(string title) =>
         string.IsNullOrWhiteSpace(title) || long.TryParse(title, CultureInfo.InvariantCulture, out _)
             ? title
-            : RemoveAccent(ReplaceGermanUmlauts(NormalizeRegex.Replace(title, string.Empty).ToLowerInvariant()));
+            : ReleaseTitle.RemoveDiacritics(ReplaceGermanUmlauts(NormalizeRegex.Replace(title, string.Empty).ToLowerInvariant()));
 
     // Word tokens used to look for a language name in a release that is not part of the movie title.
     public static string NormalizeMovieTitle(string title)
     {
         title = SpecialEpisodeWordRegex.Replace(title, string.Empty);
-        title = PunctuationRegex.Replace(title, " ");
-        title = DuplicateSpacesRegex.Replace(title, " ");
+        title = ReleaseTitle.PunctuationRegex.Replace(title, " ");
+        title = ReleaseTitle.DuplicateSpacesRegex.Replace(title, " ");
 
         return title.Trim().ToLowerInvariant();
     }
@@ -276,9 +261,9 @@ public static partial class MovieTitleParser
     // Sort title: no punctuation, no leading article.
     public static string NormalizeTitle(string title)
     {
-        title = PunctuationRegex.Replace(title, string.Empty);
+        title = ReleaseTitle.PunctuationRegex.Replace(title, string.Empty);
         title = ArticleWordRegex.Replace(title, string.Empty);
-        title = DuplicateSpacesRegex.Replace(title, " ");
+        title = ReleaseTitle.DuplicateSpacesRegex.Replace(title, " ");
         title = SpecialCharRegex.Replace(title, string.Empty);
 
         return title.Trim().ToLowerInvariant();
@@ -288,7 +273,7 @@ public static partial class MovieTitleParser
 
     public static string ToUrlSlug(string value, bool invalidDashReplacement = false, string? trimEndChars = "-_", string? deduplicateChars = "-_")
     {
-        value = RemoveAccent(value.ToLowerInvariant());
+        value = ReleaseTitle.RemoveDiacritics(value.ToLowerInvariant());
         value = WhitespaceRegex.Replace(value, "-");
         value = InvalidSlugCharRegex.Replace(value, invalidDashReplacement ? "-" : string.Empty);
 
@@ -311,7 +296,7 @@ public static partial class MovieTitleParser
 
         string movieName = titleGroup.Value.Replace('_', ' ');
         movieName = NormalizeAlternativeTitleRegex.Replace(movieName, " AKA ");
-        movieName = RequestInfoRegex.Replace(movieName, string.Empty).Trim(' ');
+        movieName = ReleaseTitle.RequestInfoRegex.Replace(movieName, string.Empty).Trim(' ');
         movieName = JoinDottedParts(movieName.Split('.'));
 
         string unbracketedName = BracketedAlternativeTitleRegex.Replace(movieName, "$1 AKA $2");
@@ -372,11 +357,5 @@ public static partial class MovieTitleParser
     private static bool ValidateBeforeParsing(string title) =>
         !(title.Contains("password", StringComparison.OrdinalIgnoreCase) && title.Contains("yenc", StringComparison.OrdinalIgnoreCase))
         && title.Any(char.IsLetterOrDigit)
-        && !HashedReleaseRegex.IsMatch(RemoveFileExtension(title));
-
-    private static string RemoveAccent(string text)
-    {
-        string decomposed = text.Normalize(NormalizationForm.FormD);
-        return new string([.. decomposed.Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)]).Normalize(NormalizationForm.FormC);
-    }
+        && !ReleaseTitle.IsHashed(ReleaseTitle.RemoveFileExtension(title));
 }

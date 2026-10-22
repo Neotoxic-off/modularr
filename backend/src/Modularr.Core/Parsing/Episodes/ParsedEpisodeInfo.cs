@@ -1,4 +1,5 @@
 using System.Globalization;
+using Modularr.Core.Languages;
 using Modularr.Core.Qualities;
 
 namespace Modularr.Core.Parsing.Episodes;
@@ -8,6 +9,7 @@ public sealed record ParsedEpisodeInfo
     public string ReleaseTitle { get; init; } = "";
     public string SeriesTitle { get; init; } = "";
     public SeriesTitleInfo SeriesTitleInfo { get; init; } = new("", "", 0, []);
+    public IReadOnlyList<Language> Languages { get; init; } = [];
     public QualityModel Quality { get; init; } = new(Qualities.Quality.Unknown, new Revision());
     public IReadOnlyList<int> SeasonNumbers { get; init; } = [];
     public IReadOnlyList<int> EpisodeNumbers { get; init; } = [];

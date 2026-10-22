@@ -168,11 +168,7 @@ public sealed class LanguageParserCaseTests
     [InlineData("Movie.Title.1994.English.1080p.XviD-LOL", "English")]
     [InlineData("Movie Title 1994 Eng 1080p XviD-GROUP", "English")]
     [InlineData("Movie Title 1994 EN 1080p XviD-GROUP", "English")]
-    // Radarr input is the release title with the movie name replaced by "A Movie" (Parser.ParseMovieTitle).
-    [InlineData("A Movie 2015", "Unknown")]
     [InlineData("Movie.Title.2018.2160p.WEBRip.x265.10bit.HDR.DD5.1-GASMASK", "Unknown")]
-    // Radarr input has the movie name and release group replaced (Parser.ParseMovieTitle).
-    [InlineData("A.Movie.2010.720p.BluRay.x264.-[RlsGrp]", "Unknown")]
     [InlineData("Movie.Title.2010.SUBFRENCH.1080p.WEB.x264-GROUP", "Unknown")]
     [InlineData("Movie.Title.2010.En.1080p.WEB.x264-GROUP", "Unknown")]
     [InlineData("Movie.Title.1994.French.1080p.XviD-LOL", "French")]

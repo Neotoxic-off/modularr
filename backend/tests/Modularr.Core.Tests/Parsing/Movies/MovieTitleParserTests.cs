@@ -1,10 +1,33 @@
 // Cases from the Radarr ParserFixture (GPL-3.0).
+using Modularr.Core.Languages;
 using Modularr.Core.Parsing.Movies;
 
 namespace Modularr.Core.Tests.Parsing.Movies;
 
 public sealed class MovieTitleParserTests
 {
+    [Theory]
+    [InlineData("The.Italian.Movie.2025.720p.BluRay.X264-AMIABLE")]
+    [InlineData("The.French.Movie.2013.720p.BluRay.x264 - ROUGH[PublicHD]")]
+    [InlineData("The.German.Doctor.2013.LIMITED.DVDRip.x264-RedBlade")]
+    [InlineData("The.Good.German.2006.720p.HDTV.x264-TVP")]
+    [InlineData("German.Lancers.2019.720p.BluRay.x264-UNiVERSUM")]
+    [InlineData("The.German.2019.720p.BluRay.x264-UNiVERSUM")]
+    [InlineData("Movie Name (2016) BluRay 1080p DTS-ES AC3 x264-3Li")]
+    public void DoesNotParseWrongLanguageInTitle(string postTitle)
+    {
+        Assert.Equal(Language.Unknown, Assert.Single(Parse(postTitle, isDir: true).Languages));
+    }
+
+    // From the Radarr LanguageParserFixture: the movie name and release group must be hidden before language parsing.
+    [Theory]
+    [InlineData("The Danish Movie 2015")]
+    [InlineData("Movie.Title.2010.720p.BluRay.x264.-[YTS.LT]")]
+    public void ParsesUnknownLanguageOutsideTitleAndGroup(string postTitle)
+    {
+        Assert.Equal(Language.Unknown, Assert.Single(Parse(postTitle).Languages));
+    }
+
     private static ParsedMovieInfo Parse(string title, bool isDir = false)
     {
         ParsedMovieInfo? parsed = MovieTitleParser.ParseMovieTitle(title, isDir);

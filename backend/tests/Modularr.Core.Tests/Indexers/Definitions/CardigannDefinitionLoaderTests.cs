@@ -5,7 +5,8 @@ namespace Modularr.Core.Tests.Indexers.Definitions;
 
 public sealed class CardigannDefinitionLoaderTests
 {
-    internal const string Minimal = """
+    // A CRLF checkout turns the raw literal into CRLF; the cases splice LF fragments into it.
+    internal static readonly string Minimal = """
         id: test
         name: Test
         description: Test indexer
@@ -26,7 +27,7 @@ public sealed class CardigannDefinitionLoaderTests
           fields:
             title:
               selector: a
-        """;
+        """.ReplaceLineEndings("\n");
 
     internal static CardigannDefinition LoadFixture(string name) =>
         CardigannDefinitionLoader.Load(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Indexers", "Definitions", "Fixtures", name)));

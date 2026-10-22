@@ -1,3 +1,4 @@
+using Modularr.Core.Languages;
 using Modularr.Core.Qualities;
 
 namespace Modularr.Core.Parsing.Movies;
@@ -10,6 +11,7 @@ public sealed record ParsedMovieInfo
     public required string ReleaseTitle { get; init; }
     public required string SimpleReleaseTitle { get; init; }
     public required QualityModel Quality { get; init; }
+    public required IReadOnlyList<Language> Languages { get; init; }
     public string? ReleaseGroup { get; init; }
     public string? ReleaseHash { get; init; }
     public string? Edition { get; init; }

@@ -1,3 +1,4 @@
+using Modularr.Core.Languages;
 using Modularr.Core.Parsing.Episodes;
 
 namespace Modularr.Core.Tests.Parsing.Episodes;
@@ -31,6 +32,7 @@ public sealed class SeasonTitleParserTests
         ParsedEpisodeInfo? result = EpisodeParser.ParseSeasonTitle(releaseTitle);
         Assert.NotNull(result);
         Assert.NotNull(result.Quality);
+        Assert.NotEmpty(result.Languages);
     }
 
     [Theory]
