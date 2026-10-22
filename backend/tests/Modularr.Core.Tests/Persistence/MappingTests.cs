@@ -68,6 +68,10 @@ public sealed class MappingTests : IDisposable
             Monitored = true,
             Path = "/movies/The Matrix (1999)",
             QualityProfileId = 5,
+            Backdrop = "https://img/fanart.jpg",
+            Rating = 8.7m,
+            Genres = ["Action", "Science Fiction"],
+            Certification = "R",
         });
 
         using ModularrDbContext db = _database.NewContext();
@@ -76,6 +80,8 @@ public sealed class MappingTests : IDisposable
         Assert.Equal((603, "tt0133093", "The Matrix", 1999, true, "/movies/The Matrix (1999)"),
             (stored.TmdbId, stored.ImdbId, stored.Title, stored.Year, stored.Monitored, stored.Path));
         Assert.Equal("Ultra-HD", stored.QualityProfile.Name);
+        Assert.Equal(("https://img/fanart.jpg", 8.7m, "R"), (stored.Backdrop, stored.Rating, stored.Certification));
+        Assert.Equal(["Action", "Science Fiction"], stored.Genres);
     }
 
     [Fact]

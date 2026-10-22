@@ -1,0 +1,811 @@
+[
+ {
+  "TmdbId": 969681,
+  "ImdbId": "tt22084616",
+  "Title": "Spider-Man: Brand New Day",
+  "Overview": "Fighting crime full-time as Spider-Man in a world that doesn't remember him—and the pressure of seeing his old friends move on without him—sparks a change in Peter Parker he may not have the power to control. But that transformation might also be the only thing that can stop a shocking new threat to the city and those he loves - a powerful villain no one can even see.",
+  "OriginalTitle": "Spider-Man: Brand New Day",
+  "OriginalLanguage": "en",
+  "TitleSlug": "969681",
+  "Runtime": 145,
+  "Popularity": 1284.3495,
+  "Year": 2026,
+  "Premier": "2026-07-27T00:00:00Z",
+  "InCinema": "2026-07-29T00:00:00Z",
+  "PhysicalRelease": "2026-12-02T00:00:00Z",
+  "DigitalRelease": "2026-10-06T00:00:00Z",
+  "Images": [
+   {
+    "CoverType": "Poster",
+    "Url": "https://image.tmdb.org/t/p/original/bjiS5ipwxb9JFy3XRRN4OAilSeX.jpg"
+   },
+   {
+    "CoverType": "Fanart",
+    "Url": "https://image.tmdb.org/t/p/original/r08LxMJCbf1SiJIWeyH9aJmdqwC.jpg"
+   }
+  ],
+  "Ratings": [
+   {
+    "Count": 5923,
+    "Value": 8.47,
+    "Origin": "Tmdb",
+    "Type": "User"
+   }
+  ],
+  "MovieRatings": {
+   "Tmdb": {
+    "Count": 5923,
+    "Value": 8.47,
+    "Type": "User"
+   },
+   "Imdb": {
+    "Count": 356257,
+    "Value": 7.9,
+    "Type": "User"
+   },
+   "Metacritic": {
+    "Count": 0,
+    "Value": 66,
+    "Type": "User"
+   },
+   "RottenTomatoes": {
+    "Count": 0,
+    "Value": 90,
+    "Type": "User"
+   },
+   "Trakt": null
+  },
+  "Genres": [
+   "Science Fiction",
+   "Action",
+   "Adventure"
+  ],
+  "Keywords": [],
+  "AlternativeTitles": [],
+  "Translations": [],
+  "Recommendations": [],
+  "Credits": [],
+  "Studio": "Marvel Studios",
+  "YoutubeTrailerId": "P3uI5sLosKU",
+  "Certifications": [
+   {
+    "Country": "AR",
+    "Certification": "ATP"
+   },
+   {
+    "Country": "AT",
+    "Certification": "12"
+   },
+   {
+    "Country": "AU",
+    "Certification": "M"
+   },
+   {
+    "Country": "BE",
+    "Certification": "12"
+   },
+   {
+    "Country": "BG",
+    "Certification": "C"
+   },
+   {
+    "Country": "BR",
+    "Certification": "12"
+   },
+   {
+    "Country": "CA",
+    "Certification": "PG"
+   },
+   {
+    "Country": "CH",
+    "Certification": "12"
+   },
+   {
+    "Country": "CL",
+    "Certification": "TE+7"
+   },
+   {
+    "Country": "CZ",
+    "Certification": "12+"
+   },
+   {
+    "Country": "DE",
+    "Certification": "12"
+   },
+   {
+    "Country": "DK",
+    "Certification": "11"
+   },
+   {
+    "Country": "ES",
+    "Certification": "12"
+   },
+   {
+    "Country": "FI",
+    "Certification": "K-12"
+   },
+   {
+    "Country": "FR",
+    "Certification": "TP"
+   },
+   {
+    "Country": "GB",
+    "Certification": "12A"
+   },
+   {
+    "Country": "GR",
+    "Certification": "K12"
+   },
+   {
+    "Country": "HK",
+    "Certification": "IIA"
+   },
+   {
+    "Country": "HU",
+    "Certification": "12"
+   },
+   {
+    "Country": "ID",
+    "Certification": "13+"
+   },
+   {
+    "Country": "IE",
+    "Certification": "12A"
+   },
+   {
+    "Country": "IL",
+    "Certification": "All"
+   },
+   {
+    "Country": "IN",
+    "Certification": "U/A 13+"
+   },
+   {
+    "Country": "IT",
+    "Certification": "T"
+   },
+   {
+    "Country": "JP",
+    "Certification": "G"
+   },
+   {
+    "Country": "KR",
+    "Certification": "12"
+   },
+   {
+    "Country": "LT",
+    "Certification": "N-13"
+   },
+   {
+    "Country": "LV",
+    "Certification": "12+"
+   },
+   {
+    "Country": "MO",
+    "Certification": "B"
+   },
+   {
+    "Country": "MX",
+    "Certification": "B"
+   },
+   {
+    "Country": "MY",
+    "Certification": "P13"
+   },
+   {
+    "Country": "NL",
+    "Certification": "12"
+   },
+   {
+    "Country": "NO",
+    "Certification": "12"
+   },
+   {
+    "Country": "NZ",
+    "Certification": "M"
+   },
+   {
+    "Country": "PH",
+    "Certification": "PG"
+   },
+   {
+    "Country": "PL",
+    "Certification": "12"
+   },
+   {
+    "Country": "PR",
+    "Certification": "PG-13"
+   },
+   {
+    "Country": "RO",
+    "Certification": "12"
+   },
+   {
+    "Country": "SE",
+    "Certification": "11"
+   },
+   {
+    "Country": "SG",
+    "Certification": "PG13"
+   },
+   {
+    "Country": "SK",
+    "Certification": "12"
+   },
+   {
+    "Country": "TH",
+    "Certification": "13"
+   },
+   {
+    "Country": "TR",
+    "Certification": "13+"
+   },
+   {
+    "Country": "TW",
+    "Certification": "6+"
+   },
+   {
+    "Country": "UA",
+    "Certification": "12+"
+   },
+   {
+    "Country": "US",
+    "Certification": "PG-13"
+   },
+   {
+    "Country": "VI",
+    "Certification": "PG-13"
+   },
+   {
+    "Country": "ZA",
+    "Certification": "13"
+   }
+  ],
+  "Status": null,
+  "Collection": {
+   "TmdbId": 531241,
+   "Name": "Spider-Man (MCU) Collection",
+   "Images": null,
+   "Overview": null,
+   "Translations": null,
+   "Parts": null
+  },
+  "Homepage": "https://spidermanbrandnewday.movie"
+ },
+ {
+  "TmdbId": 1003596,
+  "ImdbId": "tt21357150",
+  "Title": "Avengers: Doomsday",
+  "Overview": "Beloved heroes from three distinct universes are set on a deadly collision course and face an existential threat unlike anything they've ever encountered.",
+  "OriginalTitle": "Avengers: Doomsday",
+  "OriginalLanguage": "en",
+  "TitleSlug": "1003596",
+  "Runtime": 165,
+  "Popularity": 817.934,
+  "Year": 2026,
+  "Premier": null,
+  "InCinema": "2026-12-16T00:00:00Z",
+  "PhysicalRelease": null,
+  "DigitalRelease": null,
+  "Images": [
+   {
+    "CoverType": "Poster",
+    "Url": "https://image.tmdb.org/t/p/original/jzPwsojjFStf5lR5Nm07w2hH56G.jpg"
+   },
+   {
+    "CoverType": "Fanart",
+    "Url": "https://image.tmdb.org/t/p/original/g3gpP5YDbA85DsA0bt5mgGQIe5q.jpg"
+   }
+  ],
+  "Ratings": [
+   {
+    "Count": 0,
+    "Value": 0,
+    "Origin": "Tmdb",
+    "Type": "User"
+   }
+  ],
+  "MovieRatings": {
+   "Tmdb": {
+    "Count": 0,
+    "Value": 0,
+    "Type": "User"
+   },
+   "Imdb": null,
+   "Metacritic": null,
+   "RottenTomatoes": null,
+   "Trakt": null
+  },
+  "Genres": [
+   "Science Fiction",
+   "Action",
+   "Adventure"
+  ],
+  "Keywords": [],
+  "AlternativeTitles": [],
+  "Translations": [],
+  "Recommendations": [],
+  "Credits": [],
+  "Studio": "Marvel Studios",
+  "YoutubeTrailerId": "X1aFkAkFASk",
+  "Certifications": [
+   {
+    "Country": "AR",
+    "Certification": "+13"
+   },
+   {
+    "Country": "MX",
+    "Certification": "B"
+   }
+  ],
+  "Status": null,
+  "Collection": {
+   "TmdbId": 86311,
+   "Name": "The Avengers Collection",
+   "Images": null,
+   "Overview": null,
+   "Translations": null,
+   "Parts": null
+  },
+  "Homepage": "https://www.marvel.com/movies/avengers-doomsday"
+ },
+ {
+  "TmdbId": 1058424,
+  "ImdbId": "tt27369017",
+  "Title": "Hope",
+  "Overview": "In the remote South Korean village of Hope Harbor, police chief Bum-seok and officer Sung-ae are called to investigate a mysterious creature wreaking havoc on the community. But all is not as it seems, and perceptions can be misleading. What begins as ignorance plants the seed of disaster, escalating through human conflict into a tragedy of cosmic proportions.",
+  "OriginalTitle": "호프",
+  "OriginalLanguage": "ko",
+  "TitleSlug": "1058424",
+  "Runtime": 157,
+  "Popularity": 408.3035,
+  "Year": 2026,
+  "Premier": "2026-05-17T00:00:00Z",
+  "InCinema": "2026-07-15T00:00:00Z",
+  "PhysicalRelease": "2026-12-28T00:00:00Z",
+  "DigitalRelease": "2026-10-13T00:00:00Z",
+  "Images": [
+   {
+    "CoverType": "Poster",
+    "Url": "https://image.tmdb.org/t/p/original/6VY1ZKgpsc8CfGsQcCGiYEgHdH0.jpg"
+   },
+   {
+    "CoverType": "Fanart",
+    "Url": "https://image.tmdb.org/t/p/original/qqHFLg90IUSoTmSMpKOOW5RyqN3.jpg"
+   }
+  ],
+  "Ratings": [
+   {
+    "Count": 294,
+    "Value": 6.861,
+    "Origin": "Tmdb",
+    "Type": "User"
+   }
+  ],
+  "MovieRatings": {
+   "Tmdb": {
+    "Count": 294,
+    "Value": 6.861,
+    "Type": "User"
+   },
+   "Imdb": {
+    "Count": 19203,
+    "Value": 6.7,
+    "Type": "User"
+   },
+   "Metacritic": {
+    "Count": 0,
+    "Value": 66,
+    "Type": "User"
+   },
+   "RottenTomatoes": {
+    "Count": 0,
+    "Value": 78,
+    "Type": "User"
+   },
+   "Trakt": {
+    "Count": 2,
+    "Value": 1,
+    "Type": "User"
+   }
+  },
+  "Genres": [
+   "Science Fiction",
+   "Mystery",
+   "Action"
+  ],
+  "Keywords": [],
+  "AlternativeTitles": [],
+  "Translations": [],
+  "Recommendations": [],
+  "Credits": [],
+  "Studio": "Forged Films",
+  "YoutubeTrailerId": "OFaJzL83y0Q",
+  "Certifications": [
+   {
+    "Country": "AR",
+    "Certification": "+13"
+   },
+   {
+    "Country": "AU",
+    "Certification": "MA 15+"
+   },
+   {
+    "Country": "CH",
+    "Certification": "16"
+   },
+   {
+    "Country": "CL",
+    "Certification": "14"
+   },
+   {
+    "Country": "CZ",
+    "Certification": "15+"
+   },
+   {
+    "Country": "DE",
+    "Certification": "16"
+   },
+   {
+    "Country": "DK",
+    "Certification": "15"
+   },
+   {
+    "Country": "GB",
+    "Certification": "15"
+   },
+   {
+    "Country": "HK",
+    "Certification": "IIB"
+   },
+   {
+    "Country": "ID",
+    "Certification": "13+"
+   },
+   {
+    "Country": "IE",
+    "Certification": "16"
+   },
+   {
+    "Country": "IN",
+    "Certification": "A"
+   },
+   {
+    "Country": "KR",
+    "Certification": "15"
+   },
+   {
+    "Country": "LT",
+    "Certification": "N-16"
+   },
+   {
+    "Country": "MO",
+    "Certification": "C"
+   },
+   {
+    "Country": "MX",
+    "Certification": "B-15"
+   },
+   {
+    "Country": "NZ",
+    "Certification": "R13"
+   },
+   {
+    "Country": "PH",
+    "Certification": "R-13"
+   },
+   {
+    "Country": "PR",
+    "Certification": "R"
+   },
+   {
+    "Country": "PT",
+    "Certification": "M/16"
+   },
+   {
+    "Country": "RU",
+    "Certification": "18+"
+   },
+   {
+    "Country": "SG",
+    "Certification": "NC16"
+   },
+   {
+    "Country": "TH",
+    "Certification": "15"
+   },
+   {
+    "Country": "TW",
+    "Certification": "15+"
+   },
+   {
+    "Country": "UA",
+    "Certification": "18+"
+   },
+   {
+    "Country": "US",
+    "Certification": "R"
+   },
+   {
+    "Country": "ZA",
+    "Certification": "16"
+   }
+  ],
+  "Status": null,
+  "Collection": null,
+  "Homepage": "https://www.neonrated.com/film/hope"
+ },
+ {
+  "TmdbId": 969681,
+  "ImdbId": "tt22084616",
+  "Title": "Spider-Man: Brand New Day",
+  "Overview": "Fighting crime full-time as Spider-Man in a world that doesn't remember him—and the pressure of seeing his old friends move on without him—sparks a change in Peter Parker he may not have the power to control. But that transformation might also be the only thing that can stop a shocking new threat to the city and those he loves - a powerful villain no one can even see.",
+  "OriginalTitle": "Spider-Man: Brand New Day",
+  "OriginalLanguage": "en",
+  "TitleSlug": "969681",
+  "Runtime": 145,
+  "Popularity": 1284.3495,
+  "Year": 2026,
+  "Premier": "2026-07-27T00:00:00Z",
+  "InCinema": "2026-07-29T00:00:00Z",
+  "PhysicalRelease": "2026-12-02T00:00:00Z",
+  "DigitalRelease": "2026-10-06T00:00:00Z",
+  "Images": [
+   {
+    "CoverType": "Poster",
+    "Url": "https://image.tmdb.org/t/p/original/bjiS5ipwxb9JFy3XRRN4OAilSeX.jpg"
+   },
+   {
+    "CoverType": "Fanart",
+    "Url": "https://image.tmdb.org/t/p/original/r08LxMJCbf1SiJIWeyH9aJmdqwC.jpg"
+   }
+  ],
+  "Ratings": [
+   {
+    "Count": 5923,
+    "Value": 8.47,
+    "Origin": "Tmdb",
+    "Type": "User"
+   }
+  ],
+  "MovieRatings": {
+   "Tmdb": {
+    "Count": 5923,
+    "Value": 8.47,
+    "Type": "User"
+   },
+   "Imdb": {
+    "Count": 356257,
+    "Value": 7.9,
+    "Type": "User"
+   },
+   "Metacritic": {
+    "Count": 0,
+    "Value": 66,
+    "Type": "User"
+   },
+   "RottenTomatoes": {
+    "Count": 0,
+    "Value": 90,
+    "Type": "User"
+   },
+   "Trakt": null
+  },
+  "Genres": [
+   "Science Fiction",
+   "Action",
+   "Adventure"
+  ],
+  "Keywords": [],
+  "AlternativeTitles": [],
+  "Translations": [],
+  "Recommendations": [],
+  "Credits": [],
+  "Studio": "Marvel Studios",
+  "YoutubeTrailerId": "P3uI5sLosKU",
+  "Certifications": [
+   {
+    "Country": "AR",
+    "Certification": "ATP"
+   },
+   {
+    "Country": "AT",
+    "Certification": "12"
+   },
+   {
+    "Country": "AU",
+    "Certification": "M"
+   },
+   {
+    "Country": "BE",
+    "Certification": "12"
+   },
+   {
+    "Country": "BG",
+    "Certification": "C"
+   },
+   {
+    "Country": "BR",
+    "Certification": "12"
+   },
+   {
+    "Country": "CA",
+    "Certification": "PG"
+   },
+   {
+    "Country": "CH",
+    "Certification": "12"
+   },
+   {
+    "Country": "CL",
+    "Certification": "TE+7"
+   },
+   {
+    "Country": "CZ",
+    "Certification": "12+"
+   },
+   {
+    "Country": "DE",
+    "Certification": "12"
+   },
+   {
+    "Country": "DK",
+    "Certification": "11"
+   },
+   {
+    "Country": "ES",
+    "Certification": "12"
+   },
+   {
+    "Country": "FI",
+    "Certification": "K-12"
+   },
+   {
+    "Country": "FR",
+    "Certification": "TP"
+   },
+   {
+    "Country": "GB",
+    "Certification": "12A"
+   },
+   {
+    "Country": "GR",
+    "Certification": "K12"
+   },
+   {
+    "Country": "HK",
+    "Certification": "IIA"
+   },
+   {
+    "Country": "HU",
+    "Certification": "12"
+   },
+   {
+    "Country": "ID",
+    "Certification": "13+"
+   },
+   {
+    "Country": "IE",
+    "Certification": "12A"
+   },
+   {
+    "Country": "IL",
+    "Certification": "All"
+   },
+   {
+    "Country": "IN",
+    "Certification": "U/A 13+"
+   },
+   {
+    "Country": "IT",
+    "Certification": "T"
+   },
+   {
+    "Country": "JP",
+    "Certification": "G"
+   },
+   {
+    "Country": "KR",
+    "Certification": "12"
+   },
+   {
+    "Country": "LT",
+    "Certification": "N-13"
+   },
+   {
+    "Country": "LV",
+    "Certification": "12+"
+   },
+   {
+    "Country": "MO",
+    "Certification": "B"
+   },
+   {
+    "Country": "MX",
+    "Certification": "B"
+   },
+   {
+    "Country": "MY",
+    "Certification": "P13"
+   },
+   {
+    "Country": "NL",
+    "Certification": "12"
+   },
+   {
+    "Country": "NO",
+    "Certification": "12"
+   },
+   {
+    "Country": "NZ",
+    "Certification": "M"
+   },
+   {
+    "Country": "PH",
+    "Certification": "PG"
+   },
+   {
+    "Country": "PL",
+    "Certification": "12"
+   },
+   {
+    "Country": "PR",
+    "Certification": "PG-13"
+   },
+   {
+    "Country": "RO",
+    "Certification": "12"
+   },
+   {
+    "Country": "SE",
+    "Certification": "11"
+   },
+   {
+    "Country": "SG",
+    "Certification": "PG13"
+   },
+   {
+    "Country": "SK",
+    "Certification": "12"
+   },
+   {
+    "Country": "TH",
+    "Certification": "13"
+   },
+   {
+    "Country": "TR",
+    "Certification": "13+"
+   },
+   {
+    "Country": "TW",
+    "Certification": "6+"
+   },
+   {
+    "Country": "UA",
+    "Certification": "12+"
+   },
+   {
+    "Country": "US",
+    "Certification": "PG-13"
+   },
+   {
+    "Country": "VI",
+    "Certification": "PG-13"
+   },
+   {
+    "Country": "ZA",
+    "Certification": "13"
+   }
+  ],
+  "Status": null,
+  "Collection": {
+   "TmdbId": 531241,
+   "Name": "Spider-Man (MCU) Collection",
+   "Images": null,
+   "Overview": null,
+   "Translations": null,
+   "Parts": null
+  },
+  "Homepage": "https://spidermanbrandnewday.movie"
+ }
+]

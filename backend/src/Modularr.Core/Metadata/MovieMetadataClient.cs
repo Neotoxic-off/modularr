@@ -100,6 +100,15 @@ public sealed partial class MovieMetadataClient(HttpClient httpClient, IOptions<
         return movies is [MovieResource first, ..] ? MapMovie(first) : throw new MetadataNotFoundException(normalized);
     }
 
+    // RadarrAPI's keyless curated lists, as Radarr's discover page uses them: "tmdb/popular", "tmdb/trending", "imdb/popular".
+    public async Task<IReadOnlyList<MovieInfo>> GetListAsync(string list, CancellationToken cancellationToken = default)
+    {
+        List<MovieResource> movies = await MetadataHttp.GetJsonAsync<List<MovieResource>>(httpClient, MetadataHttp.Combine(_options.RadarrApiUrl, $"list/{list}"), cancellationToken).ConfigureAwait(false)
+            ?? throw new MetadataSourceException($"RadarrAPI has no list '{list}'.");
+
+        return [.. movies.DistinctBy(m => m.TmdbId).Select(MapMovie)];
+    }
+
     private static async Task<IReadOnlyList<MovieInfo>> LookupAsync(Func<CancellationToken, Task<MovieInfo>> lookup, CancellationToken cancellationToken)
     {
         try

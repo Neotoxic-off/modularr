@@ -34,7 +34,11 @@ public sealed record SeriesInfo
     public string? TitleSlug { get; init; }
     public SeriesStatus Status { get; init; }
     public MetadataRating Ratings { get; init; }
+    // 0-10, null when nobody rated the show.
+    public decimal? Rating => Ratings.Votes > 0 ? Ratings.Value : null;
     public IReadOnlyList<string> Genres { get; init; } = [];
+    // Upstream has no anime flag in the metadata (the Sonarr user picks the type); the Anime genre is the closest signal.
+    public bool IsAnime => Genres.Contains("Anime", StringComparer.OrdinalIgnoreCase);
     public string? Certification { get; init; }
     // From Sonarr's daily-series list: such shows are numbered by air date.
     public bool IsDaily { get; init; }

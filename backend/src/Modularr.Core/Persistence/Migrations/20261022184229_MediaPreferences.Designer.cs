@@ -11,8 +11,8 @@ using Modularr.Core.Persistence;
 namespace Modularr.Core.Persistence.Migrations
 {
     [DbContext(typeof(ModularrDbContext))]
-    [Migration("20261022183556_ProfilesAndLanguages")]
-    partial class ProfilesAndLanguages
+    [Migration("20261022184229_MediaPreferences")]
+    partial class MediaPreferences
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -306,6 +306,16 @@ namespace Modularr.Core.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Backdrop")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Certification")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Genres")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ImdbId")
                         .HasColumnType("TEXT");
 
@@ -330,6 +340,9 @@ namespace Modularr.Core.Persistence.Migrations
 
                     b.Property<int>("QualityProfileId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("Rating")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Runtime")
                         .HasColumnType("INTEGER");
@@ -363,6 +376,16 @@ namespace Modularr.Core.Persistence.Migrations
                     b.Property<DateTime>("Added")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Backdrop")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Certification")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Genres")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("Language")
                         .HasColumnType("INTEGER");
 
@@ -384,6 +407,9 @@ namespace Modularr.Core.Persistence.Migrations
 
                     b.Property<int>("QualityProfileId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("Rating")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Runtime")
                         .HasColumnType("INTEGER");

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Accounts;
+using Modularr.Core.Discovery;
 using Modularr.Core.Downloads;
 using Modularr.Core.Downloads.Torrents;
 using Modularr.Core.Indexers;
@@ -64,11 +65,14 @@ public static class ModularrServiceCollectionExtensions
 
         services.AddHttpClient<SeriesMetadataClient>();
         services.AddHttpClient<MovieMetadataClient>();
+        services.AddHttpClient<ShowDiscoveryClient>();
+        services.AddMemoryCache();
 
         // The end-to-end flow: library, search, grab, then the monitor imports finished torrents.
         services.AddTransient<IndexerSearch>();
         services.AddScoped<AccountService>();
         services.AddScoped<LibraryService>();
+        services.AddScoped<DiscoveryService>();
         services.AddScoped<ReleaseSearch>();
         services.AddScoped<DownloadService>();
         services.AddScoped<DownloadImporter>();

@@ -1,0 +1,558 @@
+[
+ {
+  "id": 3774537,
+  "url": "https://www.tvmaze.com/episodes/3774537/way-too-early-2026-10-22-episode-206",
+  "name": "Episode 206",
+  "season": 2026,
+  "number": 206,
+  "type": "regular",
+  "airdate": "2026-10-22",
+  "airtime": "05:00",
+  "airstamp": "2026-10-22T09:00:00+00:00",
+  "runtime": 60,
+  "rating": {
+   "average": null
+  },
+  "image": null,
+  "summary": "<p>Trump heads to Iowa after bizarre rally in South Carolina</p>",
+  "show": {
+   "id": 15308,
+   "url": "https://www.tvmaze.com/shows/15308/way-too-early",
+   "name": "Way Too Early",
+   "type": "News",
+   "language": "English",
+   "genres": [],
+   "status": "Running",
+   "runtime": 60,
+   "averageRuntime": 59,
+   "premiered": "2009-07-27",
+   "ended": null,
+   "officialSite": "http://www.msnbc.com/way-too-early",
+   "schedule": {
+    "time": "05:00",
+    "days": [
+     "Monday",
+     "Tuesday",
+     "Wednesday",
+     "Thursday",
+     "Friday"
+    ]
+   },
+   "rating": {
+    "average": null
+   },
+   "weight": 77,
+   "network": {
+    "id": 201,
+    "name": "MS NOW",
+    "country": {
+     "name": "United States",
+     "code": "US",
+     "timezone": "America/New_York"
+    },
+    "officialSite": "https://www.ms.now/live"
+   },
+   "webChannel": null,
+   "dvdCountry": null,
+   "externals": {
+    "tvrage": null,
+    "thetvdb": 282682,
+    "imdb": null
+   },
+   "image": {
+    "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/557/1394869.jpg",
+    "original": "https://static.tvmaze.com/uploads/images/original_untouched/557/1394869.jpg"
+   },
+   "summary": "<p>The fast-paced program brings viewers everything they need to know to start their days--from news and politics to sports and pop culture.</p>",
+   "updated": 1792667827,
+   "_links": {
+    "self": {
+     "href": "https://api.tvmaze.com/shows/15308"
+    },
+    "previousepisode": {
+     "href": "https://api.tvmaze.com/episodes/3774537",
+     "name": "Episode 206"
+    },
+    "nextepisode": {
+     "href": "https://api.tvmaze.com/episodes/3774538",
+     "name": "Episode 207"
+    }
+   }
+  },
+  "_links": {
+   "self": {
+    "href": "https://api.tvmaze.com/episodes/3774537"
+   },
+   "show": {
+    "href": "https://api.tvmaze.com/shows/15308",
+    "name": "Way Too Early"
+   }
+  }
+ },
+ {
+  "id": 3783311,
+  "url": "https://www.tvmaze.com/episodes/3783311/max-the-midknights-4x06-time-management",
+  "name": "Time Management",
+  "season": 4,
+  "number": 6,
+  "type": "regular",
+  "airdate": "2026-10-22",
+  "airtime": "12:12",
+  "airstamp": "2026-10-22T16:12:00+00:00",
+  "runtime": 26,
+  "rating": {
+   "average": null
+  },
+  "image": null,
+  "summary": null,
+  "show": {
+   "id": 79506,
+   "url": "https://www.tvmaze.com/shows/79506/max-the-midknights",
+   "name": "Max & the Midknights",
+   "type": "Animation",
+   "language": "English",
+   "genres": [
+    "Adventure",
+    "Children",
+    "Fantasy"
+   ],
+   "status": "Running",
+   "runtime": 26,
+   "averageRuntime": 27,
+   "premiered": "2024-10-30",
+   "ended": null,
+   "officialSite": null,
+   "schedule": {
+    "time": "",
+    "days": [
+     "Monday",
+     "Tuesday",
+     "Wednesday",
+     "Thursday",
+     "Friday"
+    ]
+   },
+   "rating": {
+    "average": null
+   },
+   "weight": 81,
+   "network": {
+    "id": 101,
+    "name": "TeenNick",
+    "country": {
+     "name": "United States",
+     "code": "US",
+     "timezone": "America/New_York"
+    },
+    "officialSite": null
+   },
+   "webChannel": null,
+   "dvdCountry": null,
+   "externals": {
+    "tvrage": null,
+    "thetvdb": 412558,
+    "imdb": "tt11349896"
+   },
+   "image": {
+    "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/603/1509376.jpg",
+    "original": "https://static.tvmaze.com/uploads/images/original_untouched/603/1509376.jpg"
+   },
+   "summary": "<p><b>Max &amp; the Midknights </b>follows a determined 10-year-old girl named Max, who pursues her dream of becoming a knight by leading her friends on an epic adventure in the fantastical medieval kingdom of Byjovia.</p>",
+   "updated": 1791582143,
+   "_links": {
+    "self": {
+     "href": "https://api.tvmaze.com/shows/79506"
+    },
+    "previousepisode": {
+     "href": "https://api.tvmaze.com/episodes/3783312",
+     "name": "Time After Time"
+    },
+    "nextepisode": {
+     "href": "https://api.tvmaze.com/episodes/3784639",
+     "name": "The Great Crossover (1)"
+    }
+   }
+  },
+  "_links": {
+   "self": {
+    "href": "https://api.tvmaze.com/episodes/3783311"
+   },
+   "show": {
+    "href": "https://api.tvmaze.com/shows/79506",
+    "name": "Max & the Midknights"
+   }
+  }
+ },
+ {
+  "id": 3793168,
+  "url": "https://www.tvmaze.com/episodes/3793168/the-young-and-the-restless-2026-10-22-ep-13491",
+  "name": "Ep. #13491",
+  "season": 2026,
+  "number": 207,
+  "type": "regular",
+  "airdate": "2026-10-22",
+  "airtime": "12:30",
+  "airstamp": "2026-10-22T16:30:00+00:00",
+  "runtime": 60,
+  "rating": {
+   "average": null
+  },
+  "image": null,
+  "summary": null,
+  "show": {
+   "id": 4344,
+   "url": "https://www.tvmaze.com/shows/4344/the-young-and-the-restless",
+   "name": "The Young and the Restless",
+   "type": "Scripted",
+   "language": "English",
+   "genres": [
+    "Drama",
+    "Family",
+    "Romance"
+   ],
+   "status": "Running",
+   "runtime": 60,
+   "averageRuntime": 60,
+   "premiered": "1973-03-26",
+   "ended": null,
+   "officialSite": "http://www.cbs.com/shows/the_young_and_the_restless/",
+   "schedule": {
+    "time": "12:30",
+    "days": [
+     "Monday",
+     "Tuesday",
+     "Wednesday",
+     "Thursday",
+     "Friday"
+    ]
+   },
+   "rating": {
+    "average": 5.7
+   },
+   "weight": 97,
+   "network": {
+    "id": 2,
+    "name": "CBS",
+    "country": {
+     "name": "United States",
+     "code": "US",
+     "timezone": "America/New_York"
+    },
+    "officialSite": "https://www.cbs.com/"
+   },
+   "webChannel": null,
+   "dvdCountry": null,
+   "externals": {
+    "tvrage": 6318,
+    "thetvdb": 70328,
+    "imdb": "tt0069658"
+   },
+   "image": {
+    "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/593/1482522.jpg",
+    "original": "https://static.tvmaze.com/uploads/images/original_untouched/593/1482522.jpg"
+   },
+   "summary": "<p><b>The Young and the Restless</b> revolves around the rivalries, romances, hopes and fears of the residents of the fictional Midwestern metropolis, Genoa City. The lives and loves of a wide variety of characters mingle through the generations, dominated by the Newman, Abbott, Chancellor, Baldwin and Winters families. ­ When The Young and the Restless premiered in 1973, it revolutionized the daytime drama. It continues to set the standard with strong characters, socially conscious storylines, romance and sensuality.</p>",
+   "updated": 1792453216,
+   "_links": {
+    "self": {
+     "href": "https://api.tvmaze.com/shows/4344"
+    },
+    "previousepisode": {
+     "href": "https://api.tvmaze.com/episodes/3793168",
+     "name": "Ep. #13491"
+    },
+    "nextepisode": {
+     "href": "https://api.tvmaze.com/episodes/3793169",
+     "name": "Ep. #13492"
+    }
+   }
+  },
+  "_links": {
+   "self": {
+    "href": "https://api.tvmaze.com/episodes/3793168"
+   },
+   "show": {
+    "href": "https://api.tvmaze.com/shows/4344",
+    "name": "The Young and the Restless"
+   }
+  }
+ },
+ {
+  "id": 3791617,
+  "url": "https://www.tvmaze.com/episodes/3791617/the-bold-and-the-beautiful-2026-10-22-ep-9892",
+  "name": "Ep. #9892",
+  "season": 2026,
+  "number": 208,
+  "type": "regular",
+  "airdate": "2026-10-22",
+  "airtime": "13:30",
+  "airstamp": "2026-10-22T17:30:00+00:00",
+  "runtime": 30,
+  "rating": {
+   "average": null
+  },
+  "image": null,
+  "summary": null,
+  "show": {
+   "id": 806,
+   "url": "https://www.tvmaze.com/shows/806/the-bold-and-the-beautiful",
+   "name": "The Bold and the Beautiful",
+   "type": "Scripted",
+   "language": "English",
+   "genres": [
+    "Drama",
+    "Family",
+    "Romance"
+   ],
+   "status": "Running",
+   "runtime": 30,
+   "averageRuntime": 30,
+   "premiered": "1987-03-23",
+   "ended": null,
+   "officialSite": "https://www.cbs.com/shows/the_bold_and_the_beautiful/",
+   "schedule": {
+    "time": "13:30",
+    "days": [
+     "Monday",
+     "Tuesday",
+     "Wednesday",
+     "Thursday",
+     "Friday"
+    ]
+   },
+   "rating": {
+    "average": 5.5
+   },
+   "weight": 97,
+   "network": {
+    "id": 2,
+    "name": "CBS",
+    "country": {
+     "name": "United States",
+     "code": "US",
+     "timezone": "America/New_York"
+    },
+    "officialSite": "https://www.cbs.com/"
+   },
+   "webChannel": null,
+   "dvdCountry": null,
+   "externals": {
+    "tvrage": 5631,
+    "thetvdb": 79838,
+    "imdb": "tt0092325"
+   },
+   "image": {
+    "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/593/1482536.jpg",
+    "original": "https://static.tvmaze.com/uploads/images/original_untouched/593/1482536.jpg"
+   },
+   "summary": "<p>They created a dynasty where passion rules, they are the Forresters, the first name in Fashion. <b>The Bold and the Beautiful</b>, a world of fashion, glamor and romance. A place where power, money and success are there for the taking in a city where dreams really do come true. Follow the lives and loves of the Forresters on <i>The Bold and the Beautiful</i>...</p>",
+   "updated": 1792662932,
+   "_links": {
+    "self": {
+     "href": "https://api.tvmaze.com/shows/806"
+    },
+    "previousepisode": {
+     "href": "https://api.tvmaze.com/episodes/3791617",
+     "name": "Ep. #9892"
+    },
+    "nextepisode": {
+     "href": "https://api.tvmaze.com/episodes/3791618",
+     "name": "Ep. #9893"
+    }
+   }
+  },
+  "_links": {
+   "self": {
+    "href": "https://api.tvmaze.com/episodes/3791617"
+   },
+   "show": {
+    "href": "https://api.tvmaze.com/shows/806",
+    "name": "The Bold and the Beautiful"
+   }
+  }
+ },
+ {
+  "id": 3783312,
+  "url": "https://www.tvmaze.com/episodes/3783312/max-the-midknights-4x07-time-after-time",
+  "name": "Time After Time",
+  "season": 4,
+  "number": 7,
+  "type": "regular",
+  "airdate": "2026-10-22",
+  "airtime": "12:38",
+  "airstamp": "2026-10-22T16:38:00+00:00",
+  "runtime": 26,
+  "rating": {
+   "average": null
+  },
+  "image": null,
+  "summary": null,
+  "show": {
+   "id": 79506,
+   "url": "https://www.tvmaze.com/shows/79506/max-the-midknights",
+   "name": "Max & the Midknights",
+   "type": "Animation",
+   "language": "English",
+   "genres": [
+    "Adventure",
+    "Children",
+    "Fantasy"
+   ],
+   "status": "Running",
+   "runtime": 26,
+   "averageRuntime": 27,
+   "premiered": "2024-10-30",
+   "ended": null,
+   "officialSite": null,
+   "schedule": {
+    "time": "",
+    "days": [
+     "Monday",
+     "Tuesday",
+     "Wednesday",
+     "Thursday",
+     "Friday"
+    ]
+   },
+   "rating": {
+    "average": null
+   },
+   "weight": 81,
+   "network": {
+    "id": 101,
+    "name": "TeenNick",
+    "country": {
+     "name": "United States",
+     "code": "US",
+     "timezone": "America/New_York"
+    },
+    "officialSite": null
+   },
+   "webChannel": null,
+   "dvdCountry": null,
+   "externals": {
+    "tvrage": null,
+    "thetvdb": 412558,
+    "imdb": "tt11349896"
+   },
+   "image": {
+    "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/603/1509376.jpg",
+    "original": "https://static.tvmaze.com/uploads/images/original_untouched/603/1509376.jpg"
+   },
+   "summary": "<p><b>Max &amp; the Midknights </b>follows a determined 10-year-old girl named Max, who pursues her dream of becoming a knight by leading her friends on an epic adventure in the fantastical medieval kingdom of Byjovia.</p>",
+   "updated": 1791582143,
+   "_links": {
+    "self": {
+     "href": "https://api.tvmaze.com/shows/79506"
+    },
+    "previousepisode": {
+     "href": "https://api.tvmaze.com/episodes/3783312",
+     "name": "Time After Time"
+    },
+    "nextepisode": {
+     "href": "https://api.tvmaze.com/episodes/3784639",
+     "name": "The Great Crossover (1)"
+    }
+   }
+  },
+  "_links": {
+   "self": {
+    "href": "https://api.tvmaze.com/episodes/3783312"
+   },
+   "show": {
+    "href": "https://api.tvmaze.com/shows/79506",
+    "name": "Max & the Midknights"
+   }
+  }
+ },
+ {
+  "id": 3781366,
+  "url": "https://www.tvmaze.com/episodes/3781366/fox-friends-first-2026-10-22-episode-211",
+  "name": "Episode 211",
+  "season": 2026,
+  "number": 211,
+  "type": "regular",
+  "airdate": "2026-10-22",
+  "airtime": "05:00",
+  "airstamp": "2026-10-22T09:00:00+00:00",
+  "runtime": 60,
+  "rating": {
+   "average": null
+  },
+  "image": null,
+  "summary": null,
+  "show": {
+   "id": 9966,
+   "url": "https://www.tvmaze.com/shows/9966/fox-friends-first",
+   "name": "FOX & Friends First",
+   "type": "News",
+   "language": "English",
+   "genres": [],
+   "status": "Running",
+   "runtime": 60,
+   "averageRuntime": 60,
+   "premiered": "2012-03-05",
+   "ended": null,
+   "officialSite": "https://www.foxnews.com/shows/fox-friends-first",
+   "schedule": {
+    "time": "05:00",
+    "days": [
+     "Monday",
+     "Tuesday",
+     "Wednesday",
+     "Thursday",
+     "Friday"
+    ]
+   },
+   "rating": {
+    "average": null
+   },
+   "weight": 76,
+   "network": {
+    "id": 185,
+    "name": "Fox News Channel",
+    "country": {
+     "name": "United States",
+     "code": "US",
+     "timezone": "America/New_York"
+    },
+    "officialSite": "https://www.foxnews.com/"
+   },
+   "webChannel": null,
+   "dvdCountry": null,
+   "externals": {
+    "tvrage": null,
+    "thetvdb": null,
+    "imdb": null
+   },
+   "image": {
+    "medium": "https://static.tvmaze.com/uploads/images/medium_portrait/614/1536193.jpg",
+    "original": "https://static.tvmaze.com/uploads/images/original_untouched/614/1536193.jpg"
+   },
+   "summary": "<p>Kicking off the day, <b>FOX &amp; Friends First</b> delivers all the headlines viewers may have missed overnight, along with a preview of upcoming news events. Presented two hours before FOX &amp; Friends, the first hour of the program is hosted by Todd Piro and Carley Shimkus</p>",
+   "updated": 1791149694,
+   "_links": {
+    "self": {
+     "href": "https://api.tvmaze.com/shows/9966"
+    },
+    "previousepisode": {
+     "href": "https://api.tvmaze.com/episodes/3781366",
+     "name": "Episode 211"
+    },
+    "nextepisode": {
+     "href": "https://api.tvmaze.com/episodes/3781367",
+     "name": "Episode 212"
+    }
+   }
+  },
+  "_links": {
+   "self": {
+    "href": "https://api.tvmaze.com/episodes/3781366"
+   },
+   "show": {
+    "href": "https://api.tvmaze.com/shows/9966",
+    "name": "FOX & Friends First"
+   }
+  }
+ }
+]

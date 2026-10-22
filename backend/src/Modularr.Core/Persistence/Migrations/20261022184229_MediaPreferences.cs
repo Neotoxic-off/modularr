@@ -5,11 +5,30 @@
 namespace Modularr.Core.Persistence.Migrations
 {
     /// <inheritdoc />
-    public partial class ProfilesAndLanguages : Migration
+    public partial class MediaPreferences : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<string>(
+                name: "Backdrop",
+                table: "Series",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "Certification",
+                table: "Series",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "Genres",
+                table: "Series",
+                type: "TEXT",
+                nullable: false,
+                defaultValue: "[]");
+
             migrationBuilder.AddColumn<int>(
                 name: "Language",
                 table: "Series",
@@ -23,6 +42,31 @@ namespace Modularr.Core.Persistence.Migrations
                 nullable: false,
                 defaultValue: 0);
 
+            migrationBuilder.AddColumn<decimal>(
+                name: "Rating",
+                table: "Series",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "Backdrop",
+                table: "Movies",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "Certification",
+                table: "Movies",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "Genres",
+                table: "Movies",
+                type: "TEXT",
+                nullable: false,
+                defaultValue: "[]");
+
             migrationBuilder.AddColumn<int>(
                 name: "Language",
                 table: "Movies",
@@ -35,6 +79,12 @@ namespace Modularr.Core.Persistence.Migrations
                 type: "INTEGER",
                 nullable: false,
                 defaultValue: 0);
+
+            migrationBuilder.AddColumn<decimal>(
+                name: "Rating",
+                table: "Movies",
+                type: "TEXT",
+                nullable: true);
 
             // A profile language other than Any becomes the override of the items using the profile, so their searches do not change.
             migrationBuilder.Sql("UPDATE Series SET Language = (SELECT p.Language FROM QualityProfiles p WHERE p.Id = Series.QualityProfileId AND p.Language <> -1);");
@@ -49,12 +99,40 @@ namespace Modularr.Core.Persistence.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
+                name: "Backdrop",
+                table: "Series");
+
+            migrationBuilder.DropColumn(
+                name: "Certification",
+                table: "Series");
+
+            migrationBuilder.DropColumn(
+                name: "Genres",
+                table: "Series");
+
+            migrationBuilder.DropColumn(
                 name: "Language",
                 table: "Series");
 
             migrationBuilder.DropColumn(
                 name: "OriginalLanguage",
                 table: "Series");
+
+            migrationBuilder.DropColumn(
+                name: "Rating",
+                table: "Series");
+
+            migrationBuilder.DropColumn(
+                name: "Backdrop",
+                table: "Movies");
+
+            migrationBuilder.DropColumn(
+                name: "Certification",
+                table: "Movies");
+
+            migrationBuilder.DropColumn(
+                name: "Genres",
+                table: "Movies");
 
             migrationBuilder.DropColumn(
                 name: "Language",
@@ -62,6 +140,10 @@ namespace Modularr.Core.Persistence.Migrations
 
             migrationBuilder.DropColumn(
                 name: "OriginalLanguage",
+                table: "Movies");
+
+            migrationBuilder.DropColumn(
+                name: "Rating",
                 table: "Movies");
 
             migrationBuilder.AddColumn<int>(
