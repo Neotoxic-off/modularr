@@ -62,6 +62,7 @@ public static class MediaFileExtensions
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     public static bool IsMediaFile(string extension) => QualityByExtension.ContainsKey(extension);
+    public static FrozenSet<string> VideoExtensions { get; } = QualityByExtension.Keys.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     public static Quality GetQualityForExtension(string extension) =>
         QualityByExtension.GetValueOrDefault(extension, Quality.Unknown);

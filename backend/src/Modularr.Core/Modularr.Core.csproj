@@ -2,5 +2,6 @@
   <ItemGroup>
     <PackageReference Include="MonoTorrent" />
     <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="SharpCompress" />
   </ItemGroup>
 </Project>
