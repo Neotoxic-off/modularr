@@ -438,3 +438,6 @@ backend/src/Modularr.Api/config/
 CLAUDE.md
 CLAUDE.local.md
 .mcp.json
+
+# Local media library mounted into the container at /media
+/media/
