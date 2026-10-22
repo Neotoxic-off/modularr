@@ -14,6 +14,8 @@ public sealed class TorrentEngine : IAsyncDisposable
     private const string TagsFile = "torrents.json";
 
     private static readonly TimeSpan SeedLimitCheckInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan StopWaitTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan StopPollInterval = TimeSpan.FromMilliseconds(100);
 
     private readonly ClientEngine _engine;
     private readonly TorrentEngineOptions _options;
@@ -105,7 +107,7 @@ public sealed class TorrentEngine : IAsyncDisposable
         }
 
         CancelMetadataWait(manager);
-        await manager.StopAsync();
+        await StopAsync(manager);
         UpdateTag(id, tag => tag with { Stopped = true });
         await SaveAsync();
         return true;
@@ -132,11 +134,7 @@ public sealed class TorrentEngine : IAsyncDisposable
         }
 
         CancelMetadataWait(manager);
-        if (manager.State != TorrentState.Stopped)
-        {
-            await manager.StopAsync();
-        }
-
+        await StopAsync(manager);
         await _engine.RemoveAsync(manager, deleteData ? RemoveMode.CacheDataAndDownloadedData : RemoveMode.CacheDataOnly);
         lock (_tags)
         {
@@ -195,7 +193,7 @@ public sealed class TorrentEngine : IAsyncDisposable
 
             if (manager.State == TorrentState.Seeding && TorrentStatusMapping.HasReachedSeedLimit(Ratio(manager, tag), SeedingTime(tag), _options))
             {
-                await manager.StopAsync();
+                await StopAsync(manager);
                 UpdateTag(id, t => t with { Stopped = true });
                 changed = true;
             }
@@ -309,6 +307,29 @@ public sealed class TorrentEngine : IAsyncDisposable
 
     private static bool IsComplete(TorrentManager manager) => manager.HasMetadata && manager.PartialProgress >= 100;
 
+    // MonoTorrent throws when asked to stop a manager that is stopped or already stopping (a slow tracker stop announce).
+    private static async Task StopAsync(TorrentManager manager)
+    {
+        if (manager.State == TorrentState.Stopping)
+        {
+            DateTimeOffset deadline = DateTimeOffset.UtcNow + StopWaitTimeout;
+            while (manager.State == TorrentState.Stopping && DateTimeOffset.UtcNow < deadline)
+            {
+                await Task.Delay(StopPollInterval);
+            }
+
+            if (manager.State == TorrentState.Stopping)
+            {
+                throw new InvalidOperationException("The torrent is still stopping, try again in a moment.");
+            }
+        }
+
+        if (manager.State != TorrentState.Stopped)
+        {
+            await manager.StopAsync();
+        }
+    }
+
     private static long TotalSize(TorrentManager manager) => manager.Torrent?.Size ?? manager.MagnetLink?.Size ?? 0;
 
     private async Task<string> AddAsync(InfoHashes infoHashes, Func<Task<TorrentManager>> add, string category)
@@ -413,9 +434,9 @@ public sealed class TorrentEngine : IAsyncDisposable
                 }
             }
         }
-        else if (manager.State != TorrentState.Stopped)
+        else
         {
-            await manager.StopAsync();
+            await StopAsync(manager);
         }
 
         UpdateTag(ToId(manager.InfoHashes), t => t with

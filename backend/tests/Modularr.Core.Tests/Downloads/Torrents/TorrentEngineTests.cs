@@ -132,6 +132,18 @@ public sealed class TorrentEngineTests : IDisposable
     }
 
     [Fact]
+    public async Task PausingTwiceThenRemovingDoesNotThrow()
+    {
+        await using TorrentEngine engine = await TorrentEngine.StartAsync(Options("pause-twice"));
+        string id = await engine.AddMagnetAsync("magnet:?xt=urn:btih:ZPBPA2P6ROZPKRHK44D5OW6NHXU5Z6KR&tr=udp://abc", Path.Combine(_root, "downloads"), "movies");
+
+        Assert.True(await engine.PauseAsync(id));
+        Assert.True(await engine.PauseAsync(id));
+        Assert.True(await engine.RemoveAsync(id, deleteData: true));
+        Assert.Empty(engine.List());
+    }
+
+    [Fact]
     public async Task RejectedTorrentFileIsNeverStarted()
     {
         (_, byte[] torrentFile) = await CreateTorrentAsync("Movie.2020.1080p.WEB-DL", ("Movie.2020.1080p.WEB-DL.mkv", 1024 * 1024), ("Codec.exe", 1024));
