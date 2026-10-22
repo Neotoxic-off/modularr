@@ -3,7 +3,8 @@ namespace Modularr.Core.Indexers;
 // One search result from an indexer (Prowlarr ReleaseInfo + TorrentInfo, torrent-only, video-only fields).
 public sealed record ReleaseInfo
 {
-    public required string Guid { get; init; }
+    // Upstream "Guid": the indexer's unique id for the release, often its details URL.
+    public required string Id { get; init; }
     public required string Title { get; init; }
     public required string Indexer { get; init; }
     public DateTimeOffset PublishDate { get; init; }
