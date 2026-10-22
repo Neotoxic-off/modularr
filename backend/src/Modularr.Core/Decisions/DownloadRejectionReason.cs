@@ -3,6 +3,9 @@ namespace Modularr.Core.Decisions;
 // The Sonarr/Radarr DownloadRejectionReason values the ported specifications produce.
 public enum DownloadRejectionReason
 {
+    UnableToParse,
+    UnknownSeries,
+    WrongMovie,
     QualityNotWanted,
     QualityUpgradesDisabled,
     WantedLanguage,

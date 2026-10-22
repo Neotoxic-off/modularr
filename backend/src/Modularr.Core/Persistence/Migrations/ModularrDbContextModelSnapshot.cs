@@ -17,6 +17,93 @@ namespace Modularr.Core.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.13");
 
+            modelBuilder.Entity("Modularr.Core.Decisions.QualityProfile", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Cutoff")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Items")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Language")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("UpgradeAllowed")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("QualityProfiles");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Cutoff = 20,
+                            Items = "[{\"Id\":0,\"Name\":null,\"Quality\":0,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":24,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":25,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":26,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":27,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":29,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":28,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":1,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":2,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":23,\"Items\":[],\"Allowed\":true},{\"Id\":1010,\"Name\":\"WEB 480p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":8,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":12,\"Items\":[],\"Allowed\":true}],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":20,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":21,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":4,\"Items\":[],\"Allowed\":true},{\"Id\":1014,\"Name\":\"WEB 720p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":5,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":14,\"Items\":[],\"Allowed\":true}],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":6,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":9,\"Items\":[],\"Allowed\":true},{\"Id\":1017,\"Name\":\"WEB 1080p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":3,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":15,\"Items\":[],\"Allowed\":true}],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":7,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":30,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":16,\"Items\":[],\"Allowed\":true},{\"Id\":1021,\"Name\":\"WEB 2160p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":18,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":17,\"Items\":[],\"Allowed\":true}],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":19,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":31,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":22,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":10,\"Items\":[],\"Allowed\":false}]",
+                            Language = -1,
+                            Name = "Any",
+                            UpgradeAllowed = false
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Cutoff = 20,
+                            Items = "[{\"Id\":0,\"Name\":null,\"Quality\":0,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":24,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":25,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":26,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":27,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":29,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":28,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":1,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":2,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":23,\"Items\":[],\"Allowed\":false},{\"Id\":1010,\"Name\":\"WEB 480p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":8,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":12,\"Items\":[],\"Allowed\":true}],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":20,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":21,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":4,\"Items\":[],\"Allowed\":false},{\"Id\":1014,\"Name\":\"WEB 720p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":5,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":14,\"Items\":[],\"Allowed\":false}],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":6,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":9,\"Items\":[],\"Allowed\":false},{\"Id\":1017,\"Name\":\"WEB 1080p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":3,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":15,\"Items\":[],\"Allowed\":false}],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":7,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":30,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":16,\"Items\":[],\"Allowed\":false},{\"Id\":1021,\"Name\":\"WEB 2160p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":18,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":17,\"Items\":[],\"Allowed\":false}],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":19,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":31,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":22,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":10,\"Items\":[],\"Allowed\":false}]",
+                            Language = -1,
+                            Name = "SD",
+                            UpgradeAllowed = false
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Cutoff = 6,
+                            Items = "[{\"Id\":0,\"Name\":null,\"Quality\":0,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":24,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":25,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":26,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":27,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":29,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":28,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":1,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":2,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":23,\"Items\":[],\"Allowed\":false},{\"Id\":1010,\"Name\":\"WEB 480p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":8,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":12,\"Items\":[],\"Allowed\":false}],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":20,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":21,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":4,\"Items\":[],\"Allowed\":true},{\"Id\":1014,\"Name\":\"WEB 720p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":5,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":14,\"Items\":[],\"Allowed\":true}],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":6,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":9,\"Items\":[],\"Allowed\":false},{\"Id\":1017,\"Name\":\"WEB 1080p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":3,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":15,\"Items\":[],\"Allowed\":false}],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":7,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":30,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":16,\"Items\":[],\"Allowed\":false},{\"Id\":1021,\"Name\":\"WEB 2160p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":18,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":17,\"Items\":[],\"Allowed\":false}],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":19,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":31,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":22,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":10,\"Items\":[],\"Allowed\":false}]",
+                            Language = -1,
+                            Name = "HD-720p",
+                            UpgradeAllowed = false
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Cutoff = 7,
+                            Items = "[{\"Id\":0,\"Name\":null,\"Quality\":0,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":24,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":25,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":26,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":27,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":29,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":28,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":1,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":2,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":23,\"Items\":[],\"Allowed\":false},{\"Id\":1010,\"Name\":\"WEB 480p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":8,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":12,\"Items\":[],\"Allowed\":false}],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":20,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":21,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":4,\"Items\":[],\"Allowed\":false},{\"Id\":1014,\"Name\":\"WEB 720p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":5,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":14,\"Items\":[],\"Allowed\":false}],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":6,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":9,\"Items\":[],\"Allowed\":true},{\"Id\":1017,\"Name\":\"WEB 1080p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":3,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":15,\"Items\":[],\"Allowed\":true}],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":7,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":30,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":16,\"Items\":[],\"Allowed\":false},{\"Id\":1021,\"Name\":\"WEB 2160p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":18,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":17,\"Items\":[],\"Allowed\":false}],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":19,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":31,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":22,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":10,\"Items\":[],\"Allowed\":false}]",
+                            Language = -1,
+                            Name = "HD-1080p",
+                            UpgradeAllowed = false
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Cutoff = 31,
+                            Items = "[{\"Id\":0,\"Name\":null,\"Quality\":0,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":24,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":25,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":26,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":27,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":29,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":28,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":1,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":2,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":23,\"Items\":[],\"Allowed\":false},{\"Id\":1010,\"Name\":\"WEB 480p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":8,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":12,\"Items\":[],\"Allowed\":false}],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":20,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":21,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":4,\"Items\":[],\"Allowed\":false},{\"Id\":1014,\"Name\":\"WEB 720p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":5,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":14,\"Items\":[],\"Allowed\":false}],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":6,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":9,\"Items\":[],\"Allowed\":false},{\"Id\":1017,\"Name\":\"WEB 1080p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":3,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":15,\"Items\":[],\"Allowed\":false}],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":7,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":30,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":16,\"Items\":[],\"Allowed\":true},{\"Id\":1021,\"Name\":\"WEB 2160p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":18,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":17,\"Items\":[],\"Allowed\":true}],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":19,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":31,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":22,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":10,\"Items\":[],\"Allowed\":false}]",
+                            Language = -1,
+                            Name = "Ultra-HD",
+                            UpgradeAllowed = false
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Cutoff = 6,
+                            Items = "[{\"Id\":0,\"Name\":null,\"Quality\":0,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":24,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":25,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":26,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":27,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":29,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":28,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":1,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":2,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":23,\"Items\":[],\"Allowed\":false},{\"Id\":1010,\"Name\":\"WEB 480p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":8,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":12,\"Items\":[],\"Allowed\":false}],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":20,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":21,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":4,\"Items\":[],\"Allowed\":true},{\"Id\":1014,\"Name\":\"WEB 720p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":5,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":14,\"Items\":[],\"Allowed\":true}],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":6,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":9,\"Items\":[],\"Allowed\":true},{\"Id\":1017,\"Name\":\"WEB 1080p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":3,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":15,\"Items\":[],\"Allowed\":true}],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":7,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":30,\"Items\":[],\"Allowed\":true},{\"Id\":0,\"Name\":null,\"Quality\":16,\"Items\":[],\"Allowed\":false},{\"Id\":1021,\"Name\":\"WEB 2160p\",\"Quality\":null,\"Items\":[{\"Id\":0,\"Name\":null,\"Quality\":18,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":17,\"Items\":[],\"Allowed\":false}],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":19,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":31,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":22,\"Items\":[],\"Allowed\":false},{\"Id\":0,\"Name\":null,\"Quality\":10,\"Items\":[],\"Allowed\":false}]",
+                            Language = -1,
+                            Name = "HD - 720p/1080p",
+                            UpgradeAllowed = false
+                        });
+                });
+
             modelBuilder.Entity("Modularr.Core.Persistence.BlocklistItem", b =>
                 {
                     b.Property<int>("Id")
@@ -238,6 +325,9 @@ namespace Modularr.Core.Persistence.Migrations
                     b.Property<int>("QualityProfileId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("Runtime")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -258,84 +348,6 @@ namespace Modularr.Core.Persistence.Migrations
                     b.ToTable("Movies");
                 });
 
-            modelBuilder.Entity("Modularr.Core.Persistence.QualityProfile", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Cutoff")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Items")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("UpgradeAllowed")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("QualityProfiles");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Cutoff = 20,
-                            Items = "[{\"Name\":null,\"Qualities\":[0],\"Allowed\":false},{\"Name\":null,\"Qualities\":[24],\"Allowed\":true},{\"Name\":null,\"Qualities\":[25],\"Allowed\":true},{\"Name\":null,\"Qualities\":[26],\"Allowed\":true},{\"Name\":null,\"Qualities\":[27],\"Allowed\":true},{\"Name\":null,\"Qualities\":[29],\"Allowed\":true},{\"Name\":null,\"Qualities\":[28],\"Allowed\":true},{\"Name\":null,\"Qualities\":[1],\"Allowed\":true},{\"Name\":null,\"Qualities\":[2],\"Allowed\":true},{\"Name\":null,\"Qualities\":[23],\"Allowed\":true},{\"Name\":\"WEB 480p\",\"Qualities\":[8,12],\"Allowed\":true},{\"Name\":null,\"Qualities\":[20],\"Allowed\":true},{\"Name\":null,\"Qualities\":[21],\"Allowed\":true},{\"Name\":null,\"Qualities\":[4],\"Allowed\":true},{\"Name\":\"WEB 720p\",\"Qualities\":[5,14],\"Allowed\":true},{\"Name\":null,\"Qualities\":[6],\"Allowed\":true},{\"Name\":null,\"Qualities\":[9],\"Allowed\":true},{\"Name\":\"WEB 1080p\",\"Qualities\":[3,15],\"Allowed\":true},{\"Name\":null,\"Qualities\":[7],\"Allowed\":true},{\"Name\":null,\"Qualities\":[30],\"Allowed\":true},{\"Name\":null,\"Qualities\":[16],\"Allowed\":true},{\"Name\":\"WEB 2160p\",\"Qualities\":[18,17],\"Allowed\":true},{\"Name\":null,\"Qualities\":[19],\"Allowed\":true},{\"Name\":null,\"Qualities\":[31],\"Allowed\":true},{\"Name\":null,\"Qualities\":[22],\"Allowed\":true},{\"Name\":null,\"Qualities\":[10],\"Allowed\":false}]",
-                            Name = "Any",
-                            UpgradeAllowed = false
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Cutoff = 20,
-                            Items = "[{\"Name\":null,\"Qualities\":[0],\"Allowed\":false},{\"Name\":null,\"Qualities\":[24],\"Allowed\":true},{\"Name\":null,\"Qualities\":[25],\"Allowed\":true},{\"Name\":null,\"Qualities\":[26],\"Allowed\":true},{\"Name\":null,\"Qualities\":[27],\"Allowed\":true},{\"Name\":null,\"Qualities\":[29],\"Allowed\":true},{\"Name\":null,\"Qualities\":[28],\"Allowed\":true},{\"Name\":null,\"Qualities\":[1],\"Allowed\":true},{\"Name\":null,\"Qualities\":[2],\"Allowed\":true},{\"Name\":null,\"Qualities\":[23],\"Allowed\":false},{\"Name\":\"WEB 480p\",\"Qualities\":[8,12],\"Allowed\":true},{\"Name\":null,\"Qualities\":[20],\"Allowed\":true},{\"Name\":null,\"Qualities\":[21],\"Allowed\":true},{\"Name\":null,\"Qualities\":[4],\"Allowed\":false},{\"Name\":\"WEB 720p\",\"Qualities\":[5,14],\"Allowed\":false},{\"Name\":null,\"Qualities\":[6],\"Allowed\":false},{\"Name\":null,\"Qualities\":[9],\"Allowed\":false},{\"Name\":\"WEB 1080p\",\"Qualities\":[3,15],\"Allowed\":false},{\"Name\":null,\"Qualities\":[7],\"Allowed\":false},{\"Name\":null,\"Qualities\":[30],\"Allowed\":false},{\"Name\":null,\"Qualities\":[16],\"Allowed\":false},{\"Name\":\"WEB 2160p\",\"Qualities\":[18,17],\"Allowed\":false},{\"Name\":null,\"Qualities\":[19],\"Allowed\":false},{\"Name\":null,\"Qualities\":[31],\"Allowed\":false},{\"Name\":null,\"Qualities\":[22],\"Allowed\":false},{\"Name\":null,\"Qualities\":[10],\"Allowed\":false}]",
-                            Name = "SD",
-                            UpgradeAllowed = false
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Cutoff = 6,
-                            Items = "[{\"Name\":null,\"Qualities\":[0],\"Allowed\":false},{\"Name\":null,\"Qualities\":[24],\"Allowed\":false},{\"Name\":null,\"Qualities\":[25],\"Allowed\":false},{\"Name\":null,\"Qualities\":[26],\"Allowed\":false},{\"Name\":null,\"Qualities\":[27],\"Allowed\":false},{\"Name\":null,\"Qualities\":[29],\"Allowed\":false},{\"Name\":null,\"Qualities\":[28],\"Allowed\":false},{\"Name\":null,\"Qualities\":[1],\"Allowed\":false},{\"Name\":null,\"Qualities\":[2],\"Allowed\":false},{\"Name\":null,\"Qualities\":[23],\"Allowed\":false},{\"Name\":\"WEB 480p\",\"Qualities\":[8,12],\"Allowed\":false},{\"Name\":null,\"Qualities\":[20],\"Allowed\":false},{\"Name\":null,\"Qualities\":[21],\"Allowed\":false},{\"Name\":null,\"Qualities\":[4],\"Allowed\":true},{\"Name\":\"WEB 720p\",\"Qualities\":[5,14],\"Allowed\":true},{\"Name\":null,\"Qualities\":[6],\"Allowed\":true},{\"Name\":null,\"Qualities\":[9],\"Allowed\":false},{\"Name\":\"WEB 1080p\",\"Qualities\":[3,15],\"Allowed\":false},{\"Name\":null,\"Qualities\":[7],\"Allowed\":false},{\"Name\":null,\"Qualities\":[30],\"Allowed\":false},{\"Name\":null,\"Qualities\":[16],\"Allowed\":false},{\"Name\":\"WEB 2160p\",\"Qualities\":[18,17],\"Allowed\":false},{\"Name\":null,\"Qualities\":[19],\"Allowed\":false},{\"Name\":null,\"Qualities\":[31],\"Allowed\":false},{\"Name\":null,\"Qualities\":[22],\"Allowed\":false},{\"Name\":null,\"Qualities\":[10],\"Allowed\":false}]",
-                            Name = "HD-720p",
-                            UpgradeAllowed = false
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Cutoff = 7,
-                            Items = "[{\"Name\":null,\"Qualities\":[0],\"Allowed\":false},{\"Name\":null,\"Qualities\":[24],\"Allowed\":false},{\"Name\":null,\"Qualities\":[25],\"Allowed\":false},{\"Name\":null,\"Qualities\":[26],\"Allowed\":false},{\"Name\":null,\"Qualities\":[27],\"Allowed\":false},{\"Name\":null,\"Qualities\":[29],\"Allowed\":false},{\"Name\":null,\"Qualities\":[28],\"Allowed\":false},{\"Name\":null,\"Qualities\":[1],\"Allowed\":false},{\"Name\":null,\"Qualities\":[2],\"Allowed\":false},{\"Name\":null,\"Qualities\":[23],\"Allowed\":false},{\"Name\":\"WEB 480p\",\"Qualities\":[8,12],\"Allowed\":false},{\"Name\":null,\"Qualities\":[20],\"Allowed\":false},{\"Name\":null,\"Qualities\":[21],\"Allowed\":false},{\"Name\":null,\"Qualities\":[4],\"Allowed\":false},{\"Name\":\"WEB 720p\",\"Qualities\":[5,14],\"Allowed\":false},{\"Name\":null,\"Qualities\":[6],\"Allowed\":false},{\"Name\":null,\"Qualities\":[9],\"Allowed\":true},{\"Name\":\"WEB 1080p\",\"Qualities\":[3,15],\"Allowed\":true},{\"Name\":null,\"Qualities\":[7],\"Allowed\":true},{\"Name\":null,\"Qualities\":[30],\"Allowed\":true},{\"Name\":null,\"Qualities\":[16],\"Allowed\":false},{\"Name\":\"WEB 2160p\",\"Qualities\":[18,17],\"Allowed\":false},{\"Name\":null,\"Qualities\":[19],\"Allowed\":false},{\"Name\":null,\"Qualities\":[31],\"Allowed\":false},{\"Name\":null,\"Qualities\":[22],\"Allowed\":false},{\"Name\":null,\"Qualities\":[10],\"Allowed\":false}]",
-                            Name = "HD-1080p",
-                            UpgradeAllowed = false
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Cutoff = 31,
-                            Items = "[{\"Name\":null,\"Qualities\":[0],\"Allowed\":false},{\"Name\":null,\"Qualities\":[24],\"Allowed\":false},{\"Name\":null,\"Qualities\":[25],\"Allowed\":false},{\"Name\":null,\"Qualities\":[26],\"Allowed\":false},{\"Name\":null,\"Qualities\":[27],\"Allowed\":false},{\"Name\":null,\"Qualities\":[29],\"Allowed\":false},{\"Name\":null,\"Qualities\":[28],\"Allowed\":false},{\"Name\":null,\"Qualities\":[1],\"Allowed\":false},{\"Name\":null,\"Qualities\":[2],\"Allowed\":false},{\"Name\":null,\"Qualities\":[23],\"Allowed\":false},{\"Name\":\"WEB 480p\",\"Qualities\":[8,12],\"Allowed\":false},{\"Name\":null,\"Qualities\":[20],\"Allowed\":false},{\"Name\":null,\"Qualities\":[21],\"Allowed\":false},{\"Name\":null,\"Qualities\":[4],\"Allowed\":false},{\"Name\":\"WEB 720p\",\"Qualities\":[5,14],\"Allowed\":false},{\"Name\":null,\"Qualities\":[6],\"Allowed\":false},{\"Name\":null,\"Qualities\":[9],\"Allowed\":false},{\"Name\":\"WEB 1080p\",\"Qualities\":[3,15],\"Allowed\":false},{\"Name\":null,\"Qualities\":[7],\"Allowed\":false},{\"Name\":null,\"Qualities\":[30],\"Allowed\":false},{\"Name\":null,\"Qualities\":[16],\"Allowed\":true},{\"Name\":\"WEB 2160p\",\"Qualities\":[18,17],\"Allowed\":true},{\"Name\":null,\"Qualities\":[19],\"Allowed\":true},{\"Name\":null,\"Qualities\":[31],\"Allowed\":true},{\"Name\":null,\"Qualities\":[22],\"Allowed\":false},{\"Name\":null,\"Qualities\":[10],\"Allowed\":false}]",
-                            Name = "Ultra-HD",
-                            UpgradeAllowed = false
-                        },
-                        new
-                        {
-                            Id = 6,
-                            Cutoff = 6,
-                            Items = "[{\"Name\":null,\"Qualities\":[0],\"Allowed\":false},{\"Name\":null,\"Qualities\":[24],\"Allowed\":false},{\"Name\":null,\"Qualities\":[25],\"Allowed\":false},{\"Name\":null,\"Qualities\":[26],\"Allowed\":false},{\"Name\":null,\"Qualities\":[27],\"Allowed\":false},{\"Name\":null,\"Qualities\":[29],\"Allowed\":false},{\"Name\":null,\"Qualities\":[28],\"Allowed\":false},{\"Name\":null,\"Qualities\":[1],\"Allowed\":false},{\"Name\":null,\"Qualities\":[2],\"Allowed\":false},{\"Name\":null,\"Qualities\":[23],\"Allowed\":false},{\"Name\":\"WEB 480p\",\"Qualities\":[8,12],\"Allowed\":false},{\"Name\":null,\"Qualities\":[20],\"Allowed\":false},{\"Name\":null,\"Qualities\":[21],\"Allowed\":false},{\"Name\":null,\"Qualities\":[4],\"Allowed\":true},{\"Name\":\"WEB 720p\",\"Qualities\":[5,14],\"Allowed\":true},{\"Name\":null,\"Qualities\":[6],\"Allowed\":true},{\"Name\":null,\"Qualities\":[9],\"Allowed\":true},{\"Name\":\"WEB 1080p\",\"Qualities\":[3,15],\"Allowed\":true},{\"Name\":null,\"Qualities\":[7],\"Allowed\":true},{\"Name\":null,\"Qualities\":[30],\"Allowed\":true},{\"Name\":null,\"Qualities\":[16],\"Allowed\":false},{\"Name\":\"WEB 2160p\",\"Qualities\":[18,17],\"Allowed\":false},{\"Name\":null,\"Qualities\":[19],\"Allowed\":false},{\"Name\":null,\"Qualities\":[31],\"Allowed\":false},{\"Name\":null,\"Qualities\":[22],\"Allowed\":false},{\"Name\":null,\"Qualities\":[10],\"Allowed\":false}]",
-                            Name = "HD - 720p/1080p",
-                            UpgradeAllowed = false
-                        });
-                });
-
             modelBuilder.Entity("Modularr.Core.Persistence.Series", b =>
                 {
                     b.Property<int>("Id")
@@ -353,6 +365,9 @@ namespace Modularr.Core.Persistence.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("QualityProfileId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Runtime")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("SeriesType")
@@ -490,7 +505,7 @@ namespace Modularr.Core.Persistence.Migrations
 
             modelBuilder.Entity("Modularr.Core.Persistence.Movie", b =>
                 {
-                    b.HasOne("Modularr.Core.Persistence.QualityProfile", "QualityProfile")
+                    b.HasOne("Modularr.Core.Decisions.QualityProfile", "QualityProfile")
                         .WithMany()
                         .HasForeignKey("QualityProfileId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -501,7 +516,7 @@ namespace Modularr.Core.Persistence.Migrations
 
             modelBuilder.Entity("Modularr.Core.Persistence.Series", b =>
                 {
-                    b.HasOne("Modularr.Core.Persistence.QualityProfile", "QualityProfile")
+                    b.HasOne("Modularr.Core.Decisions.QualityProfile", "QualityProfile")
                         .WithMany()
                         .HasForeignKey("QualityProfileId")
                         .OnDelete(DeleteBehavior.Restrict)

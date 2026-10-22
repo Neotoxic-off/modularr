@@ -8,6 +8,9 @@ public sealed record ReleaseInfo
     public required string Title { get; init; }
     public required string Indexer { get; init; }
 
+    // Definition id of Indexer (its display name), to find the definition again when grabbing.
+    public string? IndexerId { get; init; }
+
     // Lower is preferred when releases are otherwise equal (Sonarr/Radarr indexer priority, 1-50).
     public int IndexerPriority { get; init; } = 25;
     public DateTimeOffset PublishDate { get; init; }

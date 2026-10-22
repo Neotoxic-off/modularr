@@ -3,9 +3,10 @@ using Modularr.Core.Qualities;
 
 namespace Modularr.Core.Decisions;
 
-// Sonarr/Radarr QualityProfile without custom formats; items are ordered worst to best.
+// Sonarr/Radarr QualityProfile without custom formats; items are ordered worst to best. Also the persisted entity (Items is a JSON column).
 public sealed record QualityProfile
 {
+    public int Id { get; init; }
     public string Name { get; init; } = "";
     public bool UpgradeAllowed { get; init; }
 

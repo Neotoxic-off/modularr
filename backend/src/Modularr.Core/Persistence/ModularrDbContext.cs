@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Modularr.Core.Decisions;
 using Modularr.Core.Languages;
 using Modularr.Core.Qualities;
 
@@ -27,8 +28,9 @@ public sealed class ModularrDbContext(DbContextOptions<ModularrDbContext> option
         configurationBuilder.Properties<QualityModel>().HaveConversion<JsonValueConverter<QualityModel>, JsonValueComparer<QualityModel>>();
         configurationBuilder.Properties<IReadOnlyList<Language>>()
             .HaveConversion<JsonValueConverter<IReadOnlyList<Language>>, JsonValueComparer<IReadOnlyList<Language>>>();
-        configurationBuilder.Properties<IReadOnlyList<QualityProfileItem>>()
-            .HaveConversion<JsonValueConverter<IReadOnlyList<QualityProfileItem>>, JsonValueComparer<IReadOnlyList<QualityProfileItem>>>();
+        configurationBuilder.Properties<Language>().HaveConversion<LanguageIdConverter>();
+        configurationBuilder.Properties<IReadOnlyList<QualityProfileQualityItem>>()
+            .HaveConversion<JsonValueConverter<IReadOnlyList<QualityProfileQualityItem>>, JsonValueComparer<IReadOnlyList<QualityProfileQualityItem>>>();
         configurationBuilder.Properties<Dictionary<string, string>>()
             .HaveConversion<JsonValueConverter<Dictionary<string, string>>, JsonValueComparer<Dictionary<string, string>>>();
     }

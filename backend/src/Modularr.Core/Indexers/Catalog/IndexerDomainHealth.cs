@@ -22,11 +22,22 @@ public sealed class IndexerDomainHealth(IOptions<ModularrOptions> options)
         }
     }
 
+    public IndexerHealth Health(CardigannDefinition definition)
+    {
+        DomainState state = State(definition, Candidates(definition));
+        lock (state)
+        {
+            return new IndexerHealth(state.ActiveUrl, state.Failures, state.LastError, state.LastCheck);
+        }
+    }
+
     public void ReportSuccess(CardigannDefinition definition, string baseUrl)
     {
         DomainState state = State(definition, Candidates(definition));
         lock (state)
         {
+            state.LastError = null;
+            state.LastCheck = DateTimeOffset.UtcNow;
             if (state.ActiveUrl == baseUrl)
             {
                 state.Failures = 0;
@@ -35,12 +46,14 @@ public sealed class IndexerDomainHealth(IOptions<ModularrOptions> options)
     }
 
     // A report for a domain that is no longer active (a request in flight during failover) is ignored.
-    public void ReportFailure(CardigannDefinition definition, string baseUrl)
+    public void ReportFailure(CardigannDefinition definition, string baseUrl, string? error = null)
     {
         IReadOnlyList<string> candidates = Candidates(definition);
         DomainState state = State(definition, candidates);
         lock (state)
         {
+            state.LastError = error ?? "request failed";
+            state.LastCheck = DateTimeOffset.UtcNow;
             if (state.ActiveUrl != baseUrl || ++state.Failures < FailoverThreshold)
             {
                 return;
@@ -49,6 +62,17 @@ public sealed class IndexerDomainHealth(IOptions<ModularrOptions> options)
             int index = IndexOf(candidates, state.ActiveUrl);
             state.ActiveUrl = candidates[(index + 1) % candidates.Count];
             state.Failures = 0;
+        }
+    }
+
+    // A failure the domain is not to blame for (the definition or response cannot be used): shown, no failover.
+    public void ReportError(CardigannDefinition definition, string error)
+    {
+        DomainState state = State(definition, Candidates(definition));
+        lock (state)
+        {
+            state.LastError = error;
+            state.LastCheck = DateTimeOffset.UtcNow;
         }
     }
 
@@ -88,5 +112,10 @@ public sealed class IndexerDomainHealth(IOptions<ModularrOptions> options)
     {
         public required string ActiveUrl { get; set; }
         public int Failures { get; set; }
+        public string? LastError { get; set; }
+        public DateTimeOffset? LastCheck { get; set; }
     }
 }
+
+// Failures counts consecutive failures on the active domain; LastCheck is null until the indexer was searched.
+public sealed record IndexerHealth(string ActiveUrl, int Failures, string? LastError, DateTimeOffset? LastCheck);

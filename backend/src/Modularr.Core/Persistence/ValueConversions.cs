@@ -10,6 +10,8 @@ namespace Modularr.Core.Persistence;
 // Quality and Language are stored by id everywhere, in plain columns and inside JSON columns.
 public sealed class QualityIdConverter() : ValueConverter<Quality, int>(q => q.Id, id => Quality.FindById(id));
 
+public sealed class LanguageIdConverter() : ValueConverter<Language, int>(l => l.Id, id => Language.FindById(id));
+
 // SQLite keeps no DateTimeKind: everything is written as UTC and read back as UTC.
 public sealed class UtcDateTimeConverter() : ValueConverter<DateTime, DateTime>(
     v => v.Kind == DateTimeKind.Local ? v.ToUniversalTime() : DateTime.SpecifyKind(v, DateTimeKind.Utc),

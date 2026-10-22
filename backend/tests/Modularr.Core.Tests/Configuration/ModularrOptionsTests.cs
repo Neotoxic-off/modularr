@@ -3,9 +3,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Configuration;
 using Modularr.Core.Decisions;
+using Modularr.Core.Downloads;
 using Modularr.Core.Indexers.Cardigann;
+using Modularr.Core.Library;
 using Modularr.Core.MediaFiles;
 using Modularr.Core.PostProcessing;
+using Modularr.Core.Search;
 
 namespace Modularr.Core.Tests.Configuration;
 
@@ -82,6 +85,7 @@ public sealed class ModularrOptionsTests : IDisposable
     [InlineData("""{ "Paths": { "Series": "" } }""")]
     [InlineData("""{ "PostProcessing": { "SubtitleExtensions": ["srt"] } }""")]
     [InlineData("""{ "Indexers": { "RequestTimeout": "00:00:00" } }""")]
+    [InlineData("""{ "Indexers": { "SearchTimeout": "00:00:00" } }""")]
     [InlineData("""{ "Metadata": { "SkyHookUrl": "not a url" } }""")]
     [InlineData("""{ "Metadata": { "RadarrApiUrl": "" } }""")]
     [InlineData("""{ "Decisions": { "MinimumSeeders": -1 } }""")]
@@ -97,6 +101,19 @@ public sealed class ModularrOptionsTests : IDisposable
         using ServiceProvider provider = new ServiceCollection().AddModularrCore(_configDirectory).BuildServiceProvider();
 
         Assert.NotNull(provider.GetRequiredService<CardigannSearcher>());
+    }
+
+    [Fact]
+    public void RegistersTheSearchGrabAndImportFlow()
+    {
+        using ServiceProvider provider = new ServiceCollection().AddLogging().AddModularrCore(_configDirectory)
+            .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+        using IServiceScope scope = provider.CreateScope();
+
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ReleaseSearch>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<LibraryService>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<DownloadService>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<DownloadImporter>());
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using Modularr.Core.Decisions;
 using Modularr.Core.Qualities;
 
 namespace Modularr.Core.Persistence;
@@ -21,7 +22,10 @@ public static class DefaultQualityProfiles
         [Quality.BrDisk], [Quality.RawHd],
     ];
 
-    // Fresh instances on each call: entities are mutable and tracked.
+    // Upstream numbers quality groups from 1000 so a cutoff can point at a group without clashing with quality ids.
+    private const int FirstGroupId = 1000;
+
+    // Fresh instances on each call: entities are tracked.
     public static QualityProfile[] Create() =>
     [
         Profile(1, "Any", Quality.Bluray480p,
@@ -44,18 +48,22 @@ public static class DefaultQualityProfiles
             Quality.Bluray720p, Quality.Bluray1080p, Quality.Remux1080p),
     ];
 
-    // Upstream GetDefaultProfile: a group is allowed when any of its qualities is.
+    // Upstream GetDefaultProfile: a group is allowed when any of its qualities is, and so are all its members.
     private static QualityProfile Profile(int id, string name, Quality cutoff, params Quality[] allowed) => new()
     {
         Id = id,
         Name = name,
-        Cutoff = cutoff,
-        Items =
-        [
-            .. Ranking.Select(group => new QualityProfileItem(
-                group.Length == 1 ? null : $"WEB {group[0].Resolution}p",
-                group,
-                group.Any(allowed.Contains))),
-        ],
+        Cutoff = cutoff.Id,
+        Items = [.. Ranking.Select((group, index) => Item(group, group.Any(allowed.Contains), index))],
     };
+
+    private static QualityProfileQualityItem Item(Quality[] group, bool allowed, int index) => group.Length == 1
+        ? new QualityProfileQualityItem { Quality = group[0], Allowed = allowed }
+        : new QualityProfileQualityItem
+        {
+            Id = FirstGroupId + index,
+            Name = $"WEB {group[0].Resolution}p",
+            Items = [.. group.Select(q => new QualityProfileQualityItem { Quality = q, Allowed = allowed })],
+            Allowed = allowed,
+        };
 }

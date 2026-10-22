@@ -5,12 +5,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Modularr.Core.Downloads;
 using Modularr.Core.Downloads.Torrents;
+using Modularr.Core.Indexers;
 using Modularr.Core.Indexers.Cardigann;
 using Modularr.Core.Indexers.Catalog;
+using Modularr.Core.Library;
 using Modularr.Core.Metadata;
 using Modularr.Core.Persistence;
 using Modularr.Core.PostProcessing;
+using Modularr.Core.Search;
 
 namespace Modularr.Core.Configuration;
 
@@ -50,6 +54,14 @@ public static class ModularrServiceCollectionExtensions
 
         services.AddHttpClient<SeriesMetadataClient>();
         services.AddHttpClient<MovieMetadataClient>();
+
+        // The end-to-end flow: library, search, grab, then the monitor imports finished torrents.
+        services.AddTransient<IndexerSearch>();
+        services.AddScoped<LibraryService>();
+        services.AddScoped<ReleaseSearch>();
+        services.AddScoped<DownloadService>();
+        services.AddScoped<DownloadImporter>();
+        services.AddHostedService<DownloadMonitor>();
 
         return services;
     }

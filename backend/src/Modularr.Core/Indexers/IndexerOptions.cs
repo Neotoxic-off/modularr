@@ -21,4 +21,8 @@ public sealed record IndexerOptions
     // Per HTTP request to an indexer (Prowlarr's default is 100 s; search UIs need an answer sooner).
     [Range(typeof(TimeSpan), "00:00:01", "00:10:00")]
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(30);
+
+    // Whole search on one indexer (a definition may send several requests); slower indexers are reported as timed out.
+    [Range(typeof(TimeSpan), "00:00:01", "00:10:00")]
+    public TimeSpan SearchTimeout { get; init; } = TimeSpan.FromSeconds(60);
 }

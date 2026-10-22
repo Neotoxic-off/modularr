@@ -1,3 +1,4 @@
+using Modularr.Core.Indexers.Cardigann;
 using Modularr.Core.Indexers.Definitions;
 
 namespace Modularr.Core.Indexers.Catalog;
@@ -52,8 +53,8 @@ public sealed record IndexerCatalog
             IReadOnlyList<string> categories = Categories(definition);
             if (categories.Any(IsVideoCategory))
             {
-                // shortcut: private and semi-private indexers stay disabled until credentials can be configured.
-                bool enabled = definition.Privacy == IndexerPrivacy.Public && !disabled.Contains(definition.Id);
+                // shortcut: private, semi-private and login-only indexers stay disabled until credentials can be configured.
+                bool enabled = CardigannSearcher.IsSupported(definition) && !disabled.Contains(definition.Id);
                 entries.Add(new IndexerCatalogEntry(definition, categories, enabled));
             }
         }

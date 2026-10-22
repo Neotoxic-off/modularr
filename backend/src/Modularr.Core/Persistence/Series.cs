@@ -1,3 +1,5 @@
+using Modularr.Core.Decisions;
+
 namespace Modularr.Core.Persistence;
 
 // Same values as Sonarr SeriesTypes.
@@ -15,6 +17,9 @@ public sealed class Series
     public required string Title { get; set; }
     public required string SortTitle { get; set; }
     public int Year { get; set; }
+
+    // Minutes per episode, 0 when unknown; drives the release size limits.
+    public int Runtime { get; set; }
     public SeriesType SeriesType { get; set; }
     public bool Monitored { get; set; }
     public required string Path { get; set; }

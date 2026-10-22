@@ -126,11 +126,11 @@ public sealed class MappingTests : IDisposable
     [Fact]
     public void UnknownStoredQualityIdFailsInsteadOfFallingBack()
     {
-        _database.AddMovie(1);
+        _database.Insert(new MediaFile { MovieId = _database.AddMovie(1).Id, Path = "/movies/1.mkv", Quality = new QualityModel(Quality.Bluray1080p, new Revision()) });
         using ModularrDbContext db = _database.NewContext();
-        db.Database.ExecuteSqlRaw("UPDATE QualityProfiles SET Cutoff = 999 WHERE Id = 1");
+        db.Database.ExecuteSqlRaw("UPDATE MediaFiles SET Quality = {0}", """{"Quality":999,"Revision":{"Version":1,"Real":0,"IsRepack":false}}""");
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => db.QualityProfiles.Single(p => p.Id == 1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => db.MediaFiles.Single());
     }
 
     [Fact]

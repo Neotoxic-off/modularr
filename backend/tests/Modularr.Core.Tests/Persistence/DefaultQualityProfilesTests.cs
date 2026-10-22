@@ -1,3 +1,4 @@
+using Modularr.Core.Decisions;
 using Modularr.Core.Persistence;
 using Modularr.Core.Qualities;
 
@@ -19,7 +20,7 @@ public sealed class DefaultQualityProfilesTests
     {
         foreach (QualityProfile profile in DefaultQualityProfiles.Create())
         {
-            Assert.Equal(Quality.All.Select(q => q.Id).Order(), profile.Items.SelectMany(i => i.Qualities).Select(q => q.Id).Order());
+            Assert.Equal(Quality.All.Select(q => q.Id).Order(), profile.Items.SelectMany(i => i.Quality is null ? i.Items : [i]).Select(i => i.Quality!.Id).Order());
         }
     }
 
@@ -28,7 +29,7 @@ public sealed class DefaultQualityProfilesTests
     {
         foreach (QualityProfile profile in DefaultQualityProfiles.Create())
         {
-            Assert.True(profile.Items.Single(i => i.Qualities.Contains(profile.Cutoff)).Allowed, profile.Name);
+            Assert.True(profile.Items[profile.GetIndex(profile.Cutoff).Index].Allowed, profile.Name);
         }
     }
 
@@ -42,20 +43,21 @@ public sealed class DefaultQualityProfilesTests
     public void WebSourcesAreGroupedPerResolution(string profileName, string group, bool allowed)
     {
         QualityProfile profile = DefaultQualityProfiles.Create().Single(p => p.Name == profileName);
-        QualityProfileItem item = profile.Items.Single(i => i.Name == group);
+        QualityProfileQualityItem item = profile.Items.Single(i => i.Name == group);
 
-        Assert.Equal(2, item.Qualities.Count);
+        Assert.Equal(2, item.Items.Count);
+        Assert.All(item.Items, i => Assert.Equal(allowed, i.Allowed));
         Assert.Equal(allowed, item.Allowed);
     }
 
     [Fact]
     public void RemuxRanksAboveBlurayAndRawHdLast()
     {
-        IReadOnlyList<QualityProfileItem> items = DefaultQualityProfiles.Create()[0].Items;
-        int Rank(Quality quality) => items.ToList().FindIndex(i => i.Qualities.Contains(quality));
+        QualityProfile profile = DefaultQualityProfiles.Create()[0];
+        int Rank(Quality quality) => profile.GetIndex(quality).Index;
 
         Assert.True(Rank(Quality.Remux1080p) > Rank(Quality.Bluray1080p));
         Assert.True(Rank(Quality.Hdtv2160p) > Rank(Quality.Remux1080p));
-        Assert.Equal(items.Count - 1, Rank(Quality.RawHd));
+        Assert.Equal(profile.Items.Count - 1, Rank(Quality.RawHd));
     }
 }

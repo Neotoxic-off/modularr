@@ -55,7 +55,7 @@ public sealed partial class CardigannSearcher(HttpClient httpClient, IOptions<Mo
                 parsed = [.. FilterByQuery(parsed, query)];
             }
 
-            return new CardigannSearchResult.Found([.. parsed.Select(release => ToReleaseInfo(release, definition.Name)).OfType<ReleaseInfo>().DistinctBy(release => release.Id)]);
+            return new CardigannSearchResult.Found([.. parsed.Select(release => ToReleaseInfo(release, definition)).OfType<ReleaseInfo>().DistinctBy(release => release.Id)]);
         }
         catch (FailureException ex)
         {
@@ -350,14 +350,15 @@ public sealed partial class CardigannSearcher(HttpClient httpClient, IOptions<Mo
     }
 
     // Rows without a title or anything to download are of no use to Sonarr/Radarr.
-    private static ReleaseInfo? ToReleaseInfo(ParsedRelease release, string indexer) =>
+    private static ReleaseInfo? ToReleaseInfo(ParsedRelease release, CardigannDefinition definition) =>
         string.IsNullOrWhiteSpace(release.Title) || (release.DownloadUrl ?? release.MagnetUrl) is null
             ? null
             : new ReleaseInfo
             {
                 Id = release.Guid ?? release.DownloadUrl ?? release.MagnetUrl!,
                 Title = release.Title,
-                Indexer = indexer,
+                Indexer = definition.Name,
+                IndexerId = definition.Id,
                 PublishDate = release.PublishDate.Year < 2 ? default : new DateTimeOffset(release.PublishDate),
                 Size = release.Size,
                 DownloadUrl = release.DownloadUrl,
