@@ -49,9 +49,9 @@ public static class CardigannDefinitionLoader
     {
         string? error = definition switch
         {
-            { Id: var id } when string.IsNullOrWhiteSpace(id) => "id is empty",
-            { Name: var name } when string.IsNullOrWhiteSpace(name) => "name is empty",
-            { Type: var type } when !Types.Contains(type) => $"type '{type}' is not public, semi-private or private",
+            _ when string.IsNullOrWhiteSpace(definition.Id) => "id is empty",
+            _ when string.IsNullOrWhiteSpace(definition.Name) => "name is empty",
+            _ when !Types.Contains(definition.Type) => $"type '{definition.Type}' is not public, semi-private or private",
             { Links.Count: 0 } => "links is empty",
             _ => definition.Links.Concat(definition.LegacyLinks).FirstOrDefault(link => !IsHttpUrl(link)) is { } bad ? $"'{bad}' is not an absolute http(s) URL" : null,
         };

@@ -1,4 +1,5 @@
 // Cases from the Radarr UrlFixture (GPL-3.0).
+using Modularr.Core.Parsing;
 using Modularr.Core.Parsing.Movies;
 
 namespace Modularr.Core.Tests.Parsing.Movies;
@@ -26,5 +27,18 @@ public sealed class MovieUrlTests
         ParsedMovieInfo? parsed = MovieTitleParser.ParseMovieTitle(postTitle);
         Assert.NotNull(parsed);
         Assert.Equal(MovieTitleParser.CleanMovieTitle(title), MovieTitleParser.CleanMovieTitle(parsed.PrimaryMovieTitle));
+    }
+
+    [Theory]
+    [InlineData("Movie.2023.English.HDTV.XviD-LOL[www.abb.com]", "LOL")]
+    [InlineData("Movie Title 2023 English HDTV XviD LOL[www.academy.org]", null)]
+    [InlineData("Movie Title Now 2023 DVDRip XviD RUNNER[www.aetna.net]", null)]
+    [InlineData("Movie.Title.2023.DVDRip.XviD-RUNNER[www.alfaromeo.io]", "RUNNER")]
+    [InlineData("Movie.Title.2023.English.HDTV.XviD-LOL[www.abbott.gov]", "LOL")]
+    [InlineData("Movie Title 2023 English HDTV XviD LOL[www.actor.org]", null)]
+    [InlineData("Movie Title Future 2023 DVDRip XviD RUNNER[www.allstate.net]", null)]
+    public void DoesNotParseUrlInGroup(string title, string? expected)
+    {
+        Assert.Equal(expected, ReleaseGroupParser.ParseReleaseGroup(title));
     }
 }

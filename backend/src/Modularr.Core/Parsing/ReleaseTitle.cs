@@ -116,10 +116,16 @@ public static partial class ReleaseTitle
 
     private static readonly FrozenSet<string> UsenetExtensions = FrozenSet.Create(StringComparer.OrdinalIgnoreCase, ".par2", ".nzb");
 
-    private static readonly Regex[] HashedReleaseRegexes =
+    // Radarr's list: movie titles can be one long word ("Thisisaverylongsinglewordtitle 2019"), so no generic short-hash rules.
+    private static readonly Regex[] HashedMovieReleaseRegexes =
     [
         Md5HashRegex, ShortLowerHashRegex, NzbGeekUpperRegex, NzbGeekLowerRegex, BackupFileRegex, OneTwoThreeRegex,
-        AbcRegex, AbcXyzRegex, B00bsRegex, DateUnderscoreRegex, Hash30Regex, Hash26Regex, Hash39Regex, Hash24Regex,
+        AbcRegex, AbcXyzRegex, B00bsRegex,
+    ];
+
+    private static readonly Regex[] HashedReleaseRegexes =
+    [
+        .. HashedMovieReleaseRegexes, DateUnderscoreRegex, Hash30Regex, Hash26Regex, Hash39Regex, Hash24Regex,
     ];
 
     // Generic match for md5 and mixed-case hashes.
@@ -183,6 +189,8 @@ public static partial class ReleaseTitle
 
     // Titles made of a hash or an indexer placeholder instead of a release name.
     public static bool IsHashed(string titleWithoutExtension) => HashedReleaseRegexes.Any(r => r.IsMatch(titleWithoutExtension));
+
+    public static bool IsHashedMovie(string titleWithoutExtension) => HashedMovieReleaseRegexes.Any(r => r.IsMatch(titleWithoutExtension));
 
     public static string RemoveWebsites(string title) =>
         TorrentSuffixRegex.Replace(WebsitePostfixRegex.Replace(WebsitePrefixRegex.Replace(title, ""), ""), "");

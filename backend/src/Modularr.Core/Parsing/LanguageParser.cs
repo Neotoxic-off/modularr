@@ -14,7 +14,7 @@ public static partial class LanguageParser
         @"(?<russian>\b(?:rus|ru)\b)|(?<hungarian>\b(?:HUNDUB|HUN)\b)|(?<hebrew>\bHebDub(?:bed)?\b)|" +
         @"(?<polish>\b(?:PL\W?DUB|DUB\W?PL|LEK\W?PL|PL\W?LEK)\b)|(?<chinese>\[(?:CH[ST]|BIG5|GB)\]|简|繁|字幕|国语音轨[.+])|" +
         @"(?<bulgarian>\bbgaudio\b)|(?<spanish>\b(?:español|castellano|esp|spa(?!\(Latino\)))\b)|(?<ukrainian>\b(?:\dx?)?ukr)|" +
-        @"(?<romanian>\bRoDubbed\b)|(?<catalan>[-,. ]cat[. ](?:DD|subs)|\b(?:catalan?|catalán|català)\b)|(?<latvian>\b(?:lat|lav|lv)\b)|" +
+        @"(?<romanian>\b(?:RoDubbed|ROMANIAN)\b)|(?<thai>\bTHAI\b)|(?<catalan>[-,. ]cat[. ](?:DD|subs)|\b(?:catalan?|catalán|català)\b)|(?<latvian>\b(?:lat|lav|lv)\b)|" +
         @"(?<turkish>\btur\b)|(?<urdu>\burdu\b)|(?<romansh>\b(?:romansh|rumantsch|romansch)\b)|(?<mongolian>\b(?:mongolian|khalkha)\b)|" +
         @"(?<georgian>\b(?:geo|ka|kat|georgian)\b)|(?<irish>\b(?:irish|gaeilge)\b)|(?<japanese>\(JA\)|JAP|JPN)|(?<korean>\bKOR\b)|" +
         @"(?<vietnamese>\bVIE\b)|(?<telugu>\btel\b)|(?<portuguese>[_. ]por[_. ])|(?<brazilian>\b(?:dublado|pt-BR)\b)|(?<original>\b(?:orig|original)\b)";
@@ -57,7 +57,7 @@ public static partial class LanguageParser
         ("malayalam", Language.Malayalam), ("ukrainian", Language.Ukrainian), ("bulgarian", Language.Bulgarian),
         ("slovak", Language.Slovak), ("brazilian", Language.PortugueseBrazil), ("latino", Language.SpanishLatino),
         ("latvian", Language.Latvian), ("azerbaijan", Language.Azerbaijani), ("uzbek", Language.Uzbek),
-        ("romanian", Language.Romanian), ("thai", Language.Thai), ("persian", Language.Persian),
+        ("persian", Language.Persian),
         ("bengali", Language.Bengali), ("tamil", Language.Tamil), ("telugu", Language.Telugu),
         ("kannada", Language.Kannada), ("albanian", Language.Albanian), ("afrikaans", Language.Afrikaans),
         ("marathi", Language.Marathi), ("tagalog", Language.Tagalog),
@@ -76,6 +76,7 @@ public static partial class LanguageParser
         ("korean", Language.Korean), ("vietnamese", Language.Vietnamese), ("telugu", Language.Telugu),
         ("portuguese", Language.Portuguese), ("brazilian", Language.PortugueseBrazil), ("original", Language.Original),
         ("lithuanian", Language.Lithuanian), ("czech", Language.Czech), ("slovak", Language.Slovak),
+        ("thai", Language.Thai),
     ];
 
     public static IReadOnlyList<Language> ParseLanguages(string title)

@@ -5,24 +5,50 @@ public static class CompletedDownloadProcessor
     // Archive in archive is extracted, one level only.
     private const int ExtractionPasses = 2;
 
+    // Links are never followed: one pointing outside the download would get its target's files deleted.
+    private static readonly EnumerationOptions WalkOptions = new()
+    {
+        RecurseSubdirectories = true,
+        IgnoreInaccessible = false,
+        AttributesToSkip = FileAttributes.Hidden | FileAttributes.System | FileAttributes.ReparsePoint,
+    };
+
     // Extracts archives in place, deletes everything that is not a kept video or subtitle, and judges the release.
     public static PostProcessingVerdict Process(string path, PostProcessingOptions options)
     {
         // Full paths, so files match the volumes and entries reported by the extractor.
         string fullPath = Path.GetFullPath(path);
         List<string> files;
+        string root;
 
         if (Directory.Exists(fullPath))
         {
-            files = [.. Directory.EnumerateFiles(fullPath, "*", SearchOption.AllDirectories)];
+            if (new DirectoryInfo(fullPath).LinkTarget is not null)
+            {
+                return new PostProcessingVerdict.Rejected($"Download path is a link, not processed: {path}", Blacklist: false);
+            }
+
+            files = [.. Directory.EnumerateFiles(fullPath, "*", WalkOptions)];
+            root = fullPath;
         }
         else if (File.Exists(fullPath))
         {
             files = [fullPath];
+            root = Path.GetDirectoryName(fullPath)!;
         }
         else
         {
             return new PostProcessingVerdict.Rejected($"Download path not found: {path}", Blacklist: false);
+        }
+
+        root = Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar;
+
+        void Delete(string file)
+        {
+            if (Path.GetFullPath(file).StartsWith(root, StringComparison.Ordinal))
+            {
+                File.Delete(file);
+            }
         }
 
         List<string> pending = files;
@@ -42,7 +68,7 @@ public static class CompletedDownloadProcessor
 
                 foreach (string volume in extraction.Volumes)
                 {
-                    File.Delete(volume);
+                    Delete(volume);
                 }
 
                 files.RemoveAll(f => extraction.Volumes.Contains(f, StringComparer.OrdinalIgnoreCase));
@@ -77,7 +103,7 @@ public static class CompletedDownloadProcessor
 
             if (keep != videos && keep != subtitles)
             {
-                File.Delete(file);
+                Delete(file);
             }
         }
 

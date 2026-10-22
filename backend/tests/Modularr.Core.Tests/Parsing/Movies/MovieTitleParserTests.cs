@@ -41,6 +41,16 @@ public sealed class MovieTitleParserTests
         Assert.Equal("carnivale", MovieTitleParser.CleanMovieTitle("Carnivàle"));
     }
 
+    // Sonarr's generic 24-39 character hash rules would reject a long single-word movie title; Radarr's list does not.
+    [Fact]
+    public void ParsesLongSingleWordTitle()
+    {
+        ParsedMovieInfo? parsed = MovieTitleParser.ParseMovieTitle("Thisisaverylongsinglewordtitle 2019 1080p BluRay x264-GRP");
+
+        Assert.NotNull(parsed);
+        Assert.Equal("Thisisaverylongsinglewordtitle", parsed.PrimaryMovieTitle);
+    }
+
     [Theory]
     [InlineData("The.Movie.from.U.N.C.L.E.2015.1080p.BluRay.x264-SPARKS", "The Movie from U.N.C.L.E.")]
     [InlineData("1776.1979.EXTENDED.720p.BluRay.X264-AMIABLE", "1776")]

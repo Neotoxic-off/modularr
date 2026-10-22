@@ -12,6 +12,7 @@ WebApplication app = builder.Build();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
+// shortcut: no auth on /api (nothing secret in ModularrOptions yet), add an API key requirement before any credential enters the config.
 RouteGroupBuilder api = app.MapGroup("/api");
 api.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 api.MapGet("/config", (IOptions<ModularrOptions> options) => Results.Ok(options.Value));

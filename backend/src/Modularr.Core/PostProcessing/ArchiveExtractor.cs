@@ -10,6 +10,10 @@ public sealed record ArchiveExtraction(IReadOnlyList<string> ExtractedFiles, IRe
 
 public static partial class ArchiveExtractor
 {
+    // Video archives are stored, not compressed: far above this ratio is an archive bomb, not a release.
+    private const long MaxExpansionRatio = 100;
+    private const int MaxEntries = 10_000;
+
     [GeneratedRegex(@"\.part(?<number>\d+)\.rar$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex RarPartRegex { get; }
 
@@ -28,7 +32,7 @@ public static partial class ArchiveExtractor
             : !RarVolumeRegex.IsMatch(fileName);
     }
 
-    // Extracts next to the archive, all or nothing: every entry is checked before anything is written.
+    // Extracts next to the archive, all or nothing: every entry is checked before anything is written, nothing is overwritten.
     public static ArchiveExtraction Extract(string firstVolume)
     {
         List<FileInfo> volumes = [.. ArchiveFactory.GetFileParts(new FileInfo(firstVolume))];
@@ -54,9 +58,18 @@ public static partial class ArchiveExtractor
             }
 
             List<string> extracted = [];
+            long archiveSize = volumes.Sum(v => v.Length);
+            long extractedSize = 0;
 
             foreach (IArchiveEntry entry in archive.Entries.Where(e => !e.IsDirectory))
             {
+                extractedSize += Math.Max(entry.Size, 0);
+
+                if (extracted.Count >= MaxEntries || extractedSize > archiveSize * MaxExpansionRatio)
+                {
+                    return Fail("archive too large, it would expand far beyond its own size");
+                }
+
                 if (entry.LinkTarget is not null)
                 {
                     return Fail($"link entry '{entry.Key}' refused");
@@ -69,10 +82,21 @@ public static partial class ArchiveExtractor
                     return Fail($"entry '{entry.Key}' escapes the download folder");
                 }
 
+                if (CrossesLink(target, destination))
+                {
+                    return Fail($"entry '{entry.Key}' would be written through a link");
+                }
+
+                // A single-file download sits in the shared downloads root: never replace another download's file.
+                if (File.Exists(target) || Directory.Exists(target))
+                {
+                    return Fail($"entry '{entry.Key}' would overwrite an existing file");
+                }
+
                 extracted.Add(target);
             }
 
-            archive.WriteToDirectory(destination, new ExtractionOptions { ExtractFullPath = true, Overwrite = true });
+            archive.WriteToDirectory(destination, new ExtractionOptions { ExtractFullPath = true, Overwrite = false });
 
             return new ArchiveExtraction(extracted, volumePaths, null);
         }
@@ -84,5 +108,23 @@ public static partial class ArchiveExtractor
         {
             return Fail($"corrupt archive ({ex.Message})");
         }
+        catch (IOException ex)
+        {
+            // Disk full or a header that lied about sizes: still a verdict, never an unhandled throw.
+            return Fail($"extraction failed ({ex.Message})");
+        }
+    }
+
+    private static bool CrossesLink(string target, string destination)
+    {
+        for (DirectoryInfo? directory = Directory.GetParent(target); directory is not null && directory.FullName.Length > destination.Length; directory = directory.Parent)
+        {
+            if (directory.LinkTarget is not null)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

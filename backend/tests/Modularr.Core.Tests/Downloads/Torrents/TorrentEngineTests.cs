@@ -45,6 +45,25 @@ public sealed class TorrentEngineTests : IDisposable
     }
 
     [Fact]
+    public async Task StartsFreshWhenTheStateFileIsTruncated()
+    {
+        TorrentEngineOptions options = Options("corrupt");
+        await using (TorrentEngine engine = await TorrentEngine.StartAsync(options))
+        {
+            await engine.AddMagnetAsync("magnet:?xt=urn:btih:ZPBPA2P6ROZPKRHK44D5OW6NHXU5Z6KR&tr=udp://abc", Path.Combine(_root, "downloads"), "tv");
+        }
+
+        string statePath = Path.Combine(options.StateDirectory, "engine.state");
+        byte[] state = await File.ReadAllBytesAsync(statePath, TestContext.Current.CancellationToken);
+        await File.WriteAllBytesAsync(statePath, state[..(state.Length / 2)], TestContext.Current.CancellationToken);
+
+        await using TorrentEngine restarted = await TorrentEngine.StartAsync(options);
+
+        Assert.Empty(restarted.List());
+        Assert.True(File.Exists(statePath + ".corrupt"));
+    }
+
+    [Fact]
     public async Task DownloadsFromSeederOverLocalhostThenRestoresAndRemoves()
     {
         string seedDirectory = Directory.CreateDirectory(Path.Combine(_root, "seed")).FullName;

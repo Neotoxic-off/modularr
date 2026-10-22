@@ -8,6 +8,9 @@ namespace Modularr.Core.Downloads.Torrents;
 // In-process BitTorrent client owning one MonoTorrent ClientEngine; replaces the external qBittorrent of Sonarr/Radarr.
 public sealed class TorrentEngine : IAsyncDisposable
 {
+    private const string EngineStateFile = "engine.state";
+    private const string TagsFile = "torrents.json";
+
     private static readonly TimeSpan SeedLimitCheckInterval = TimeSpan.FromSeconds(30);
 
     private readonly ClientEngine _engine;
@@ -25,27 +28,21 @@ public sealed class TorrentEngine : IAsyncDisposable
         _seedLimitLoop = RunSeedLimitLoopAsync(_stopping.Token);
     }
 
-    private string EngineStatePath => Path.Combine(_options.StateDirectory, "engine.state");
+    private string EngineStatePath => Path.Combine(_options.StateDirectory, EngineStateFile);
 
-    private string TagsPath => Path.Combine(_options.StateDirectory, "torrents.json");
+    private string TagsPath => Path.Combine(_options.StateDirectory, TagsFile);
+
+    // Last failure of the background seed-limit check, null once a check succeeds again.
+    public Exception? SeedLimitError { get; private set; }
 
     public static async Task<TorrentEngine> StartAsync(TorrentEngineOptions options)
     {
         Directory.CreateDirectory(options.StateDirectory);
-        string statePath = Path.Combine(options.StateDirectory, "engine.state");
-        string tagsPath = Path.Combine(options.StateDirectory, "torrents.json");
+        string statePath = Path.Combine(options.StateDirectory, EngineStateFile);
+        string tagsPath = Path.Combine(options.StateDirectory, TagsFile);
         EngineSettings settings = BuildSettings(options);
 
-        ClientEngine engine;
-        if (File.Exists(statePath))
-        {
-            engine = await ClientEngine.RestoreStateAsync(statePath);
-            await engine.UpdateSettingsAsync(settings);
-        }
-        else
-        {
-            engine = new ClientEngine(settings);
-        }
+        ClientEngine engine = await RestoreAsync(statePath, settings) ?? new ClientEngine(settings);
 
         Dictionary<string, TorrentTag> tags = File.Exists(tagsPath)
             ? JsonSerializer.Deserialize<Dictionary<string, TorrentTag>>(await File.ReadAllBytesAsync(tagsPath)) ?? []
@@ -150,7 +147,8 @@ public sealed class TorrentEngine : IAsyncDisposable
         foreach (TorrentManager manager in _engine.Torrents.ToArray())
         {
             string id = ToId(manager.InfoHashes);
-            if (!manager.Complete)
+            // The snapshot can hold a torrent RemoveAsync removed meanwhile.
+            if (!manager.Complete || !_engine.Contains(manager.InfoHashes))
             {
                 continue;
             }
@@ -181,7 +179,10 @@ public sealed class TorrentEngine : IAsyncDisposable
         await _saveLock.WaitAsync();
         try
         {
-            await _engine.SaveStateAsync(EngineStatePath);
+            // MonoTorrent writes the path in place; a kill mid-write would leave a truncated state that blocks startup.
+            string stateTempPath = EngineStatePath + ".tmp";
+            await File.WriteAllBytesAsync(stateTempPath, await _engine.SaveStateAsync());
+            File.Move(stateTempPath, EngineStatePath, overwrite: true);
 
             Dictionary<string, long> sessionUploaded = _engine.Torrents.ToDictionary(m => ToId(m.InfoHashes), m => m.Monitor.DataBytesSent);
             Dictionary<string, TorrentTag> snapshot;
@@ -220,6 +221,27 @@ public sealed class TorrentEngine : IAsyncDisposable
             _engine.Dispose();
             _stopping.Dispose();
             _saveLock.Dispose();
+        }
+    }
+
+    // A corrupt state file is set aside so the app still boots; fast-resume and metadata files are separate and still load.
+    private static async Task<ClientEngine?> RestoreAsync(string statePath, EngineSettings settings)
+    {
+        if (!File.Exists(statePath))
+        {
+            return null;
+        }
+
+        try
+        {
+            ClientEngine engine = await ClientEngine.RestoreStateAsync(statePath);
+            await engine.UpdateSettingsAsync(settings);
+            return engine;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            File.Move(statePath, statePath + ".corrupt", overwrite: true);
+            return null;
         }
     }
 
@@ -332,7 +354,16 @@ public sealed class TorrentEngine : IAsyncDisposable
         using PeriodicTimer timer = new(SeedLimitCheckInterval);
         while (await timer.WaitForNextTickAsync(cancellationToken))
         {
-            await EnforceSeedLimitsAsync();
+            try
+            {
+                await EnforceSeedLimitsAsync();
+                SeedLimitError = null;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // One failed tick (disk full, a torrent removed mid-check) must not end enforcement for the whole session.
+                SeedLimitError = ex;
+            }
         }
     }
 

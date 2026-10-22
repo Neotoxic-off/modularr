@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using Modularr.Core.PostProcessing;
 
 namespace Modularr.Core.Tests.PostProcessing;
@@ -142,6 +143,67 @@ public sealed class CompletedDownloadProcessorTests : IDisposable
         Assert.True(rejected.Blacklist);
         Assert.Contains("escapes the download folder", rejected.Reason, StringComparison.Ordinal);
         Assert.Equal(["dl/Show.S01E01.zip"], _download.Files());
+    }
+
+    [Fact]
+    public void DoesNotFollowALinkedSubdirectory()
+    {
+        _download.CreateFile("dl/Show.S01E01.mkv");
+        _download.CreateFile("outside/precious.txt");
+        LinkDirectory("dl/link", "outside");
+
+        Assert.IsType<PostProcessingVerdict.Accepted>(Process(_download.PathOf("dl")));
+        Assert.Contains("outside/precious.txt", _download.Files());
+    }
+
+    [Fact]
+    public void RefusesAnEntryWrittenThroughALink()
+    {
+        _download.Zip("dl/Show.S01E01.zip", ("Show.S01E01.mkv", Payload), ("link/evil.txt", Payload));
+        Directory.CreateDirectory(_download.PathOf("outside"));
+        LinkDirectory("dl/link", "outside");
+
+        PostProcessingVerdict.Rejected rejected = Assert.IsType<PostProcessingVerdict.Rejected>(Process(_download.PathOf("dl")));
+
+        Assert.Contains("through a link", rejected.Reason, StringComparison.Ordinal);
+        Assert.Empty(Directory.EnumerateFileSystemEntries(_download.PathOf("outside")));
+    }
+
+    [Fact]
+    public void RejectsAnArchiveBomb()
+    {
+        using (ZipArchive zip = ZipFile.Open(_download.PathOf("Show.S01E01.zip"), ZipArchiveMode.Create))
+        {
+            using Stream entry = zip.CreateEntry("Show.S01E01.mkv", CompressionLevel.SmallestSize).Open();
+            entry.Write(new byte[4 * 1024 * 1024]);
+        }
+
+        AssertRejected("archive too large");
+        Assert.Equal(["Show.S01E01.zip"], _download.Files());
+    }
+
+    [Fact]
+    public void RefusesToOverwriteAnotherDownloadsFile()
+    {
+        string other = _download.CreateFile("Movie (2000).mkv", size: 3);
+        string archive = _download.Zip("Movie.Again.zip", ("Movie (2000).mkv", Payload));
+
+        PostProcessingVerdict.Rejected rejected = Assert.IsType<PostProcessingVerdict.Rejected>(Process(archive));
+
+        Assert.Contains("overwrite", rejected.Reason, StringComparison.Ordinal);
+        Assert.Equal(3, new FileInfo(other).Length);
+    }
+
+    private void LinkDirectory(string link, string target)
+    {
+        try
+        {
+            Directory.CreateSymbolicLink(_download.PathOf(link), _download.PathOf(target));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Assert.Skip($"Cannot create a directory symlink here: {ex.Message}");
+        }
     }
 
     [Fact]

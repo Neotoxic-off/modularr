@@ -148,7 +148,7 @@ public static partial class MovieTitleParser
         {
             Match match = regex.Match(simpleTitle);
 
-            if (match.Success && ParseTitleMatch(match) is var (movieTitles, year, edition))
+            if (match.Success && ParseTitleMatch(match) is { } parsed)
             {
                 string simpleReleaseTitle = ReplaceTitleWithPlaceholder(SimpleReleaseTitleRegex.Replace(releaseTitle, string.Empty), match.Groups["title"]);
                 Group subGroup = match.Groups["subgroup"];
@@ -156,9 +156,9 @@ public static partial class MovieTitleParser
 
                 return new ParsedMovieInfo
                 {
-                    MovieTitles = movieTitles,
-                    Year = year,
-                    Edition = edition ?? ParseEdition(simpleReleaseTitle),
+                    MovieTitles = parsed.MovieTitles,
+                    Year = parsed.Year,
+                    Edition = parsed.Edition ?? ParseEdition(simpleReleaseTitle),
                     ReleaseGroup = releaseGroup,
                     ReleaseHash = ReleaseTitle.GetReleaseHash(match),
                     HardcodedSubs = ParseHardcodedSubs(title),
@@ -357,5 +357,5 @@ public static partial class MovieTitleParser
     private static bool ValidateBeforeParsing(string title) =>
         !(title.Contains("password", StringComparison.OrdinalIgnoreCase) && title.Contains("yenc", StringComparison.OrdinalIgnoreCase))
         && title.Any(char.IsLetterOrDigit)
-        && !ReleaseTitle.IsHashed(ReleaseTitle.RemoveFileExtension(title));
+        && !ReleaseTitle.IsHashedMovie(ReleaseTitle.RemoveFileExtension(title));
 }

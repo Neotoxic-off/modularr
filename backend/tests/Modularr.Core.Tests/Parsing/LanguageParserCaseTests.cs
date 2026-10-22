@@ -16,6 +16,8 @@ public sealed class LanguageParserCaseTests
     [InlineData("Title.the.Italy.Series.S02E01.720p.HDTV.x264-TLA", "Unknown")]
     [InlineData("Series Title - S01E01 - Pilot.en.sub", "Unknown")]
     [InlineData("Series.Title.S01E01.SUBFRENCH.1080p.WEB.x264-GROUP", "Unknown")]
+    [InlineData("Series.Title.S01E01.720p.WEB.THAI.SUBS-GRP", "Unknown")]
+    [InlineData("Series.Title.S01E01.720p.WEB.ROMANIAN.SUBS-GRP", "Unknown")]
     [InlineData("[Judas] Series Japanese Name (Series English Name) - S02E10 [1080P][HEVC x256 10bit][Eng-Subs] (Weekly)", "Unknown")]
     [InlineData("Detektiv.Conan.1996.S33E39.Ger.Eng.Sub.AAC.1080p.WEB.H264-WeebPinn", "Unknown")]
     [InlineData("Detektiv.Conan.1996.S33E39.Ger.Eng.Fre.Sub.AAC.1080p.WEB.H264-WeebPinn", "Unknown")]

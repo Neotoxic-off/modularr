@@ -16,6 +16,9 @@ public sealed record PostProcessingOptions : IValidatableObject
     public static FrozenSet<string> DefaultIgnorableExtensions { get; } = new[]
     {
         ".nfo", ".txt", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tbn", ".sfv", ".md5", ".srr", ".srs", ".nzb", ".par2",
+        ".url", ".diz", ".htm", ".html", ".log", ".xml",
+        // External audio tracks are not imported, but they belong to a legit release: delete without blacklisting.
+        ".mka", ".ac3", ".dts", ".flac",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     public IReadOnlySet<string> VideoExtensions { get; init; } = MediaFileExtensions.VideoExtensions;
