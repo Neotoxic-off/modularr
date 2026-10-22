@@ -242,6 +242,39 @@ export interface Folder {
   directories: { name: string; path: string }[];
 }
 
+export type ActivityKind =
+  | "Added" | "SearchStarted" | "SearchCompleted" | "NothingFound" | "SearchFailed" | "Grabbed" | "DownloadStarted"
+  | "DownloadStalled" | "DownloadFailed" | "Blocklisted" | "Regrabbed" | "Imported" | "ImportFailed" | "Removed";
+
+export interface Activity {
+  id: number;
+  time: string;
+  kind: ActivityKind;
+  level: "Info" | "Success" | "Warning" | "Error";
+  // The item or release name; message says what happened.
+  title: string;
+  message: string | null;
+  seriesId: number | null;
+  movieId: number | null;
+  downloadId: number | null;
+  read: boolean;
+}
+
+// One entry of the "progress" server event, sent every 2 s while downloads run.
+export interface DownloadProgress {
+  id: number;
+  progress: number;
+  rate: number;
+  eta: number | null;
+}
+
+export interface ActivityQuery {
+  before?: number;
+  limit?: number;
+  seriesId?: number;
+  movieId?: number;
+}
+
 // Fired on any 401 so the auth gate drops back to the sign-in screen.
 export const UNAUTHORIZED = "modularr:unauthorized";
 
@@ -315,6 +348,11 @@ export const api = {
   removeDownload: (id: number, deleteData: boolean, blocklist: boolean) =>
     send<void>("DELETE", `/downloads/${id}?deleteData=${deleteData}&blocklist=${blocklist}`),
 
+  activity: (query: ActivityQuery = {}) =>
+    request<Activity[]>(`/activity?${new URLSearchParams(Object.entries(query).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]))}`),
+  unreadCount: () => request<{ count: number }>("/activity/unread-count"),
+  markRead: (upTo?: number) => send<void>("POST", `/activity/read${upTo === undefined ? "" : `?upTo=${upTo}`}`),
+
   indexers: () => request<IndexerList>("/indexers"),
 
   qualities: () => request<Quality[]>("/qualities"),
@@ -351,13 +389,17 @@ export function formatRuntime(minutes: number): string | null {
   return minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
-const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+const relative = {
+  long: new Intl.RelativeTimeFormat("en", { numeric: "auto" }),
+  short: new Intl.RelativeTimeFormat("en", { numeric: "auto", style: "narrow" }),
+};
 
-export function formatAgo(iso: string): string {
+export function formatAgo(iso: string, style: keyof typeof relative = "long"): string {
+  const format = relative[style];
   const minutes = Math.round((new Date(iso).getTime() - Date.now()) / 60000);
-  if (Math.abs(minutes) < 60) return relative.format(minutes, "minute");
-  if (Math.abs(minutes) < 1440) return relative.format(Math.round(minutes / 60), "hour");
-  return relative.format(Math.round(minutes / 1440), "day");
+  if (Math.abs(minutes) < 60) return format.format(minutes, "minute");
+  if (Math.abs(minutes) < 1440) return format.format(Math.round(minutes / 60), "hour");
+  return format.format(Math.round(minutes / 1440), "day");
 }
 
 export const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));

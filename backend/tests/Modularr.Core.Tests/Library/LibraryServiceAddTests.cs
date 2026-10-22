@@ -1,12 +1,18 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
 using Modularr.Core.Decisions;
+using Modularr.Core.Indexers;
+using Modularr.Core.Indexers.Catalog;
 using Modularr.Core.Languages;
 using Modularr.Core.Library;
 using Modularr.Core.Metadata;
 using Modularr.Core.Persistence;
+using Modularr.Core.Search;
 using Modularr.Core.Tests.Metadata;
 using Modularr.Core.Tests.Persistence;
 
@@ -39,7 +45,7 @@ public sealed class LibraryServiceAddTests : IDisposable
     {
         using ModularrDbContext db = _database.NewContext();
 
-        Movie movie = await Library(db).AddMovieAsync(70981, qualityProfileId: null, Language.French, TestContext.Current.CancellationToken);
+        Movie movie = await Library(db).AddMovieAsync(70981, qualityProfileId: null, Language.French, search: false, TestContext.Current.CancellationToken);
 
         Assert.Equal((4, Language.English, Language.French), (movie.QualityProfileId, movie.OriginalLanguage, movie.Language));
         Assert.Equal(Language.French, Settings.Media.WantedLanguage(movie));
@@ -50,7 +56,7 @@ public sealed class LibraryServiceAddTests : IDisposable
     {
         using ModularrDbContext db = _database.NewContext();
 
-        Series series = await Library(db).AddSeriesAsync(76885, qualityProfileId: null, language: null, SeriesMonitor.All, TestContext.Current.CancellationToken);
+        Series series = await Library(db).AddSeriesAsync(76885, qualityProfileId: null, language: null, SeriesMonitor.All, search: false, TestContext.Current.CancellationToken);
 
         Assert.Equal((MediaType.Anime, 2, Language.Japanese), (series.MediaType, series.QualityProfileId, series.OriginalLanguage));
         Assert.Equal(Language.Original, Settings.Media.WantedLanguage(series));
@@ -61,7 +67,7 @@ public sealed class LibraryServiceAddTests : IDisposable
     {
         using ModularrDbContext db = _database.NewContext();
 
-        await Assert.ThrowsAsync<ArgumentException>(() => Library(db).AddMovieAsync(70981, 42, null, TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => Library(db).AddMovieAsync(70981, 42, null, search: false, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -138,13 +144,67 @@ public sealed class LibraryServiceAddTests : IDisposable
 
     private static ItemUpdate Patch(string json) => JsonSerializer.Deserialize<ItemUpdate>(json, JsonSerializerOptions.Web)!;
 
-    private LibraryService Library(ModularrDbContext db)
+    [Fact]
+    public async Task AddingSearchesTheAiredMissingEpisodesAtOnceUnlessTheClientOptsOut()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using ServiceProvider provider = SearchServices();
+        using SearchRunner searches = new(provider.GetRequiredService<IServiceScopeFactory>());
+        await searches.StartAsync(ct);
+        using ModularrDbContext db = _database.NewContext();
+
+        // The test database is one connection: wait on the feed, not by reading it while the search runs.
+        await using IAsyncEnumerator<ServerEvent?> events = provider.GetRequiredService<ActivityFeed>().SubscribeAsync(TimeSpan.FromMinutes(1), ct).GetAsyncEnumerator(ct);
+        ValueTask<bool> subscribed = events.MoveNextAsync();
+
+        // Jobs run in order: had the movie been queued, it would be searched before the series.
+        Movie movie = await Library(db, searches).AddMovieAsync(70981, qualityProfileId: null, language: null, search: false, ct);
+        Series series = await Library(db, searches).AddSeriesAsync(76885, qualityProfileId: null, language: null, SeriesMonitor.All, search: true, ct);
+
+        Assert.True(await subscribed);
+        while (events.Current?.Data is not Activity { Kind: ActivityKind.NothingFound })
+        {
+            Assert.True(await events.MoveNextAsync());
+        }
+
+        await searches.StopAsync(ct);
+        List<Activity> activities = await db.Activities.OrderBy(a => a.Id).ToListAsync(ct);
+        Assert.Equal(ActivityKind.Added, activities.Single(a => a.MovieId == movie.Id).Kind);
+        Activity[] seriesActivities = [.. activities.Where(a => a.SeriesId == series.Id)];
+        Assert.Equal([ActivityKind.Added, ActivityKind.SearchStarted, ActivityKind.NothingFound], seriesActivities.Select(a => a.Kind));
+        Assert.All(seriesActivities, a => Assert.Equal(series.Title, a.Title));
+        int missing = series.Episodes.Count(e => e.Monitored && e.AirDate <= DateOnly.FromDateTime(DateTime.UtcNow));
+        Assert.True(missing > 0);
+        Assert.Equal($"Searching for {missing} missing episode(s)", seriesActivities[1].Message);
+        Assert.Equal("0 release(s) found, 0 approved, nothing grabbed", seriesActivities[2].Message);
+    }
+
+    // The real search pipeline over no indexer: every search finds nothing, and no grab is reachable.
+    private ServiceProvider SearchServices()
+    {
+        IOptions<ModularrOptions> options = Options.Create(Settings);
+        return new ServiceCollection()
+            .AddScoped(_ => _database.NewContext())
+            .AddSingleton<ActivityFeed>()
+            .AddScoped<ActivityLog>()
+            .AddScoped(services =>
+            {
+                ModularrDbContext db = services.GetRequiredService<ModularrDbContext>();
+                ReleaseSearch search = new(db, new IndexerCatalogHost(options, null!), new IndexerSearch(null!, null!, options), new FixedOptionsMonitor(Settings));
+                return new AutoSearch(db, search, null!, services.GetRequiredService<ActivityLog>());
+            })
+            .BuildServiceProvider();
+    }
+
+    private LibraryService Library(ModularrDbContext db, SearchRunner? searches = null)
     {
         IOptions<ModularrOptions> metadataOptions = Options.Create(new ModularrOptions());
         return new LibraryService(
             db,
             new SeriesMetadataClient(new HttpClient(_http), metadataOptions),
             new MovieMetadataClient(new HttpClient(_http), metadataOptions),
-            new FixedOptionsMonitor(Settings));
+            new FixedOptionsMonitor(Settings),
+            searches ?? new SearchRunner(null!),
+            new ActivityLog(db, new ActivityFeed()));
     }
 }

@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { api, errorMessage, kindOfDiscovery, titleHref } from "@/lib/api";
-import type { AddOptions, DiscoveryItem } from "@/lib/api";
+import type { AddOptions, DiscoveryItem, LibraryItem } from "@/lib/api";
 import { defaultsFor, languageLabel, useOptions } from "@/lib/options";
+import { titleKey } from "@/components/Activity";
 import { kindLabel, PosterArt } from "@/components/Poster";
+import { useToast } from "@/components/Toasts";
 import { Alert, Button, Field, Modal, Rating, Select, Spinner, Switch } from "@/components/ui";
 
 type OnAdded = (item: DiscoveryItem, libraryId: number) => void;
@@ -18,6 +20,25 @@ export const useAddDialog = () => useContext(AddContext);
 
 export const markAdded = (items: readonly DiscoveryItem[], added: DiscoveryItem, libraryId: number) =>
   items.map((i) => (i.kind === added.kind && i.tmdbId === added.tmdbId && i.tvdbId === added.tvdbId ? { ...i, inLibrary: true, libraryId } : i));
+
+// Adds a title and says so at once; the search results follow as live notifications.
+export function useAddTitle() {
+  const toast = useToast();
+  return useCallback(async (item: DiscoveryItem, options: AddOptions = {}): Promise<LibraryItem> => {
+    const added = await api.add(item, options);
+    const kind = kindOfDiscovery(item);
+    const searching = options.searchNow !== false && options.monitor !== "None";
+    toast({
+      key: titleKey({ movieId: kind === "movie" ? added.id : null, seriesId: kind === "movie" ? null : added.id }) ?? item.title,
+      icon: searching ? "search" : "plus",
+      tone: "accent",
+      title: item.title,
+      message: searching ? "Added. Searching for releases…" : "Added to your library",
+      href: titleHref(kind, added.id),
+    });
+    return added;
+  }, [toast]);
+}
 
 export function AddDialogProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState<{ item: DiscoveryItem; onAdded?: OnAdded } | null>(null);
@@ -33,6 +54,7 @@ export function AddDialogProvider({ children }: { children: ReactNode }) {
 
 function AddDialog({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: OnAdded; onClose: () => void }) {
   const router = useRouter();
+  const addTitle = useAddTitle();
   const options = useOptions();
   const kind = kindOfDiscovery(item);
   const [profile, setProfile] = useState("");
@@ -50,7 +72,7 @@ function AddDialog({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: 
     setBusy(true);
     setError(null);
     try {
-      const added = await api.add(item, {
+      const added = await addTitle(item, {
         qualityProfileId: profile ? Number(profile) : null,
         language: language || null,
         searchNow,

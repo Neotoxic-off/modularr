@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { api, errorMessage, formatAgo, formatRuntime, isSeries, kindOf } from "@/lib/api";
 import type { Episode, ItemPatch, Kind, LibraryItem, MovieDetail, SeriesDetail } from "@/lib/api";
 import { languageLabel, useOptions } from "@/lib/options";
+import { useTitleEvents } from "@/components/Activity";
+import { ActivityTimeline } from "@/components/ActivityFeed";
 import { useSession } from "@/components/AuthGate";
 import { Icon } from "@/components/icons";
 import { PosterArt } from "@/components/Poster";
@@ -46,8 +48,9 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searching, setSearching] = useState<number | "all" | null>(null);
-  const reloadTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => () => clearTimeout(reloadTimer.current), []);
+  const scope = isSeries(item) ? { seriesId: item.id } : { movieId: item.id };
+  // Searches and imports change the status and "Last search", so the title reloads as they happen.
+  useTitleEvents(scope, reload);
 
   async function patch(change: ItemPatch) {
     setError(null);
@@ -64,9 +67,6 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
     try {
       await api.autoSearch(kind, item.id, season);
       setNotice(season === undefined ? "Search started. Anything that matches your profile is sent to Downloads." : `Searching season ${season}.`);
-      // The search runs in the background; its result shows up under "Last search".
-      clearTimeout(reloadTimer.current);
-      reloadTimer.current = setTimeout(reload, 8000);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -134,6 +134,7 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
             <Seasons seasons={detail.seasons} episodes={detail.episodes} searching={searching}
               onSearch={search} onReleases={(season) => setReleases({ season })} />
           )}
+          <ActivityTimeline scope={scope} itemTitle={item.title} />
         </div>
 
         <aside className="space-y-4">

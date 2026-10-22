@@ -81,7 +81,7 @@ export function Alert({ children, tone = "red" }: { children: ReactNode; tone?: 
   );
 }
 
-const tones = {
+export const tones = {
   neutral: "bg-white/5 text-muted ring-white/10",
   accent: "bg-accent/15 text-accent ring-accent/25",
   green: "bg-emerald-400/10 text-emerald-300 ring-emerald-400/20",
@@ -177,12 +177,22 @@ export function Tabs<T extends string>({ value, options, onChange, label }: {
   );
 }
 
-export function Modal({ title, description, banner, onClose, size = "md", children, footer }: {
+const dialog = "max-h-[92vh] animate-rise rounded-t-2xl border sm:rounded-2xl";
+
+// "side" is a full-height sheet from the right edge, for panels that list rather than ask.
+const modalLayouts = {
+  md: { overlay: "items-end justify-center sm:items-center sm:p-6", panel: `max-w-xl ${dialog}` },
+  lg: { overlay: "items-end justify-center sm:items-center sm:p-6", panel: `max-w-4xl ${dialog}` },
+  side: { overlay: "justify-end", panel: "h-full max-w-md animate-slide border-l" },
+} as const;
+
+export function Modal({ title, description, actions, banner, onClose, size = "md", children, footer }: {
   title: ReactNode;
   description?: ReactNode;
+  actions?: ReactNode;
   banner?: string | null;
   onClose: () => void;
-  size?: "md" | "lg";
+  size?: keyof typeof modalLayouts;
   children: ReactNode;
   footer?: ReactNode;
 }) {
@@ -214,9 +224,9 @@ export function Modal({ title, description, banner, onClose, size = "md", childr
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex animate-fade items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center sm:p-6" onMouseDown={onClose}>
+    <div className={`fixed inset-0 z-50 flex animate-fade bg-black/70 backdrop-blur-sm ${modalLayouts[size].overlay}`} onMouseDown={onClose}>
       <div ref={panel} role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1} onMouseDown={(e) => e.stopPropagation()}
-        className={`relative flex max-h-[92vh] w-full animate-rise outline-none flex-col overflow-hidden rounded-t-2xl border border-line bg-surface shadow-2xl shadow-black/60 sm:rounded-2xl ${size === "lg" ? "max-w-4xl" : "max-w-xl"}`}>
+        className={`relative flex w-full flex-col overflow-hidden border-line bg-surface shadow-2xl shadow-black/60 outline-none ${modalLayouts[size].panel}`}>
         {banner && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={banner} alt="" className="pointer-events-none absolute inset-x-0 top-0 h-44 w-full object-cover opacity-25 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
@@ -226,9 +236,12 @@ export function Modal({ title, description, banner, onClose, size = "md", childr
             <h2 id={id} className="font-display text-lg font-semibold">{title}</h2>
             {description && <div className="mt-0.5 text-sm text-muted">{description}</div>}
           </div>
-          <button onClick={onClose} aria-label="Close" className="-mr-1 cursor-pointer rounded-lg p-1.5 text-muted hover:bg-raised hover:text-foreground">
-            <Icon name="x" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            {actions}
+            <button onClick={onClose} aria-label="Close" className="-mr-1 cursor-pointer rounded-lg p-1.5 text-muted hover:bg-raised hover:text-foreground">
+              <Icon name="x" />
+            </button>
+          </div>
         </header>
         <div className="relative min-h-0 flex-1 overflow-y-auto">{children}</div>
         {footer && <footer className="relative flex flex-wrap justify-end gap-2 border-t border-line bg-background/40 px-5 py-3.5">{footer}</footer>}
@@ -270,13 +283,13 @@ export function SaveBar({ busy, error, done, label = "Save changes", disabled }:
   );
 }
 
-export function Logo() {
+export function Logo({ markOnly = false }: { markOnly?: boolean }) {
   return (
     <span className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight">
       <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-accent to-accent-strong text-white shadow-lg shadow-accent-strong/30">
         <Icon name="play" size={12} fill="currentColor" strokeWidth={0} />
       </span>
-      modularr
+      {markOnly ? <span className="sr-only">modularr</span> : "modularr"}
     </span>
   );
 }

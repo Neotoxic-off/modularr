@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
 using Modularr.Core.Languages;
 using Modularr.Core.MediaFiles;
@@ -14,7 +15,7 @@ using Modularr.Core.Search;
 namespace Modularr.Core.Downloads;
 
 // Upstream CompletedDownloadService + ImportApprovedEpisodes/Movies + FailedDownloadService for one finished torrent.
-public sealed class DownloadImporter(ModularrDbContext db, IOptions<ModularrOptions> options)
+public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activities, IOptions<ModularrOptions> options)
 {
     // Returns true when the release was rejected and blocklisted: the caller then removes the torrent and its data.
     public async Task<bool> ImportAsync(TrackedDownload download, string outputPath, CancellationToken cancellationToken)
@@ -27,9 +28,16 @@ public sealed class DownloadImporter(ModularrDbContext db, IOptions<ModularrOpti
         {
             case PostProcessingVerdict.Accepted accepted:
                 // No video matched an episode of the series: leave it for the user rather than import nothing silently.
-                download.State = await ImportFilesAsync(download, accepted, cancellationToken).ConfigureAwait(false) > 0
-                    ? TrackedDownloadState.Imported
-                    : TrackedDownloadState.ImportBlocked;
+                if (await ImportFilesAsync(download, accepted, cancellationToken).ConfigureAwait(false) is string imported)
+                {
+                    download.State = TrackedDownloadState.Imported;
+                    activities.Add(Activity.For(download, ActivityKind.Imported, ActivityLevel.Success, imported));
+                }
+                else
+                {
+                    Block(download, "No video file matches an episode of the series");
+                }
+
                 break;
 
             case PostProcessingVerdict.Rejected { Blacklist: true } rejected:
@@ -37,8 +45,8 @@ public sealed class DownloadImporter(ModularrDbContext db, IOptions<ModularrOpti
                 return true;
 
             // A missing or linked download path: nothing wrong with the release itself, wait for the user.
-            default:
-                download.State = TrackedDownloadState.ImportBlocked;
+            case PostProcessingVerdict.Rejected rejected:
+                Block(download, rejected.Reason);
                 break;
         }
 
@@ -53,17 +61,26 @@ public sealed class DownloadImporter(ModularrDbContext db, IOptions<ModularrOpti
         await BlocklistAsync(download, reason, cancellationToken).ConfigureAwait(false);
         download.State = TrackedDownloadState.Failed;
         download.Message = reason;
+        activities.Add(Activity.For(download, ActivityKind.DownloadFailed, ActivityLevel.Error, reason));
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    private void Block(TrackedDownload download, string reason)
+    {
+        download.State = TrackedDownloadState.ImportBlocked;
+        activities.Add(Activity.For(download, ActivityKind.ImportFailed, ActivityLevel.Error, reason));
+    }
+
+    // What was imported ("Imported to <file>" or "<n> files imported to <folder>"), null when nothing was.
     // shortcut: files keep their release file name and replaced files stay on disk, add renaming and the recycle bin later.
-    private async Task<int> ImportFilesAsync(TrackedDownload download, PostProcessingVerdict.Accepted accepted, CancellationToken cancellationToken)
+    private async Task<string?> ImportFilesAsync(TrackedDownload download, PostProcessingVerdict.Accepted accepted, CancellationToken cancellationToken)
     {
         Series? series = download.SeriesId is int seriesId
             ? await db.Series.Include(s => s.Episodes).SingleAsync(s => s.Id == seriesId, cancellationToken).ConfigureAwait(false)
             : null;
         Movie? movie = download.MovieId is int movieId ? await db.Movies.SingleAsync(m => m.Id == movieId, cancellationToken).ConfigureAwait(false) : null;
         string? firstDirectory = null;
+        string? lastFile = null;
         int imported = 0;
 
         foreach (string video in accepted.VideoFiles)
@@ -87,6 +104,7 @@ public sealed class DownloadImporter(ModularrDbContext db, IOptions<ModularrOpti
             }
 
             imported++;
+            lastFile = destination;
 
             if (await db.MediaFiles.AnyAsync(f => f.Path == destination, cancellationToken).ConfigureAwait(false))
             {
@@ -129,7 +147,12 @@ public sealed class DownloadImporter(ModularrDbContext db, IOptions<ModularrOpti
             }
         }
 
-        return imported;
+        return imported switch
+        {
+            0 => null,
+            1 => $"Imported to {lastFile}",
+            _ => $"{imported} files imported to {firstDirectory}",
+        };
     }
 
     // The file's own name first (season packs); a single-video download falls back to the episodes it was grabbed for.
@@ -146,6 +169,7 @@ public sealed class DownloadImporter(ModularrDbContext db, IOptions<ModularrOpti
 
         if (!await db.Blocklist.AnyAsync(b => b.InfoHash == download.InfoHash, cancellationToken).ConfigureAwait(false))
         {
+            activities.Add(Activity.For(download, ActivityKind.Blocklisted, ActivityLevel.Warning, reason));
             db.Blocklist.Add(new BlocklistItem
             {
                 SeriesId = download.SeriesId,

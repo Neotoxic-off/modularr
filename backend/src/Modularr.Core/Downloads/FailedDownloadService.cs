@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
 using Modularr.Core.Decisions;
 using Modularr.Core.Downloads.Torrents;
@@ -15,6 +16,7 @@ public sealed class FailedDownloadService(
     DownloadImporter importer,
     AutoSearch search,
     TorrentEngineHost torrents,
+    ActivityLog activities,
     IOptions<ModularrOptions> options)
 {
     public async Task FailAsync(TrackedDownload download, string reason, CancellationToken cancellationToken)
@@ -38,16 +40,27 @@ public sealed class FailedDownloadService(
     // shortcut: a search that throws is not retried and the download stays failed, add a pending re-grab flag if indexers fail often.
     private async Task RegrabAsync(TrackedDownload download, CancellationToken cancellationToken)
     {
-        if (await RegrabRequestAsync(db, download, options.Value.Torrents.MaxAutomaticRegrabs, cancellationToken).ConfigureAwait(false) is not ReleaseSearchRequest request)
+        int maxRegrabs = options.Value.Torrents.MaxAutomaticRegrabs;
+        if (await RegrabRequestAsync(db, download, maxRegrabs, cancellationToken).ConfigureAwait(false) is not ReleaseSearchRequest request)
         {
+            if (download.Regrabs >= maxRegrabs)
+            {
+                await activities.RecordAsync(
+                    Activity.For(download, ActivityKind.NothingFound, ActivityLevel.Warning, "Regrab limit reached, no replacement will be tried"), cancellationToken).ConfigureAwait(false);
+            }
+
             return;
         }
 
-        foreach (TrackedDownload next in await search.GrabBestAsync(request, download.SeriesId, download.MovieId, wanted: null, cancellationToken).ConfigureAwait(false))
+        GrabResult result = await search.GrabBestAsync(request, download.SeriesId, download.MovieId, wanted: null, cancellationToken).ConfigureAwait(false);
+        foreach (TrackedDownload next in result.Grabbed)
         {
             next.Regrabs = download.Regrabs + 1;
         }
 
+        activities.Add(result.Grabbed.Count > 0
+            ? Activity.For(download, ActivityKind.Regrabbed, ActivityLevel.Info, $"Replaced by {string.Join(", ", result.Grabbed.Select(d => d.ReleaseTitle))}")
+            : Activity.For(download, ActivityKind.NothingFound, ActivityLevel.Warning, $"No replacement: {result.Releases} release(s) found, {result.Approved} approved"));
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 

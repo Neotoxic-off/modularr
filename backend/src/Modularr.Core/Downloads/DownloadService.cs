@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
 using Modularr.Core.Downloads.Torrents;
 using Modularr.Core.Indexers;
@@ -34,6 +35,7 @@ public sealed class DownloadService(
     CardigannSearcher searcher,
     IHttpClientFactory httpClientFactory,
     DownloadImporter importer,
+    ActivityLog activities,
     IOptionsMonitor<ModularrOptions> options)
 {
     public const string SeriesCategory = "series";
@@ -132,6 +134,8 @@ public sealed class DownloadService(
             return raced;
         }
 
+        await activities.RecordAsync(
+            Activity.For(download, ActivityKind.Grabbed, ActivityLevel.Success, $"Grabbed from {release.Indexer} in {quality.Quality}"), cancellationToken).ConfigureAwait(false);
         return download;
     }
 
@@ -163,6 +167,7 @@ public sealed class DownloadService(
         }
 
         download.State = TrackedDownloadState.Ignored;
+        activities.Add(Activity.For(download, ActivityKind.Removed, ActivityLevel.Info, deleteData ? "Removed from downloads with its data" : "Removed from downloads"));
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 

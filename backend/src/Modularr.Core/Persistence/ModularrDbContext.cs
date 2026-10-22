@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Modularr.Core.Activities;
 using Modularr.Core.Decisions;
 using Modularr.Core.Languages;
 using Modularr.Core.Qualities;
@@ -21,6 +22,7 @@ public sealed class ModularrDbContext(DbContextOptions<ModularrDbContext> option
     public DbSet<HistoryItem> History => Set<HistoryItem>();
     public DbSet<TrackedDownload> TrackedDownloads => Set<TrackedDownload>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Activity> Activities => Set<Activity>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
