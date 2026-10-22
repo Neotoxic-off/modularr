@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Modularr.Core.Downloads.Torrents;
 using Modularr.Core.Indexers.Cardigann;
 using Modularr.Core.Indexers.Catalog;
+using Modularr.Core.Metadata;
 using Modularr.Core.Persistence;
 using Modularr.Core.PostProcessing;
 
@@ -46,6 +47,9 @@ public static class ModularrServiceCollectionExtensions
         // Redirects are handled per search path (Cardigann "followredirect"), so the handler must not follow them itself.
         services.AddHttpClient<CardigannSearcher>(client => client.DefaultRequestHeaders.UserAgent.ParseAdd("Modularr/1.0"))
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false, AutomaticDecompression = DecompressionMethods.All });
+
+        services.AddHttpClient<SeriesMetadataClient>();
+        services.AddHttpClient<MovieMetadataClient>();
 
         return services;
     }

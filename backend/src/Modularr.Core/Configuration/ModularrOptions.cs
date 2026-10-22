@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using Modularr.Core.Downloads.Torrents;
 using Modularr.Core.Indexers;
+using Modularr.Core.Metadata;
 using Modularr.Core.Persistence;
 using Modularr.Core.PostProcessing;
 
@@ -26,4 +27,7 @@ public sealed class ModularrOptions
 
     [ValidateObjectMembers]
     public DatabaseOptions Database { get; set; } = new();
+
+    [ValidateObjectMembers]
+    public MetadataOptions Metadata { get; set; } = new();
 }

@@ -1,0 +1,1333 @@
+[
+  {
+    "TmdbId": 70981,
+    "ImdbId": "tt1446714",
+    "Title": "Prometheus",
+    "Overview": "A team of explorers discover a clue to the origins of mankind on Earth, leading them on a journey to the darkest corners of the universe. There, they must fight a terrifying battle to save the future of the human race.",
+    "OriginalTitle": "Prometheus",
+    "OriginalLanguage": "en",
+    "TitleSlug": "70981",
+    "Runtime": 124,
+    "Popularity": 23.6264,
+    "Year": 2012,
+    "Premier": "2012-04-11T00:00:00Z",
+    "InCinema": "2012-05-30T00:00:00Z",
+    "PhysicalRelease": "2012-09-25T00:00:00Z",
+    "DigitalRelease": "2012-06-07T00:00:00Z",
+    "Images": [
+      {
+        "CoverType": "Poster",
+        "Url": "https://image.tmdb.org/t/p/original/qsYQflQhOuhDpQ0W2aOcwqgDAeI.jpg"
+      },
+      {
+        "CoverType": "Fanart",
+        "Url": "https://image.tmdb.org/t/p/original/qDG5SlGkWNsjSJWiGTBMFI8DpzA.jpg"
+      }
+    ],
+    "Ratings": [
+      {
+        "Count": 13738,
+        "Value": 6.614,
+        "Origin": "Tmdb",
+        "Type": "User"
+      }
+    ],
+    "MovieRatings": {
+      "Tmdb": {
+        "Count": 13738,
+        "Value": 6.614,
+        "Type": "User"
+      },
+      "Imdb": {
+        "Count": 708865,
+        "Value": 7,
+        "Type": "User"
+      },
+      "Metacritic": {
+        "Count": 0,
+        "Value": 64,
+        "Type": "User"
+      },
+      "RottenTomatoes": {
+        "Count": 0,
+        "Value": 73,
+        "Type": "User"
+      },
+      "Trakt": {
+        "Count": 23660,
+        "Value": 7.11902,
+        "Type": "User"
+      }
+    },
+    "Genres": [
+      "Science Fiction",
+      "Mystery",
+      "Horror"
+    ],
+    "Keywords": [
+      "2090s",
+      "alien",
+      "android",
+      "archaeological dig",
+      "cave drawing",
+      "cosmic horror",
+      "creation",
+      "creature",
+      "emergency surgery",
+      "genetic mutation",
+      "god complex",
+      "lovecraftian",
+      "objective",
+      "origins of life",
+      "prometheus",
+      "sci-fi horror",
+      "space",
+      "spin off",
+      "stasis"
+    ],
+    "AlternativeTitles": [
+      {
+        "Title": "Prometeo",
+        "Type": "Tmdb",
+        "Language": "es"
+      },
+      {
+        "Title": "Prometheus 3D",
+        "Type": "Tmdb",
+        "Language": "en"
+      },
+      {
+        "Title": "Prometeo",
+        "Type": "Tmdb",
+        "Language": "en"
+      },
+      {
+        "Title": "Alien: Prometheus",
+        "Type": "Tmdb",
+        "Language": "en"
+      },
+      {
+        "Title": "프로메테우스",
+        "Type": "Tmdb",
+        "Language": "ko"
+      },
+      {
+        "Title": "הנוסע השמיני: פרומתיאוס",
+        "Type": "Tmdb",
+        "Language": "en"
+      },
+      {
+        "Title": "프로메테우스-확장",
+        "Type": "Tmdb",
+        "Language": "ko"
+      },
+      {
+        "Title": "Prometeusz",
+        "Type": "Tmdb",
+        "Language": "en"
+      },
+      {
+        "Title": "Hành Trình Đến Hành Tinh Chết",
+        "Type": "Tmdb",
+        "Language": "en"
+      },
+      {
+        "Title": "异形：普罗米修斯",
+        "Type": "Tmdb",
+        "Language": "zh"
+      },
+      {
+        "Title": "Paradise",
+        "Type": "Tmdb",
+        "Language": "en"
+      },
+      {
+        "Title": "異形：普羅米修斯",
+        "Type": "Tmdb",
+        "Language": "zh"
+      },
+      {
+        "Title": "普羅米修斯",
+        "Type": "Tmdb",
+        "Language": "zh"
+      },
+      {
+        "Title": "異形",
+        "Type": "Tmdb",
+        "Language": "zh"
+      },
+      {
+        "Title": "Tomb of the Gods",
+        "Type": "Tmdb",
+        "Language": "en"
+      },
+      {
+        "Title": "Prometey",
+        "Type": "Tmdb",
+        "Language": "en"
+      },
+      {
+        "Title": "Prometėjas",
+        "Type": "Tmdb",
+        "Language": "lt"
+      }
+    ],
+    "Translations": [
+      {
+        "Title": "Prometheus",
+        "Overview": "A team of explorers discover a clue to the origins of mankind on Earth, leading them on a journey to the darkest corners of the universe. There, they must fight a terrifying battle to save the future of the human race.",
+        "Language": "en-US"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Nell'anno 2089 due scienziati portano a compimento le ricerche di una vita scoprendo che alcuni artefatti, ritrovati in diversi punti della Terra e tutti risalenti a migliaia di anni prima, riportano la medesima immagine di creature giganti che indicano un determinato pianeta. Ricostruito quale sia il pianeta in questione e trovati i fondi da un miliardario morente, i due si imbarcano assieme a un equipaggio misto di scienziati e piloti verso quel pianeta per andare a scoprire quel che ritengono essere l'origine della vita sulla Terra. Lì troveranno i resti di una civiltà aliena assieme a ciò che l'ha quasi estinta.",
+        "Language": "it-IT"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Lorsque Elisabeth Shaw découvre un mystérieux lien entre plusieurs artefacts au cours de ses recherches, elle est persuadée qu'il s'agit d'un indice remettant en cause l'origine de l'humanité sur Terre. Une équipe de scientifiques supervisée par Meredith Vickers et l'androïde David se lance alors dans un voyage spatial fascinant aux confins de l'univers, vers un monde inconnu. Là-bas, un affrontement terrifiant qui décidera de l'avenir de l'humanité les attend…",
+        "Language": "fr-FR"
+      },
+      {
+        "Title": "Prometheus - Dunkle Zeichen",
+        "Overview": "Wir schreiben das späte 21. Jahrhundert. Überall auf der Welt wurden bei den unterschiedlichsten uralten Kulturen, wie den Azteken oder Mesopotamiern, Zeichnungen gefunden, die auf eine Art Sternenkarte hinweisen. Eine Gruppe von Wissenschaftlern unter Leitung von Dr. Elizabeth Shaw soll im Auftrag des Weyland-Konzerns, gegründet vom Visionär Peter Weyland, diesen Zeichen nachgehen, die Shaw als eine Art Einladung deutet. Die Mission, die von Meredith Vickers für den Weyland-Konzern organisiert und überwacht wird, führt das Team und die Crew von Captain Janek an den Rand des Universums und in eine Welt jenseits der Vorstellungskraft. Was sie schließlich finden, ist nicht nur die mögliche Wiege der Menschheit, sondern auch der wahrscheinliche Untergang der menschlichen Rasse.",
+        "Language": "de-DE"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "En grupp vetenskapsmän och utforskare ger sig ut på en intergalaktisk resa som sätter deras fysiska och mentala gränser på prov. När de strandsätts på en avlägsen planet gör de en upptäckt som kan avslöja svaren på mänsklighetens största frågor och livets största mysterium.",
+        "Language": "sv-SE"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Egy tudósokból álló expedíció az ember földi életének eredetére utaló nyomokat talál. Ezeket követve indulnak kutatóútjukra, mely az univerzum legtávolabbi, legveszélyesebb vidékére vezet. Olyan tájra jutnak, és olyan ellenségekkel kell szembenézniük, amilyenről ember eddig nem is álmodott. Még a rémálmaikban sem. Egy szörnyű csata vár rájuk: ha alul maradnak, akkor az egész emberiség velük pusztul.",
+        "Language": "hu-HU"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Uma equipa de exploradores descobre uma pista sobre as origens da humanidade na Terra, o que os leva numa viagem pelo Universo, em que têm de travar uma batalha para salvar o futuro da raça humana.",
+        "Language": "pt-PT"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Un grupo de científicos y exploradores emprende un viaje espacial a un remoto planeta, en el que sus límites físicos y mentales serán puestos a prueba. El motivo de la misión es que los humanos creen que allá podrán encontrar las respuestas a las preguntas más profundas y al mayor de los misterios: el origen de la vida en la Tierra.",
+        "Language": "es-ES"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Een team van ontdekkingsreizigers gaat op een reis door het universum waarbij ze een ontdekking doen die leidt naar de oorsprong van het ontstaan van de mensheid. Hierdoor belanden ze in de gevaarlijkste uithoeken van het universum. Daar zullen ze een angstaanjagend gevecht moeten doorstaan om de toekomst van de mensheid te redden.",
+        "Language": "nl-NL"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Bu mitolojik dünyanın içinde bir grup kaşif, Dünya üzerindeki insanoğlunun kökenine dair bir ipucu keşfediyor. Bu ipucu gruptakileri evrenin en karanlık köşelerine heyecanlı bir yolculuk yapmaya zorluyor. Ancak yolculuğun sonunda insan ırkının geleceğini kurtarmak için korkunç bir savaşa katılmaları gerekiyor.",
+        "Language": "tr-TR"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Et hold forskere rejser gennem universet i rumskibet Prometheus på en tur, der har til formål at udforske fremmede livsformer i rummet. Da de finder en mørk og mystisk hule (og om muligt en ny livsform), er lykken gjort, men den viser sig at være kort.  Forskerholdet ender nu som strandet på en fremmed planet i det mørkeste hjørne af universet, og imens de må kæmpe for deres overlevelse, går det op for dem, at rædslerne ikke blot er en trussel mod dem selv, men en trussel mod hele menneskeheden.",
+        "Language": "da-DK"
+      },
+      {
+        "Title": "Прометей",
+        "Overview": "В поисках сакрального знания группа ученых отправляется в самые темные и неизведанные чертоги вселенной. Именно там, в отдаленных мирах, находясь на пределе своих умственных и физических возможностей, им предстоит вступить в безжалостную схватку за будущее всего человечества.",
+        "Language": "ru-RU"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Tým badatelů objeví klíč k počátkům lidstva na Zemi a vydá se na cestu do nejtemnějších koutů vesmíru, kde musí vybojovat bitvu o záchranu budoucnosti lidské rasy.",
+        "Language": "cs-CZ"
+      },
+      {
+        "Title": "פרומתיאוס",
+        "Overview": "בסוף המאה ה-21, מפת כוכבים מתגלית בינות איוריהן של תרבויות האצטקים, המסופוטמים והמגדלנים. צוות ספינת החלל פרומתאוס נשלח למשימת מחקר לעקוב אחר המפה במטרה לגלות את מקור האנושות. כאשר הם חוקרים ציוויליזציה חייזרית מתקדמת, הם נתקלים באיום לעצם קיומה של האנושות. הסרט תוכנן כסרט מקדים לסרט הנוסע השמיני משנת 1979, אף הוא בבימויו של סקוט.",
+        "Language": "he-IL"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Arkeologit ovat löytäneet eri sivilisaatioiden tekemiä kaiverruksia ja luolamaalauksia, joissa palvotaan samaa tähtikuviota ja jättiläismäisiä hahmoja. Kaivauksia Skotlannissa johtavat Elizabeth Shaw ja hänen miehensä Charlie vakuuttuvat, että kyseessä on ulkoavaruuden olentojen jättämä viesti ihmiskunnalle. Pariskunta  epäilee, että olennot olisivat ihmisen kehityksen takana - luolamaalaus puhuu evoluution ja avaruusolentojen muinaisen yhteyden puolesta.  Tähtikuvio paikallistetaan ja sen luokse lähetetään teollisuusbiljonääri Peter Weylandin  rahoittama tutkimusalus Prometheus. Arkeologiparin ohella miehistön ytimeen kuuluvat yhtiön etua raivokkaasti valvova Meredith Vickers sekä Weylandin itsensä suunnittelema superälykäs, ihmistä täysin muistuttava David-androidi, jonka inhimillisyys ei kuitenkaan kata kaikkia tunnetiloja. Prometheus vie tutkimusryhmän universumin pimeimpään ja syrjäisimpään kolkkaan, jossa heitä odottaa taistelu koko ihmiskunnan tulevaisuuden puolesta.",
+        "Language": "fi-FI"
+      },
+      {
+        "Title": "普罗米修斯",
+        "Overview": "21世纪末，人类的科技水平已高度发达，克隆人技术和宇宙航行早已实现，不再是梦想。与此同时，许多科学家仍孜孜不倦追索着人类起源的秘密与真相。通过对许多古老文明的考察与对比，科学家伊丽莎白·肖和查理·赫洛维发现，人类可能是来自一个遥远星系的外星人创造的。在维兰德公司的资助下，他们乘坐维克丝所掌管的宇宙飞船普罗米修斯号前往那颗未知的星球。经过对当地的考察，地球人的设想成功得到印证。可是他们贸然探查“神的秘密”的行为，也将自己引入万劫不复的深渊……",
+        "Language": "zh-CN"
+      },
+      {
+        "Title": "Прометей",
+        "Overview": "Екип от изследователи разкрива ключа за произхода на човека на Земята, което ги повежда през едно вълнуващо пътешествие към най-мрачните места във вселената. Там те трябва да се впуснат в страшна битка, за да спасят бъдещето на човешката раса.",
+        "Language": "bg-BG"
+      },
+      {
+        "Title": "პრომეთე",
+        "Overview": "მკვლევარების ჯგუფმა აღმოაჩინა კაცობრიობის წარმოქმნის გასაღებს რის გამოც მათ სამყაროს ბნელ კუთხეებში მოგზაურობა უწევთ. იქ კი მათ მოუწევთ შემაძრწუნებელი ბრძოლა რათა გადაარჩინონ კაცობრიობის მომავალი.",
+        "Language": "ka-GE"
+      },
+      {
+        "Title": "Prometeusz",
+        "Overview": "Mamy rok 2089, zespół archeologów pod kierownictwem Elizabeth Shaw (Noomi Rapace) odkrywa tajemnicze piktogramy, które są według nich dziełem starożytnej cywilizacji. By dowiedzieć się więcej o autorach znaków, wyruszają supernowoczesnym statkiem kosmicznym o nazwie \"Prometeusz\" do odległego zakątka naszego wszechświata. Otóż całą wyprawę finansuje korporacja Weyland Industries, którą na statku reprezentuje bezwzględna Meredith Vickers (Charlize Theron). Naukowcy wierzą, że uda im się nawiązać pokojowe kontakty z Obcymi, ale okazuję się, że twórcy znaków są bardzo niebezpieczni. Shaw i jej towarzysze będą musieli stoczyć walkę o własne życie i przyszłość całej ludzkiej rasy.",
+        "Language": "pl-PL"
+      },
+      {
+        "Title": "Προμηθέας",
+        "Overview": "Μια ομάδα επιστημόνων και εξερευνητών ξεκινούν ένα συναρπαστικό ταξίδι, κατά το οποίο θα τεστάρουν τα φυσικά και πνευματικά τους όρια, ενώ θα βρεθούν σε έναν μακρινό κόσμο, όπου θα ανακαλύψουν τις απαντήσεις στα πιο σημαντικά ερωτήματα και στο απόλυτο μυστήριο της ζωής.",
+        "Language": "el-GR"
+      },
+      {
+        "Title": "Hành Trình Đến Hành Tinh Chết",
+        "Overview": "Nội dung phim nói về các nhà khảo cổ phát hiện ra những manh mối về nguồn gốc của loài người. Những manh mối này dẫn họ tìm tới những góc tối tăm nhất, tận cùng của vũ trụ. Tại đó, họ phải đối mặt với một cuộc chiến đầy khiếp sợ để cứu tương lai của nhân loại. Prometheus 3D có sự tham gia của dàn diễn viên tài năng: Michael Fassbender, Charlize Theron, Idris Elba, Logan Marshall-Green và Guy Pearce. Cùng chờ đợi đến ngày 8.6.2012 để trải nghiệm và tự cảm  nhận bộ phim thú vị này như thế nào.",
+        "Language": "vi-VN"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Dvaja mladí, úspešní archeológovia Eisabeth Shaw (Noomi Rapace) a Charie Holloway (Logan Marshall-Green) objavili na rôznych miestach Zeme niekoľko jaskynných piktogramov z dávnych civilizácií a postupne sa im podarilo rozlúštiť, že všetky piktogramy smerujú na jedno jediné miesto vo vzdialenom vesmíre. S týmom ďalších bádateľov sa tak na palube kozmickej lodi Prometheus vydávajú na cestu, na konci ktorej chcú nájsť odpovede na najzákladnejšie otázky ľudského bytia. Každý z nich má však rozdielnu motiváciu, prečo sa expedície zúčastniť. Elisabeth verí, že ľudstvo bolo stvorené vyššou mocou a chce sa stretnúť so stvoriteľmi a pochopiť pôvod ľudskej existencie, zatiaľ čo Holloway sa viac snaží uviesť veci na pravú mieru. Nikto z posádky však nie je pripravený na nepredstaviteľnú hrôzu, ktorá na nich čaká a netušia, že práve oni budú musieť zviesť desivý súboj o záchranu budúcnosti ľudskej rasy.",
+        "Language": "sk-SK"
+      },
+      {
+        "Title": "プロメテウス",
+        "Overview": "科学者エリザベスが、地球上の時代も場所も異なる複数の古代遺跡から共通のサインを発見した。それを知的生命体からのと分析した彼女は、巨大企業ウェイランド社が出資した宇宙船プロメテウス号で地球を旅立つ。2年以上の航海を経て未知の惑星にたどり着いたエリザベスは、冷徹な女性監督官ヴィッカーズ、精巧なアンドロイドのデヴィッドらとともに砂漠の大地にそびえ立つ遺跡のような建造物の調査を開始する。やがて遺跡の奥に足を踏み入れたエリザベスは、地球上の科学の常識では計り知れない驚愕の真実を目の当たりにするのだった……。",
+        "Language": "ja-JP"
+      },
+      {
+        "Title": "โพรมีธีอุส",
+        "Overview": "ทีมนักวิทยาศาสตร์และผู้สำรวจบนยานโพรมีธีอุส ไม่มีจุดหมายใดที่ยิ่งใหญ่ไปกว่าการเดินทางไปหาคำตอบในข้อสงสัยเกี่ยวกับสิ่งมีชีวิตที่มีความลึกซึ้ง นักวิทยาศาสตร์หนุ่มมสาวผู้อัจฉริยะทั้งสอง ชอว์ (นูมี ราเพซ) และ ฮอลโลเวย์ (โลแกน มาร์แชล-กรีน) ซึ่งมีแรงจูงใจตรงกันข้ามกันเป็นผู้นำการเดินทาง ชอว์เป็นผู้มีความศรัทธา เธออยากพบกับ “พระเจ้า” ในแบบที่ใกล้เคียงกับจินตนาการของเธอด้านศาสนาที่เก่าแก่ ขณะที่ฮอลโลเวย์กำลังมองหาข้อหักล้างความคิดทางศาสนาพวกนี้ จากภารกิจของพวกเขาในฐานะของนักโบราณคดี พวกเขาได้พบกับร่องรอยพิคโทรแกรมในถ้ำของอารยธรรมโบราณจากทั่วโลก ทั้งหมดเจาะจงไปที่สถานที่แห่งเดียวกันในจักรวาลอันไกลลับตา จึงมีการโน้มน้าวบริษัท Weyland Industries ให้มาจัดสรรทุนสำหรับภารกิจนี้",
+        "Language": "th-TH"
+      },
+      {
+        "Title": "프로메테우스",
+        "Overview": "리플리가 노스트로모호를 타고 에일리언과 접촉하기 30여년 전, 과학자 엘리자베스 쇼와 찰리 할러웨이가 스코틀랜드에서 선사시대 벽화를 발견한다. 이 벽화가 인류를 창조한 외계인들의 위치를 나타내는 지도라는 걸 깨달은 그들은 웨일랜드사가 꾸린 팀과 함께 탐사선 프로메테우스호를 타고 우주로 나아간다. 탐사대는 행성에 착륙하자마자 외계인들이 남긴 거대한 피라미드형 유적을 발견하고, 내부에서 죽은 외계인들의 시체와 마주친다. 엘리자베스는 죽은 외계인의 DNA가 인간의 것과 똑같다는 것을 밝혀내는데...",
+        "Language": "ko-KR"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "O echipă de exploratori descoperă un indiciu asupra originii omenirii de pe Pământ, ce îi conduce într-o călătorie spre cele mai întunecate colțuri ale universului. Acolo trebuie să ducă o luptă terifiantă pentru a salva viitorul rasei umane.",
+        "Language": "ro-RO"
+      },
+      {
+        "Title": "普羅米修斯",
+        "Overview": "一群地球科學家根據古文明壁畫的指引，前往遙遠的星系進行太空探測，他們意外發現極可能是人類生命起源的線索，但這卻讓他們走入宇宙最黑暗的深淵...。為了人類的存亡，這群身處異星的探險家，必須克服巨大的恐懼，挑戰人類意志力與耐力的極限，阻止地球遭到毀滅的可能...  在希臘神話中，「普羅米修斯 Prometheus」是第一位在天界偷取火種來到人世造福人群的天神，也因此為世界帶來光明，但他同情人類的行為則換來被宙斯天神的無盡懲罰。「普羅米修斯」也藉此隱喻世界起源的神秘世界，在探索的過程當中，將可能引起毀滅性的浩大危機...",
+        "Language": "zh-TW"
+      },
+      {
+        "Title": "Prometėjas",
+        "Overview": "Režisierius Ridley Scott, išgarsėjęs filmais „Svetimas\" (orig. „Alien\", 1979) ir „Bėgantis skustuvo ašmenimis\" (orig. „Blade Runner\", 1982) grįžta prie mokslinės fantastikos ištakų.Grupė mokslininkų leidžiasi į pavojingą kelionę – tyrinėti slapčiausių ir pavojingiausių Visatos užkaborių. Jie dar nežino, kad ši kelionė taps jų fizinių ir psichologinių galimybių išbandymu.Nublokšti į kitą pasaulį jie ieško atsakymų į slapčiausius žmoniją kamuojančius klausimus ir siekia įminti pagrindinę pasaulio sukūrimo paslaptį. Svetimame jiems pasaulyje mokslininkai privalo stoti į pavojingą kovą už žmogiškosios rasės ateitį, stengdamiesi užkirsti kelią sunaikinimui. Novatoriška mitologija, įspūdingi specialieji efektai, 3D formatas šio žanro genijaus R.Scotto rankose pavirs į filmą, kuris į kino istoriją bus įrašytas didžiosiomis raidėmis.",
+        "Language": "lt-LT"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Uma equipe de cientistas embarca em uma jornada espacial para descobrir a verdade sobre a origem da raça humana. No planeta de destino, eles encontram criaturas poderosas e revelações assustadoras.",
+        "Language": "pt-BR"
+      },
+      {
+        "Title": "Прометей",
+        "Overview": "Команда дослідників знаходить на Землі ключі до розкриття таємниці походження людства, що вказують їм у пошуках відповідей відправитися в захоплюючу космічну подорож до найтемніших куточків всесвіту. Там, в незвіданих світах, їм доводиться вступити в жорстоку битву за майбутнє людської раси…",
+        "Language": "uk-UA"
+      },
+      {
+        "Title": "Prometej",
+        "Overview": "Mitološki dokazi o izvoru človeštva na Zemlji usmerijo posadko raziskovalcev proti neraziskanim kotičkom vesolja. Tam pa jih čaka boj za prihodnost človeške rase. Naletijo na nezemeljsko raso vesoljskih popotnikov, ki naj bi bili stvaritelji človeštva in ustvarjalci življenja na Zemlji. Za posadko vesoljske ladje \"Prometej\" na svoji milijarde dolarjev vredni misiji so to torej nič manj kot bogovi. Tako kot pri mitološkem Prometeju pa je izzivanje bogov zelo tvegano početje.",
+        "Language": "sl-SI"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Une équipe menée par les scientifiques Elizabeth Shaw et Charlie Holloway débarque sur une planète lointaine après un voyage de deux ans, pendant lequel l'androïde David a pris soin de l'équipage placé en état d'hibernation à bord du vaisseau Prometheus. Croyant trouver les responsables de la vie sur Terre, les scientifiques débutent leurs recherches dans un sanctuaire abandonné où ils découvrent d'étranges créatures extraterrestres. Lorsque des membres d'équipage son attaqués, les responsables de l'expédition réalisent que leurs recherches pourraient mener à leur perte. Et David semble aussi avoir une mission à accomplir de son côté.",
+        "Language": "fr-CA"
+      },
+      {
+        "Title": "Прометеј",
+        "Overview": "Оригинална митологија у којој тим истраживача налази доказ о пореклу човечанства на Земљи који их води на путовање у најмрачније делове свемира. Тамо морају да се боре да би спасили будућност људске расе. Током путовања на које су кренули да би упознали оне које неки научници из тима називају својим творцима, бићима која су можда створила живот на нашој планети, посада свемирског брода „Прометеј“ и велика корпорација која је уложила трилион долара у ову мисију у потпуности изазивају богове. Из искуства особе по којој је брод и добио име, знамо да је изазивање богова веома, веома лоша идеја.",
+        "Language": "sr-RS"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Et team med oppdagelsesreisende oppdager en tegn om menneskets opprinnelse på jorden, som fører dem på en reise til universets mørkeste hjørner. Der må de kjempe en skremmende kamp for å redde menneskehetens fremtid.",
+        "Language": "nb-NO"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Året er 2089. To arkeologer oppdager en mulig ledetråd til menneskets opprinnelse på jorden. Det mystiske funnet leder dem til universets mørkeste avkroker, hvor de fire år senere våkner opp på en planet befolket av intelligente vesener - og blir nødt til å kjempe ikke bare for sine egne liv, men for å redde hele menneskehetens fremtid.",
+        "Language": "no-NO"
+      },
+      {
+        "Title": "Prometejs",
+        "Overview": "Meklējot sakrālās zināšanas, grupa zinātnieku dodas uz vistumšākajiem un nezināmākajiem Visuma nostūriem. Tieši tur, tālajās pasaulēs, atrodoties uz savu prāta un fizisko spēju robežas, viņiem nāksies iesaistīties nežēlīgā cīņā par visas cilvēces nākotni...",
+        "Language": "lv-LV"
+      },
+      {
+        "Title": "Prometeo",
+        "Overview": "Un equipo de exploradores descubre una pista a los orígenes de humanidad en la Tierra, conduciéndolos en un viaje a las esquinas más oscuras del universo. Allí, deben luchar una batalla aterradora para salvar el futuro de la raza humana.",
+        "Language": "es-MX"
+      },
+      {
+        "Title": "普羅米修斯",
+        "Overview": "時間推至當年探險隊與異形首次相遇的 30 年前，太空船「普羅米修斯號」正在遠赴外太空探索人類起源的秘密。他們相信在遙遠的星系之中，一些高等「異種生物」參與創造人類計劃，而這個剛被發現的星系，相信與人類進化，有莫大關係。太空船企業老闆彼得偉蘭（佳皮里斯）遂派出探險隊出征，作出為期兩年的太空飛行，女考古學家伊莉莎伯（露美慧柏絲）滿懷希望地與男友荷蘭（勞根瑪素堅）一起上船，並與機械人大衞（麥可法斯班德）及企業代表瑪莉迪芙（查理絲泰朗）齊齊踏上征途。怎料，在浩瀚宇宙中等待著他們的，卻是前所未有兇難和危機；不但影響到各人性命安危，更險些永遠解不開人類發跡的驚人謎團…",
+        "Language": "zh-HK"
+      },
+      {
+        "Title": "بیگانه ۵ : پرومتئوس",
+        "Overview": "تیمی از دانشمندان برای تحقیق در مورد منشاء حیات انسان با سفینه ای بنام «پرومتئوس» در کائنات سفر می کنند. طولی نمی کشد که این تیم در دنیایی بیگانه گرفتار می شوند، و در هنگام تلاش برای فرار از آن، در میابند که نه تنها جان آن ها، بلکه کل بشر در خطر است…",
+        "Language": "fa-IR"
+      },
+      {
+        "Title": "بروميثيوس",
+        "Overview": "يكتشف فريق من المستكشفين دليلًا على أصول البشرية على الأرض، مما يقودهم في رحلة إلى أحلك أركان الكون. وهناك، يتعين عليهم خوض معركة مرعبة لإنقاذ مستقبل الجنس البشري.",
+        "Language": "ar-SA"
+      },
+      {
+        "Title": "Prometej",
+        "Overview": "Ekipa znanstvenika i istraživača na Prometeju nalazi se ni više ni manje nego na putu da otkrije odgovore na najdublja životna pitanja. Ekspediciju vode dva briljantna mlada znanstvenika, Shaw (Noomi Rapace) i Holloway (Logan Marshall-Green) sa suprotnim motivima. Shaw je vjernica: želi upoznati te “bogove” kako bi se približila svojim tradicionalnim vjerskim pogledima, dok Holloway želi razotkriti tu vrstu duhovnosti. U svojem radu kao arheolozi otkrili su tragove na špiljskim piktogramima iz starih civilizacija diljem svijeta, pri čemu svi ukazuju na isto mjesto u dalekom svemiru, i uvjerili su korporaciju Weyland Industries da financira misiju. Nitko od znanstvenika nije bio pripremljen za nezamislive terore na koje će naići.",
+        "Language": "hr-HR"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Un grup de científics emprèn un viatge espacial de més de dos anys a la nau Prometheus cap a un remot planeta, amb l’objectiu de trobar resposta sobre l'origen de la vida a la terra, però aviat s'adonen que no estan sols.",
+        "Language": "ca-ES"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Inimkonna algusest pärineva vihje avastamine viib teadlased universumi kõige salapärasematesse urgastesse. Ekspeditsiooni juhivad kaks noort ja erakordselt taibukat teadlast. Shaw loodab leida nö heatahtliku rassi, kes täidaks tema ootused jumalikkuse kehastusele. Holloway eesmärgiks on aga paljastada kogu spiritualismiga seotu. Kumbki teadlastest ega nende kaaslastest pole aga valmis terroriks, mis neid ees ootab.",
+        "Language": "et-EE"
+      },
+      {
+        "Title": "Prometheus",
+        "Overview": "Një ekip eksploruesish zbulojnë gjurmët e origjinës së njerëzimit në Tokë, që i çojnë ata në një udhëtim në qoshet më të errëta të universit. Atje, ata duhet të luftojnë një betejë të tmerrshme për të shpëtuar të ardhmen e racës njerëzore.",
+        "Language": "sq-AL"
+      }
+    ],
+    "Recommendations": [
+      {
+        "TmdbId": 348,
+        "Title": "Alien"
+      },
+      {
+        "TmdbId": 1091,
+        "Title": "The Thing"
+      },
+      {
+        "TmdbId": 945961,
+        "Title": "Alien: Romulus"
+      },
+      {
+        "TmdbId": 126889,
+        "Title": "Alien: Covenant"
+      },
+      {
+        "TmdbId": 8413,
+        "Title": "Event Horizon"
+      },
+      {
+        "TmdbId": 1116201,
+        "Title": "Iron Lung"
+      },
+      {
+        "TmdbId": 395,
+        "Title": "AVP: Alien vs. Predator"
+      },
+      {
+        "TmdbId": 60935,
+        "Title": "The Thing"
+      },
+      {
+        "TmdbId": 819876,
+        "Title": "Crimes of the Future"
+      },
+      {
+        "TmdbId": 378018,
+        "Title": "The Void"
+      }
+    ],
+    "Credits": {
+      "Cast": [
+        {
+          "Name": "Noomi Rapace",
+          "Order": 0,
+          "Character": "Elizabeth Shaw",
+          "TmdbId": 87722,
+          "CreditId": "52fe481dc3a368484e0e9d7b",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/m0J6ZqEyNljqF1DXBoC9DcMStHP.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Michael Fassbender",
+          "Order": 1,
+          "Character": "David",
+          "TmdbId": 17288,
+          "CreditId": "52fe481dc3a368484e0e9d6b",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/xvbnUiB2ZBR3QIt595OzNy657Vw.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Charlize Theron",
+          "Order": 2,
+          "Character": "Meredith Vickers",
+          "TmdbId": 6885,
+          "CreditId": "52fe481dc3a368484e0e9d6f",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/gd7ShD0yt4bsR2STeQ19KQ6hvXL.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Idris Elba",
+          "Order": 3,
+          "Character": "Janek",
+          "TmdbId": 17605,
+          "CreditId": "52fe481dc3a368484e0e9d73",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/be1bVF7qGX91a6c5WeRPs5pKXln.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Guy Pearce",
+          "Order": 4,
+          "Character": "Peter Weyland",
+          "TmdbId": 529,
+          "CreditId": "52fe481dc3a368484e0e9d77",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/vTqk6Nh3WgqPubkS23eOlMAwmwa.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Logan Marshall-Green",
+          "Order": 5,
+          "Character": "Charlie Holloway",
+          "TmdbId": 130253,
+          "CreditId": "52fe481dc3a368484e0e9d7f",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/vOV76X3Dd8LsBxrTLdHybFLU8w8.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Sean Harris",
+          "Order": 6,
+          "Character": "Fifield",
+          "TmdbId": 16702,
+          "CreditId": "52fe481dc3a368484e0e9e1d",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/jouyaTu0UuZMNBrADRRkCQX1VX1.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Rafe Spall",
+          "Order": 7,
+          "Character": "Millburn",
+          "TmdbId": 28847,
+          "CreditId": "52fe481dc3a368484e0e9d83",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/zcqUqAvO7RQnitcCNNfTVPaiQtS.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Emun Elliott",
+          "Order": 8,
+          "Character": "Chance",
+          "TmdbId": 228968,
+          "CreditId": "52fe481dc3a368484e0e9d8b",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/A0PGkWHpgbus4t76hKSTqoey8HP.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Benedict Wong",
+          "Order": 9,
+          "Character": "Ravel",
+          "TmdbId": 30082,
+          "CreditId": "52fe481dc3a368484e0e9d8f",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/yYfLyrC2CE6vBWSJfkpuVKL2POM.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Kate Dickie",
+          "Order": 10,
+          "Character": "Ford",
+          "TmdbId": 71083,
+          "CreditId": "52fe481dc3a368484e0e9d87",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/mlFYUmZycpRa7TGgDTfP0xanE1Q.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Branwell Donaghey",
+          "Order": 11,
+          "Character": "Mercenary 1",
+          "TmdbId": 1074615,
+          "CreditId": "52fe481dc3a368484e0e9e03",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/gC0idonPVZ5LlHCDis7MDuAAbBa.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Vladimir \"Furdo\" Furdik",
+          "Order": 12,
+          "Character": "Mercenary 2",
+          "TmdbId": 1074616,
+          "CreditId": "52fe481dc3a368484e0e9e07",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/1661o64vCOQyFMswIMZBB3MsOb8.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "C.C. Smiff",
+          "Order": 13,
+          "Character": "Mercenary 3",
+          "TmdbId": 1074617,
+          "CreditId": "594ea963c3a368327903ac34",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/glhejpqIphvfpeOagIvxC1gHJyo.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Shane Steyn",
+          "Order": 14,
+          "Character": "Mercenary 4",
+          "TmdbId": 1074618,
+          "CreditId": "52fe481dc3a368484e0e9e25",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/f1xpvlYGIKKfEVlB1UrYr1luPO9.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Ian Whyte",
+          "Order": 15,
+          "Character": "Last Engineer",
+          "TmdbId": 946696,
+          "CreditId": "52fe481dc3a368484e0e9e29",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/svlJyDgPbTHoGjbQKU4S2J6g5hi.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "John Lebar",
+          "Order": 16,
+          "Character": "Ghost Engineer",
+          "TmdbId": 938419,
+          "CreditId": "52fe481dc3a368484e0e9e2d",
+          "Images": []
+        },
+        {
+          "Name": "Daniel James Peterson",
+          "Order": 17,
+          "Character": "Sacrifice Engineer",
+          "TmdbId": 1831995,
+          "CreditId": "593d695d925141058f020e3f",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/nuMD8VMZsawSREbT72zdNtgPPzM.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Patrick Wilson",
+          "Order": 18,
+          "Character": "Shaw's Father",
+          "TmdbId": 17178,
+          "CreditId": "52fe481dc3a368484e0e9d99",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/oym6H2QD9esk4yABjCHaUoNAOa8.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Lucy Hutchinson",
+          "Order": 19,
+          "Character": "Young Shaw",
+          "TmdbId": 564941,
+          "CreditId": "52fe481dc3a368484e0e9e31",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/4LSXzDg18tdFaB1SPITKixHL1jZ.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Giannina Facio",
+          "Order": 20,
+          "Character": "Shaw's Mother",
+          "TmdbId": 58787,
+          "CreditId": "52fe481dc3a368484e0e9e35",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/8ndgZB1rkkee3jwFB9Lx7i2ebJT.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Anil Biltoo",
+          "Order": 21,
+          "Character": "Linguist Teacher",
+          "TmdbId": 1272932,
+          "CreditId": "52fe481dc3a368484e0e9e39",
+          "Images": []
+        },
+        {
+          "Name": "Louisa Staples",
+          "Order": 22,
+          "Character": "Greeting Message Violinist",
+          "TmdbId": 1272933,
+          "CreditId": "52fe481dc3a368484e0e9e3d",
+          "Images": []
+        },
+        {
+          "Name": "James Embree",
+          "Order": 23,
+          "Character": "Mechanic 1",
+          "TmdbId": 1390394,
+          "CreditId": "54784a95c3a36849bd00024a",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/wfoYAGY9KF8LZSvvZ6FqLdvCyEb.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Florian Robin",
+          "Order": 24,
+          "Character": "Mechanic 2",
+          "TmdbId": 2143672,
+          "CreditId": "64fb922fffc9de0ee1749ffe",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/iRXSyqY65hq8lZHSZNDEyx8JX4Y.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Matthew Burgess",
+          "Order": 25,
+          "Character": "Mechanic 3",
+          "TmdbId": 4261496,
+          "CreditId": "64fb9238f8595800adc90d9c",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/hUAmnwEh37GMGMxzpIRZG5hrITe.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Eugene O'Hare",
+          "Order": 26,
+          "Character": "Mechanic 4",
+          "TmdbId": 1762541,
+          "CreditId": "64fb9241ffc9de0ee174a005",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/e3ScZAjqQUyj2P09eCL1cU8EqQr.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Richard Thomson",
+          "Order": 27,
+          "Character": "Archaeological Assistant",
+          "TmdbId": 1321379,
+          "CreditId": "64fb926dffc9de0eded1fdf2",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/vHu7vSgxKQarJzk6B7KdUCRVN3z.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Philip McGinley",
+          "Order": 28,
+          "Character": "Archaeological Assistant",
+          "TmdbId": 1251769,
+          "CreditId": "64fb927affc9de0eded1fdf8",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/9desdU4jIFT0Y03oTFi9MQaNhf9.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Jenny Rainsford",
+          "Order": 29,
+          "Character": "Archaeological Assistant",
+          "TmdbId": 1648727,
+          "CreditId": "64fb9284f85958011ca02cf0",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/pVwR9hsEiHzVTo9giCjR3vIfa8W.jpg"
+            }
+          ]
+        }
+      ],
+      "Crew": [
+        {
+          "Name": "Ridley Scott",
+          "Order": 0,
+          "Job": "Director",
+          "Department": "Directing",
+          "TmdbId": 578,
+          "CreditId": "52fe481dc3a368484e0e9d95",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/zABJmN9opmqD4orWl3KSdCaSo7Q.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Damon Lindelof",
+          "Order": 1,
+          "Job": "Writer",
+          "Department": "Writing",
+          "TmdbId": 28974,
+          "CreditId": "52fe481dc3a368484e0e9e19",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/9V75oRAKiI0chdg1wGh1wPqaXsG.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Jon Spaihts",
+          "Order": 2,
+          "Job": "Writer",
+          "Department": "Writing",
+          "TmdbId": 564940,
+          "CreditId": "52fe481dc3a368484e0e9e0d",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/n5JF0cYCWe8AUqb4Sto042rnG4e.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Ridley Scott",
+          "Order": 3,
+          "Job": "Producer",
+          "Department": "Production",
+          "TmdbId": 578,
+          "CreditId": "52fe481dc3a368484e0e9ddb",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/zABJmN9opmqD4orWl3KSdCaSo7Q.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "David Giler",
+          "Order": 4,
+          "Job": "Producer",
+          "Department": "Production",
+          "TmdbId": 915,
+          "CreditId": "55385f6892514138a9001233",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/mKsyy0SS0YNWBgDQp2Hse3i9g2h.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Walter Hill",
+          "Order": 5,
+          "Job": "Producer",
+          "Department": "Production",
+          "TmdbId": 1723,
+          "CreditId": "52fe481dc3a368484e0e9ded",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/3CiICrmhaYnirmOMHEaFXYTbsnT.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Damon Lindelof",
+          "Order": 6,
+          "Job": "Executive Producer",
+          "Department": "Production",
+          "TmdbId": 28974,
+          "CreditId": "52fe481dc3a368484e0e9e13",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/9V75oRAKiI0chdg1wGh1wPqaXsG.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Mark Huffam",
+          "Order": 7,
+          "Job": "Executive Producer",
+          "Department": "Production",
+          "TmdbId": 8401,
+          "CreditId": "52fe481dc3a368484e0e9df9",
+          "Images": []
+        },
+        {
+          "Name": "Michael Costigan",
+          "Order": 8,
+          "Job": "Executive Producer",
+          "Department": "Production",
+          "TmdbId": 40374,
+          "CreditId": "52fe481dc3a368484e0e9df3",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/3yUHDqJ067xrzLvSJHMMLQN6egP.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Michael Ellenberg",
+          "Order": 9,
+          "Job": "Executive Producer",
+          "Department": "Production",
+          "TmdbId": 1018939,
+          "CreditId": "52fe481dc3a368484e0e9dff",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/vO2x4h82Pdga3ggUcOX90CLUaKQ.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Dariusz Wolski",
+          "Order": 10,
+          "Job": "Director of Photography",
+          "Department": "Camera",
+          "TmdbId": 120,
+          "CreditId": "52fe481dc3a368484e0e9da5",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/qnNirhrjkbi6RGdP4FZeljbjzkU.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Dan O'Bannon",
+          "Order": 11,
+          "Job": "Characters",
+          "Department": "Writing",
+          "TmdbId": 5045,
+          "CreditId": "5c9130fc9251410f939ecd72",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/cg7v9I6bgfJTacud7KHG6cTXBcY.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Simon Hayes",
+          "Order": 12,
+          "Job": "Production Sound Mixer",
+          "Department": "Sound",
+          "TmdbId": 1327029,
+          "CreditId": "65e34451b7a154018678cbe1",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/owIunnVBY4U5txToVfoQcayaJh0.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Nina Gold",
+          "Order": 13,
+          "Job": "Casting",
+          "Department": "Production",
+          "TmdbId": 16363,
+          "CreditId": "52fe481dc3a368484e0e9db1",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/emeKuabMDN3C8x8ibby7FNtjRgu.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Ronald Shusett",
+          "Order": 14,
+          "Job": "Characters",
+          "Department": "Writing",
+          "TmdbId": 5046,
+          "CreditId": "5c9131040e0a2663c751f9a5",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/fNfdVzGnrp1PKfdhCdUWOvp36J9.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Max Keene",
+          "Order": 15,
+          "Job": "First Assistant Director",
+          "Department": "Directing",
+          "TmdbId": 1528429,
+          "CreditId": "66c2fc87f61f7e593afbfdd6",
+          "Images": []
+        },
+        {
+          "Name": "Daniele Massaccesi",
+          "Order": 16,
+          "Job": "Steadicam Operator",
+          "Department": "Camera",
+          "TmdbId": 8673,
+          "CreditId": "5478465392514104d8004691",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/wVDsmCu1FCcB9LwpvHbisJSJS0p.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Daniele Massaccesi",
+          "Order": 17,
+          "Job": "Camera Operator",
+          "Department": "Camera",
+          "TmdbId": 8673,
+          "CreditId": "54784647c3a36849bd0001ce",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/wVDsmCu1FCcB9LwpvHbisJSJS0p.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Dan O'Connell",
+          "Order": 18,
+          "Job": "Foley",
+          "Department": "Sound",
+          "TmdbId": 1338372,
+          "CreditId": "547841b9c3a3687a2000261e",
+          "Images": []
+        },
+        {
+          "Name": "Rob Inch",
+          "Order": 19,
+          "Job": "Stunt Coordinator",
+          "Department": "Crew",
+          "TmdbId": 40713,
+          "CreditId": "54784565c3a3687a200026a1",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/ihuAlrMLqovvyoNq42MJ4ZauvJz.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "John T. Cucci",
+          "Order": 20,
+          "Job": "Foley",
+          "Department": "Sound",
+          "TmdbId": 1367493,
+          "CreditId": "5478419292514161360053b2",
+          "Images": []
+        },
+        {
+          "Name": "H. R. Giger",
+          "Order": 21,
+          "Job": "Art Direction",
+          "Department": "Art",
+          "TmdbId": 9136,
+          "CreditId": "6066c9f80ff15a00587a2a65",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/1PzfrXpbtaLnyRJpoXUKFl2gwts.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Ron Bartlett",
+          "Order": 22,
+          "Job": "Sound Re-Recording Mixer",
+          "Department": "Sound",
+          "TmdbId": 16177,
+          "CreditId": "547849fb92514160e3008dfc",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/AmFG81joHLkvnh4Io20TdCCBk8P.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Annie Penn",
+          "Order": 23,
+          "Job": "Script Supervisor",
+          "Department": "Directing",
+          "TmdbId": 1390388,
+          "CreditId": "547848929251416a270002f5",
+          "Images": []
+        },
+        {
+          "Name": "Perry Evans",
+          "Order": 24,
+          "Job": "Gaffer",
+          "Department": "Lighting",
+          "TmdbId": 1390367,
+          "CreditId": "547845c7925141231c0015f1",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/7zwBAcgSBLObRICHcUReHTJUPYe.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Rowley Irlam",
+          "Order": 25,
+          "Job": "Stunts",
+          "Department": "Crew",
+          "TmdbId": 1388878,
+          "CreditId": "66f85af01a9c9188fecc2dfb",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/Ai0TlD5HbmfFtSlcg38qOp25dJY.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Jason Lei Howden",
+          "Order": 26,
+          "Job": "Rotoscoping Artist",
+          "Department": "Visual Effects",
+          "TmdbId": 1422673,
+          "CreditId": "68da236142f426a59abb0d71",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/4SybBzMHKYfU6jKByLn7n4pFCFX.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Arthur Max",
+          "Order": 27,
+          "Job": "Production Design",
+          "Department": "Art",
+          "TmdbId": 944,
+          "CreditId": "52fe481dc3a368484e0e9dbd",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/kIh83DFSNqWQuHsR0CiKw3Qjf2n.jpg"
+            }
+          ]
+        },
+        {
+          "Name": "Chris Lyons",
+          "Order": 28,
+          "Job": "Special Effects Makeup Artist",
+          "Department": "Costume & Make-Up",
+          "TmdbId": 1635006,
+          "CreditId": "69a7bcb60883811f6274fe22",
+          "Images": []
+        },
+        {
+          "Name": "Avy Kaufman",
+          "Order": 29,
+          "Job": "Casting",
+          "Department": "Production",
+          "TmdbId": 2952,
+          "CreditId": "52fe481dc3a368484e0e9db7",
+          "Images": [
+            {
+              "CoverType": "Headshot",
+              "Url": "https://image.tmdb.org/t/p/original/9hh0HIAmLgPqMTn1keJvh1MF1DR.jpg"
+            }
+          ]
+        }
+      ]
+    },
+    "Studio": "Dune Entertainment",
+    "YoutubeTrailerId": "cJMIzdf1eo8",
+    "Certifications": [
+      {
+        "Country": "AU",
+        "Certification": "MA 15+"
+      },
+      {
+        "Country": "BE",
+        "Certification": "18"
+      },
+      {
+        "Country": "BG",
+        "Certification": "D"
+      },
+      {
+        "Country": "BR",
+        "Certification": "14"
+      },
+      {
+        "Country": "CH",
+        "Certification": "16"
+      },
+      {
+        "Country": "CZ",
+        "Certification": "15+"
+      },
+      {
+        "Country": "DE",
+        "Certification": "16"
+      },
+      {
+        "Country": "DK",
+        "Certification": "15"
+      },
+      {
+        "Country": "ES",
+        "Certification": "16"
+      },
+      {
+        "Country": "FI",
+        "Certification": "K-16"
+      },
+      {
+        "Country": "FR",
+        "Certification": "12"
+      },
+      {
+        "Country": "GB",
+        "Certification": "15"
+      },
+      {
+        "Country": "GR",
+        "Certification": "Κ-15"
+      },
+      {
+        "Country": "HU",
+        "Certification": "16"
+      },
+      {
+        "Country": "IE",
+        "Certification": "15A"
+      },
+      {
+        "Country": "IT",
+        "Certification": "VM14"
+      },
+      {
+        "Country": "KR",
+        "Certification": "19"
+      },
+      {
+        "Country": "MX",
+        "Certification": "B-15"
+      },
+      {
+        "Country": "NL",
+        "Certification": "16"
+      },
+      {
+        "Country": "NO",
+        "Certification": "18"
+      },
+      {
+        "Country": "NZ",
+        "Certification": "R16"
+      },
+      {
+        "Country": "PL",
+        "Certification": "16"
+      },
+      {
+        "Country": "PT",
+        "Certification": "M/16"
+      },
+      {
+        "Country": "RO",
+        "Certification": "18"
+      },
+      {
+        "Country": "SE",
+        "Certification": "15"
+      },
+      {
+        "Country": "SK",
+        "Certification": "15"
+      },
+      {
+        "Country": "US",
+        "Certification": "R"
+      }
+    ],
+    "Status": null,
+    "Collection": {
+      "TmdbId": 135416,
+      "Name": "Prometheus Collection",
+      "Images": null,
+      "Overview": null,
+      "Translations": null,
+      "Parts": null
+    },
+    "Homepage": "https://www.20thcenturystudios.com/movies/prometheus"
+  }
+]

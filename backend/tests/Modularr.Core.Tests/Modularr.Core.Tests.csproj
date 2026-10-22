@@ -11,5 +11,6 @@
   <ItemGroup>
     <None Include="PostProcessing\Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Indexers\Cardigann\Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Metadata\Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
