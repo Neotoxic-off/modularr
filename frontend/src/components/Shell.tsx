@@ -198,13 +198,13 @@ function Header({ pathname, crumb, onSearch, onNotifications }: { pathname: stri
       <Link href="/" aria-label="modularr, Today" className="rounded-pill md:hidden"><Logo /></Link>
       <div className="min-w-0 flex-1 max-md:hidden">
         {crumb ? (
-          <p className="flex min-w-0 items-baseline gap-2 font-serif text-[24px] leading-none">
+          <p className="flex min-w-0 items-baseline gap-2 font-display text-[24px] leading-none">
             <Link href={crumb.href} className="shrink-0 text-ink-2 hover:text-ink">{crumb.label}</Link>
             <span aria-hidden="true" className="text-ink-3">/</span>
             <span className="truncate">{crumb.title}</span>
           </p>
         ) : (
-          <p aria-hidden="true" className={`truncate font-serif text-[24px] leading-none transition duration-300 ${scrolled ? "opacity-100" : "translate-y-1 opacity-0"}`}>{title}</p>
+          <p aria-hidden="true" className={`truncate font-display text-[24px] leading-none transition duration-300 ${scrolled ? "opacity-100" : "translate-y-1 opacity-0"}`}>{title}</p>
         )}
       </div>
       <div className="ml-auto flex items-center gap-2">
@@ -246,7 +246,7 @@ function UserMenu() {
   const { user, logout } = useSession();
   return (
     <Menu label={`Account menu for ${user.username}`} trigger={user.username[0]}
-      className="grid size-11 cursor-pointer place-items-center rounded-full bg-white font-serif text-[22px] leading-none text-canvas uppercase transition hover:bg-white/85">
+      className="grid size-11 cursor-pointer place-items-center rounded-full bg-white font-display text-[22px] leading-none text-canvas uppercase transition hover:bg-white/85">
       <div className="mb-1 border-b border-hair-2 px-3 pt-2 pb-3">
         <p className="truncate text-[15px] font-semibold">{user.username}</p>
         <p className="text-[13px] text-ink-3">{user.role === "Admin" ? "Administrator" : "Member"}</p>

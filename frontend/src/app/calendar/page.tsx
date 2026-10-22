@@ -65,7 +65,7 @@ export default function CalendarPage() {
                 className={`glass flex min-w-0 flex-col gap-2 rounded-tile p-3 md:min-h-[360px] ${day === today ? "ring-1 ring-white/40" : ""} ${airing && episodes.length === 0 ? "max-md:hidden" : ""}`}>
                 <p className="flex items-baseline justify-between gap-2 px-1 pt-1">
                   <span className="caption">{d.toLocaleDateString(undefined, { weekday: "short" })}</span>
-                  <span className={`font-serif text-[28px] leading-none ${day === today ? "" : "text-ink-2"}`}>{d.getDate()}</span>
+                  <span className={`font-display text-[28px] leading-none ${day === today ? "" : "text-ink-2"}`}>{d.getDate()}</span>
                 </p>
                 {!airing ? <Skeleton className="h-16 rounded-card" /> : episodes.length === 0 ? (
                   <p className="px-1 text-[13px] text-ink-3">Nothing airing.</p>

@@ -265,7 +265,7 @@ export function PageHeader({ title, description, children }: { title: string; de
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        <h1 tabIndex={-1} className="font-serif text-[40px] leading-none outline-none">{title}</h1>
+        <h1 tabIndex={-1} className="font-display text-[40px] leading-none outline-none">{title}</h1>
         {description && <p className="mt-2 text-[13px] text-ink-3">{description}</p>}
       </div>
       {children}
@@ -524,7 +524,7 @@ export function Menu({ label, trigger, className = "", align = "right", children
       </button>
       {open && (
         // Nearly opaque: a menu often opens over another blurred panel, whose own blur cannot reach behind it.
-        <div role="menu" aria-label={label} className={`glass-pop absolute top-full z-40 mt-2 w-64 animate-rise rounded-tile bg-[rgb(20_19_27/.97)] p-2 ${align === "right" ? "right-0" : "left-0"}`}>
+        <div role="menu" aria-label={label} className={`glass-pop absolute top-full z-40 mt-2 w-64 animate-rise rounded-tile bg-[rgb(10_10_10/.97)] p-2 ${align === "right" ? "right-0" : "left-0"}`}>
           <CloseMenu value={() => setOpen(false)}>{children}</CloseMenu>
         </div>
       )}
@@ -552,8 +552,8 @@ export function MenuItem({ icon, href, onClick, danger = false, disabled, classN
 export function Logo({ markOnly = false }: { markOnly?: boolean }) {
   return (
     <span className="flex items-center gap-2.5">
-      <span className="grid size-8 shrink-0 place-items-center rounded-[11px] bg-white font-serif text-[22px] leading-none text-canvas italic">m</span>
-      {markOnly ? <span className="sr-only">modularr</span> : <span className="font-serif text-[24px] leading-none">modularr</span>}
+      <span className="grid size-8 shrink-0 place-items-center rounded-[11px] bg-white font-display text-[22px] leading-none text-canvas">m</span>
+      {markOnly ? <span className="sr-only">modularr</span> : <span className="font-display text-[24px] leading-none">modularr</span>}
     </span>
   );
 }

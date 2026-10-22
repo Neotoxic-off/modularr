@@ -168,7 +168,7 @@ function Hero({ item, status, downloading }: { item: LibraryItem; status?: Statu
           {status && (downloading
             ? <Link href="/downloads/" className="inline-block rounded-pill"><StatusBadge status={status} /></Link>
             : <StatusBadge status={status} />)}
-          <h1 tabIndex={-1} className="scrim-text font-serif text-[clamp(40px,6vw,64px)] leading-none text-balance outline-none">{item.title}</h1>
+          <h1 tabIndex={-1} className="scrim-text font-display text-[clamp(40px,6vw,64px)] leading-none text-balance outline-none">{item.title}</h1>
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-2">
             {item.year > 0 && <span className="tabular-nums">{item.year}</span>}
             <Rating value={item.rating} className="text-[13px]" />

@@ -118,7 +118,7 @@ export default function TodayPage() {
       <p aria-live="polite" className="sr-only">{announcement}</p>
       <header className="pt-2 md:pt-4">
         <p className="caption">{new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}</p>
-        <h1 tabIndex={-1} className="mt-3 font-serif text-[clamp(40px,6vw,64px)] leading-none outline-none">
+        <h1 tabIndex={-1} className="mt-3 font-display text-[clamp(40px,6vw,64px)] leading-none outline-none">
           {greeting()}, <span className="capitalize">{user.username}</span>.
         </h1>
         <p className="mt-3 text-[15px] text-ink-2">
@@ -206,7 +206,7 @@ function JustAddedTile({ item, loading, style }: { item: LibraryItem | null; loa
       <h2 className="caption relative p-5 text-ink-2">Just added</h2>
       <div className="relative flex flex-wrap items-end justify-between gap-4 p-5">
         <div className="min-w-0">
-          <p className="scrim-text line-clamp-2 text-balance font-serif text-[clamp(32px,4vw,52px)] leading-none">{item.title}</p>
+          <p className="scrim-text line-clamp-2 text-balance font-display text-[clamp(32px,4vw,52px)] leading-none">{item.title}</p>
           <p className="scrim-text mt-2 text-[13px] text-ink-2">
             {[item.year > 0 && item.year, item.genres.slice(0, 2).join(", "), isSeries(item) && `${item.episodesWithFile}/${item.episodes} episodes`].filter(Boolean).join("   ")}
           </p>
@@ -277,7 +277,7 @@ function AiringTile({ summary, compact = false, style }: { summary: Summary; com
       <Tile title="Airing" className={compactTile}>
         {!summary.data ? <TileSkeleton /> : (
           <div className="flex flex-1 flex-col justify-end">
-            <p className="font-serif text-5xl leading-none tabular-nums">{airing.length}</p>
+            <p className="font-display text-5xl leading-none tabular-nums">{airing.length}</p>
             <p className="mt-1 text-[13px] text-ink-2">{airing.length === 1 ? "episode" : "episodes"} this week</p>
           </div>
         )}
@@ -345,7 +345,7 @@ function AttentionTile({ summary, library, compact = false, style }: { summary: 
       <Tile title="Attention" className={compactTile}>
         {!summary.data ? <TileSkeleton /> : (
           <div className="flex flex-1 flex-col justify-end">
-            <p className={`font-serif text-5xl leading-none tabular-nums ${total > 0 ? "text-warn" : ""}`}>{total}</p>
+            <p className={`font-display text-5xl leading-none tabular-nums ${total > 0 ? "text-warn" : ""}`}>{total}</p>
             <p className="mt-1 text-[13px] text-ink-2">{total === 0 ? "All good" : "need a look"}</p>
           </div>
         )}
@@ -360,7 +360,7 @@ function AttentionTile({ summary, library, compact = false, style }: { summary: 
           {rows.map((r) => (
             <li key={r.label}>
               <Link href={r.href} className="well flex h-full min-h-24 flex-col justify-between rounded-card p-3 transition hover:bg-fill">
-                <span className={`font-serif text-5xl leading-none tabular-nums ${r.value > 0 ? "text-warn" : "text-ink-3"}`}>{r.value}</span>
+                <span className={`font-display text-5xl leading-none tabular-nums ${r.value > 0 ? "text-warn" : "text-ink-3"}`}>{r.value}</span>
                 <span className="text-[12px] leading-tight font-medium text-ink-2">{r.label}</span>
               </Link>
             </li>
@@ -379,7 +379,7 @@ function LibraryTile({ summary, compact = false, style }: { summary: Summary; co
       <Tile title="Library" className={compactTile}>
         {!counts ? <TileSkeleton /> : (
           <div className="flex flex-1 flex-col justify-end">
-            <p className="font-serif text-5xl leading-none tabular-nums">{total}</p>
+            <p className="font-display text-5xl leading-none tabular-nums">{total}</p>
             <p className="mt-1 text-[13px] text-ink-2">{total === 1 ? "title" : "titles"}</p>
           </div>
         )}
@@ -391,7 +391,7 @@ function LibraryTile({ summary, compact = false, style }: { summary: Summary; co
     <Tile title="Library" style={style}>
       {summary.error && !counts ? <TileError message={summary.error} onRetry={summary.reload} /> : !counts ? <TileSkeleton /> : (
         <>
-          <p className="flex items-baseline gap-2"><span className="font-serif text-5xl leading-none tabular-nums">{total}</span><span className="text-[13px] text-ink-2">titles</span></p>
+          <p className="flex items-baseline gap-2"><span className="font-display text-5xl leading-none tabular-nums">{total}</span><span className="text-[13px] text-ink-2">titles</span></p>
           <ul className="space-y-1">
             {rows.map(([kind, label, value]) => (
               <li key={kind}>
@@ -526,7 +526,7 @@ function TimelineSection({ feed, library, downloads, onChanged, limit }: {
   return (
     <section id="timeline" aria-labelledby="timeline-heading" className="scroll-mt-24">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 id="timeline-heading" className="font-serif text-[28px] leading-none">Timeline</h2>
+        <h2 id="timeline-heading" className="font-display text-[28px] leading-none">Timeline</h2>
         <div role="group" aria-label="Show" className="rail -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           {filters.map((f) => <Chip key={f.value} selected={filter === f.value} onClick={() => setFilter(f.value)}>{f.label}</Chip>)}
         </div>
@@ -565,7 +565,7 @@ function FirstRun() {
   ];
   return (
     <section aria-labelledby="first-run" className="space-y-4">
-      <h2 id="first-run" className="font-serif text-[28px] leading-none">Get set up</h2>
+      <h2 id="first-run" className="font-display text-[28px] leading-none">Get set up</h2>
       <ol className="grid gap-4 md:grid-cols-3">
         {steps.map((s, i) => (
           <li key={s.title} style={rise(i)} className="glass flex animate-rise flex-col gap-3 rounded-tile p-5">

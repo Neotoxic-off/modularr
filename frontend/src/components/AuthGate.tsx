@@ -73,7 +73,7 @@ function Login({ setup, onSignedIn }: { setup: boolean; onSignedIn: (user: User)
         <div className="space-y-6">
           <Logo />
           <div>
-            <h1 className="font-serif text-[40px] leading-none">{setup ? "Make it yours." : "Welcome back."}</h1>
+            <h1 className="font-display text-[40px] leading-none">{setup ? "Make it yours." : "Welcome back."}</h1>
             <p className="mt-2 text-[13px] text-ink-2">{setup ? "Create the admin account. It manages settings, users and the library." : "Sign in to continue to your library."}</p>
           </div>
         </div>
