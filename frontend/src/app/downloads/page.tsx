@@ -2,33 +2,32 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { api, errorMessage, formatEta, formatSize, titleHref } from "@/lib/api";
-import type { Download, DownloadState } from "@/lib/api";
+import type { Download, DownloadState, LibraryItem } from "@/lib/api";
 import { useActivity, useActivityRefresh } from "@/components/Activity";
 import { Icon } from "@/components/icons";
-import { Alert, Badge, Button, Empty, Modal, PageHeader, Skeleton, Spinner, Switch, Segmented } from "@/components/ui";
-import type { Tone } from "@/components/ui";
+import { PosterArt } from "@/components/Poster";
+import { useToast } from "@/components/Toasts";
+import { Alert, Badge, Button, Checkbox, Empty, Modal, PageHeader, Progress, Skeleton } from "@/components/ui";
 
-type Group = "active" | "completed" | "failed" | "all";
+type Group = "active" | "importing" | "failed" | "completed";
 
 const groupOf: Record<DownloadState, Group | null> = {
-  Downloading: "active", ImportPending: "active", Importing: "active",
-  Imported: "completed",
+  Downloading: "active",
+  ImportPending: "importing", Importing: "importing",
   ImportBlocked: "failed", FailedPending: "failed", Failed: "failed",
+  Imported: "completed",
   Ignored: null,
 };
 
-const stateLabel: Record<DownloadState, [string, Tone]> = {
-  Downloading: ["Downloading", "live"], ImportPending: ["Waiting to import", "neutral"], Importing: ["Importing", "live"],
-  Imported: ["Imported", "ok"], ImportBlocked: ["Import blocked", "warn"], FailedPending: ["Failed", "bad"],
-  Failed: ["Failed", "bad"], Ignored: ["Removed", "neutral"],
-};
-
 const POLL_MS = 2000;
+const COMPLETED_DAYS = 7;
 
 export default function DownloadsPage() {
+  const toast = useToast();
   const [downloads, setDownloads] = useState<Download[] | null>(null);
-  const [group, setGroup] = useState<Group>("active");
+  const [titles, setTitles] = useState<{ movies: ReadonlyMap<number, LibraryItem>; series: ReadonlyMap<number, LibraryItem> }>({ movies: new Map(), series: new Map() });
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<Download | null>(null);
   const { connected, epoch, progress } = useActivity();
@@ -40,6 +39,13 @@ export default function DownloadsPage() {
   useEffect(refresh, [refresh, epoch]);
   useActivityRefresh((a) => a.downloadId !== null, refresh);
 
+  // Posters, destinations and whether a file is already there come from the library.
+  useEffect(() => {
+    Promise.all([api.movies(), api.series()])
+      .then(([movies, series]) => setTitles({ movies: new Map(movies.map((m) => [m.id, m])), series: new Map(series.map((s) => [s.id, s])) }))
+      .catch(() => undefined);
+  }, [epoch]);
+
   // Polls only while the live stream is down.
   useEffect(() => {
     if (connected) return;
@@ -47,100 +53,162 @@ export default function DownloadsPage() {
     return () => clearInterval(timer);
   }, [connected, refresh]);
 
-  const visible = (downloads ?? []).filter((d) => groupOf[d.state] !== null).map((d) => {
-    const live = progress.get(d.id);
-    return live ? { ...d, progress: live.progress, downloadRate: live.rate, eta: live.eta } : d;
-  });
-  const inGroup = (d: Download, g: Group) => g === "all" || groupOf[d.state] === g;
-  const count = (g: Group) => visible.filter((d) => inGroup(d, g)).length;
-  const shown = visible.filter((d) => inGroup(d, group)).sort((a, b) => b.added.localeCompare(a.added));
-  const speed = visible.reduce((n, d) => n + (groupOf[d.state] === "active" && d.status !== "Paused" ? d.downloadRate ?? 0 : 0), 0);
+  const since = new Date();
+  since.setDate(since.getDate() - COMPLETED_DAYS);
+  const visible = (downloads ?? [])
+    .filter((d) => groupOf[d.state] !== null && (groupOf[d.state] !== "completed" || new Date(d.added) > since))
+    .map((d) => {
+      const live = progress.get(d.id);
+      return live ? { ...d, progress: live.progress, downloadRate: live.rate, eta: live.eta } : d;
+    })
+    .sort((a, b) => b.added.localeCompare(a.added));
+  const inGroup = (g: Group) => visible.filter((d) => groupOf[d.state] === g);
+  const active = inGroup("active");
+  const running = active.filter((d) => d.status !== "Paused");
+  const speed = running.reduce((n, d) => n + (d.downloadRate ?? 0), 0);
+  const titleOf = (d: Download) => (d.movieId !== null ? titles.movies.get(d.movieId) : d.seriesId !== null ? titles.series.get(d.seriesId) : undefined);
 
-  const act = (action: Promise<void>) => action.then(refresh).catch((e: unknown) => setError(errorMessage(e)));
+  const act = async (action: () => Promise<unknown>, done?: string, d?: Download) => {
+    try {
+      await action();
+      if (done && d) toast({ key: `download:${d.id}`, icon: "search", tone: "seek", title: titleOf(d)?.title ?? d.releaseTitle, message: done });
+    } catch (e) {
+      toast({ key: d ? `download:${d.id}` : "downloads", icon: "alert", tone: "bad", title: "Downloads", message: errorMessage(e) });
+    }
+    refresh();
+  };
+  const searchAgain = (d: Download) => (d.movieId !== null ? api.autoSearch("movie", d.movieId) : d.seriesId !== null ? api.autoSearch("series", d.seriesId) : Promise.resolve());
+
+  const row = (d: Download) => {
+    const item = titleOf(d);
+    const canSearch = !!item && !item.hasFile;
+    return (
+      <Row key={d.id} download={d} item={item} onRemove={() => setRemoving(d)}
+        onToggle={() => void act(() => (d.status === "Paused" ? api.resume(d.id) : api.pause(d.id)))}
+        onRetry={canSearch ? () => void act(() => searchAgain(d), "Searching again.", d) : undefined}
+        onBlocklist={canSearch ? () => void act(async () => { await api.removeDownload(d.id, true, true); await searchAgain(d); }, "Release blocklisted. Searching again.", d) : undefined} />
+    );
+  };
 
   return (
     <>
-      <PageHeader title="Downloads" description={downloads && (count("active") > 0
-        ? <span><span className="text-ink tabular-nums">{count("active")}</span> active, <span className="text-ink tabular-nums">{formatSize(speed)}/s</span> in total</span>
+      <PageHeader title="Downloads" description={downloads && (running.length > 0
+        ? <span><span className="text-ink tabular-nums">{formatSize(speed)}/s</span> across {running.length} {running.length === 1 ? "download" : "downloads"}</span>
         : "Nothing downloading right now.")}>
-        <Segmented label="Show" value={group} onChange={setGroup} options={[
-          { value: "active", label: "Active", count: count("active") },
-          { value: "completed", label: "Completed", count: count("completed") },
-          { value: "failed", label: "Failed", count: count("failed") },
-          { value: "all", label: "All", count: count("all") },
-        ]} />
+        {active.length > 0 && (running.length > 0
+          ? <Button icon="pause" onClick={() => void act(() => Promise.all(running.map((d) => api.pause(d.id))))}>Pause all</Button>
+          : <Button icon="play" onClick={() => void act(() => Promise.all(active.map((d) => api.resume(d.id))))}>Resume all</Button>)}
       </PageHeader>
       {error && <div className="mb-4"><Alert>{error}</Alert></div>}
       {!downloads ? (
-        <div className="space-y-2">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-20" />)}</div>
-      ) : shown.length === 0 ? (
-        <Empty icon="download" title={group === "failed" ? "No failed downloads" : group === "completed" ? "Nothing completed yet" : "Nothing downloading"}>
-          Releases grabbed for your titles show up here with live progress.
+        <div className="space-y-3">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-24 rounded-[20px]" />)}</div>
+      ) : visible.length === 0 ? (
+        <Empty icon="download" title="Queue is empty.">
+          <p>Releases grabbed for your titles show up here with live progress.</p>
+          <Link href="/explore/" className="mt-3 inline-flex h-9 items-center rounded-pill px-4 text-[13px] font-semibold text-ink hover:bg-fill">Explore →</Link>
         </Empty>
       ) : (
-        <ul className="divide-y divide-hair-2 overflow-hidden rounded-tile border border-hair bg-fill">
-          {shown.map((d) => (
-            <Row key={d.id} download={d}
-              onToggle={() => act(d.status === "Paused" ? api.resume(d.id) : api.pause(d.id))}
-              onRemove={() => setRemoving(d)} />
-          ))}
-        </ul>
+        <div className="space-y-8">
+          <Group title="Active" items={active}>{active.map(row)}</Group>
+          <Group title="Importing" items={inGroup("importing")}>{inGroup("importing").map(row)}</Group>
+          <Group title="Failed" items={inGroup("failed")}>{inGroup("failed").map(row)}</Group>
+          {inGroup("completed").length > 0 && (
+            <details className="group">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2">
+                <h2 className="caption">Completed, last {COMPLETED_DAYS} days</h2>
+                <span className="text-[11px] text-ink-3 tabular-nums">{inGroup("completed").length}</span>
+                <Icon name="chevronDown" size={16} className="text-ink-3 transition group-open:rotate-180" />
+              </summary>
+              <ul className="mt-3 space-y-3">{inGroup("completed").map(row)}</ul>
+            </details>
+          )}
+        </div>
       )}
       {removing && <RemoveDialog download={removing} onClose={() => setRemoving(null)} onRemoved={() => { setRemoving(null); refresh(); }} />}
     </>
   );
 }
 
-function Row({ download: d, onToggle, onRemove }: { download: Download; onToggle: () => void; onRemove: () => void }) {
-  const [label, tone] = stateLabel[d.state];
+function Group({ title, items, children }: { title: string; items: readonly Download[]; children: ReactNode }) {
+  if (items.length === 0) return null;
+  return (
+    <section aria-label={title}>
+      <h2 className="caption mb-3 flex items-center gap-2">{title}<span className="tabular-nums">{items.length}</span></h2>
+      <ul className="space-y-3">{children}</ul>
+    </section>
+  );
+}
+
+function Row({ download: d, item, onToggle, onRemove, onRetry, onBlocklist }: {
+  download: Download;
+  item: LibraryItem | undefined;
+  onToggle: () => void;
+  onRemove: () => void;
+  onRetry?: () => void;
+  onBlocklist?: () => void;
+}) {
+  const group = groupOf[d.state];
   const paused = d.status === "Paused";
-  const active = groupOf[d.state] === "active";
-  const progress = Math.round((d.progress ?? (d.state === "Imported" ? 1 : 0)) * 100);
+  const value = d.progress ?? (group === "completed" ? 1 : 0);
   const href = d.movieId !== null ? titleHref("movie", d.movieId) : d.seriesId !== null ? titleHref("series", d.seriesId) : null;
+  const eta = d.eta !== null ? formatEta(d.eta) : null;
 
   return (
-    <li className="px-4 py-4 transition hover:bg-fill-2 sm:px-5">
-      <div className="flex items-start gap-3">
-        <span className={`mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg ${d.category === "movies" ? "bg-fill-2 text-live" : "bg-fill-2 text-ink"}`}>
-          <Icon name={d.category === "movies" ? "film" : "tv"} size={16} />
-        </span>
-        <div className="min-w-0 flex-1">
-          {href
-            ? <Link href={href} className="block truncate text-sm font-medium hover:text-ink" title={d.releaseTitle}>{d.releaseTitle}</Link>
-            : <p className="truncate text-sm font-medium" title={d.releaseTitle}>{d.releaseTitle}</p>}
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-3">
-            <Badge tone={paused ? "neutral" : tone}>{paused ? "Paused" : label}</Badge>
-            <span className="tabular-nums">{formatSize(d.size)}</span>
-            <span>{d.indexer}</span>
-            {active && !paused && d.downloadRate != null && (
-              <>
-                <span className="flex items-center gap-1 tabular-nums"><Icon name="down" size={12} />{formatSize(d.downloadRate)}/s</span>
-                <span className="flex items-center gap-1 tabular-nums"><Icon name="clock" size={12} />{formatEta(d.eta)} left</span>
-              </>
+    <li className="well flex gap-4 rounded-[20px] p-4">
+      <PosterArt src={item?.poster ?? null} title={item?.title ?? ""} className="w-[52px] shrink-0 rounded-[10px]" />
+      <div className="min-w-0 flex-1 space-y-2.5">
+        <div className="flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            {href
+              ? <Link href={href} className="block truncate text-[15px] font-semibold hover:underline">{item?.title ?? d.releaseTitle}</Link>
+              : <p className="truncate text-[15px] font-semibold">{d.releaseTitle}</p>}
+            <p className="truncate text-[13px] text-ink-3" title={d.releaseTitle}>{d.releaseTitle}</p>
+          </div>
+          {group === "active" && (
+            <button onClick={onToggle} aria-label={paused ? "Resume" : "Pause"} title={paused ? "Resume" : "Pause"}
+              className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-ink-2 hover:bg-fill-2 hover:text-ink">
+              <Icon name={paused ? "play" : "pause"} size={17} />
+            </button>
+          )}
+          <button onClick={onRemove} aria-label="Remove" title="Remove"
+            className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-ink-2 hover:bg-fill-2 hover:text-ink">
+            <Icon name="trash" size={17} />
+          </button>
+        </div>
+
+        {group === "active" && (
+          <div className="space-y-1.5">
+            <Progress value={value} eta={eta} label={`${item?.title ?? "Download"} progress`} tone={paused ? "ink" : "live"} />
+            <p className="flex flex-wrap gap-x-3 text-[13px] text-ink-3 tabular-nums">
+              <span className="font-semibold text-ink">{Math.round(value * 100)}%</span>
+              {paused ? <span>Paused</span> : <>
+                {d.downloadRate != null && <span>{formatSize(d.downloadRate)}/s</span>}
+                {eta && <span>{eta} left</span>}
+              </>}
+              <span>{formatSize(d.size)}</span>
+              <span className="max-sm:hidden">{d.indexer}</span>
+            </p>
+          </div>
+        )}
+        {group === "importing" && <p className="flex items-center gap-2 text-[13px] text-live"><span className="size-1.5 animate-pulse-dot rounded-full bg-live" />Moving to library…</p>}
+        {group === "failed" && (
+          <div className="space-y-2.5">
+            <p className="flex items-start gap-2 text-[13px] text-bad"><Icon name="alert" size={15} className="mt-0.5 shrink-0" />{d.message ?? (d.state === "ImportBlocked" ? "The import is blocked." : "The download failed.")}</p>
+            {onRetry && onBlocklist && (
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" icon="refresh" onClick={onRetry}>Retry</Button>
+                <Button size="sm" variant="ghost" icon="ban" onClick={onBlocklist}>Blocklist & search again</Button>
+              </div>
             )}
           </div>
-          {d.message && <p className="mt-1.5 text-xs text-warn">{d.message}</p>}
-        </div>
-        <div className="flex shrink-0 gap-0.5">
-          {active && (
-            <Button variant="ghost" size="sm" aria-label={paused ? "Resume" : "Pause"} title={paused ? "Resume" : "Pause"} onClick={onToggle}>
-              <Icon name={paused ? "play" : "pause"} size={16} />
-            </Button>
-          )}
-          <Button variant="ghost" size="sm" aria-label="Remove" title="Remove" onClick={onRemove}>
-            <Icon name="trash" size={16} />
-          </Button>
-        </div>
+        )}
+        {group === "completed" && (
+          <p className="flex flex-wrap items-center gap-2 text-[13px]">
+            <Badge tone="ok"><Icon name="check" size={12} strokeWidth={2.6} />Imported</Badge>
+            {item && <span className="min-w-0 truncate text-ink-3" title={item.path}>Moved to {item.path}</span>}
+          </p>
+        )}
       </div>
-
-      {active && (
-        <div className="mt-3 flex items-center gap-3 sm:pl-12">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-fill-2" role="progressbar" aria-label="Progress" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
-            <div className={`h-full rounded-full transition-[width] duration-700 ${paused ? "bg-ink-3" : "bg-gradient-to-r from-white to-white"}`} style={{ width: `${progress}%` }} />
-          </div>
-          <span className="w-10 text-right text-xs text-ink-3 tabular-nums">{progress}%</span>
-        </div>
-      )}
     </li>
   );
 }
@@ -166,11 +234,11 @@ function RemoveDialog({ download, onClose, onRemoved }: { download: Download; on
     <Modal onClose={onClose} title="Remove download?" description={<span className="break-all">{download.releaseTitle}</span>}
       footer={<>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button variant="danger" onClick={remove} disabled={busy}>{busy ? <Spinner /> : "Remove"}</Button>
+        <Button variant="danger" onClick={remove} loading={busy}>Remove</Button>
       </>}>
-      <div className="space-y-4 px-5 pb-5">
-        <Switch checked={deleteData} onChange={setDeleteData} label="Delete downloaded data" description="Removes the files from the download folder." />
-        <Switch checked={blocklist} onChange={setBlocklist} label="Blocklist this release" description="This exact release will not be grabbed again." />
+      <div className="space-y-2 px-5 pb-5">
+        <Checkbox checked={deleteData} onChange={setDeleteData} label="Delete data" description="Removes the files from the download folder." />
+        <Checkbox checked={blocklist} onChange={setBlocklist} label="Blocklist" description="This exact release is never grabbed again." />
         {error && <Alert>{error}</Alert>}
       </div>
     </Modal>

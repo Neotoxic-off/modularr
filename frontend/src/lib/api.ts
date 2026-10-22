@@ -130,8 +130,11 @@ export interface AddOptions {
   qualityProfileId?: number | null;
   version?: string | null;
   searchNow?: boolean;
-  monitor?: "All" | "Latest" | "Future" | "None";
+  monitor?: SeriesMonitor;
 }
+
+export type SeriesMonitor = "All" | "Latest" | "Future" | "First" | "None";
+export type ImportMode = "Move" | "Hardlink";
 
 export interface Release {
   id: string;
@@ -481,6 +484,9 @@ export const api = {
   update: (kind: Kind, id: number, patch: ItemPatch) => send<LibraryItem>("PATCH", `${libraryPath(kind)}/${id}`, patch),
   remove: (kind: Kind, id: number, deleteFiles: boolean) =>
     send<void>("DELETE", `${libraryPath(kind)}/${id}?deleteFiles=${deleteFiles}`),
+  setSeasonMonitored: (seriesId: number, season: number, monitored: boolean) =>
+    send<SeriesDetail>("PATCH", `/series/${seriesId}/seasons/${season}`, { monitored }),
+  setEpisodeMonitored: (id: number, monitored: boolean) => send<Episode>("PATCH", `/episodes/${id}`, { monitored }),
   autoSearch: (kind: Kind, id: number, season?: number) =>
     send<void>("POST", `${libraryPath(kind)}/${id}/search${season === undefined ? "" : `?season=${season}`}`),
   rescan: (kind: Kind, id: number) => send<ScanResult>("POST", `${libraryPath(kind)}/${id}/rescan`),
@@ -524,6 +530,10 @@ export const api = {
   downloadSubtitle: (target: SubtitleTarget, candidate: SubtitleCandidate) => send<SubtitleFile>("POST", "/subtitles/download", { ...target, ...candidate }),
   paths: () => request<Paths>("/settings/paths"),
   savePaths: (paths: Paths) => send<Paths>("PUT", "/settings/paths", paths),
+  importMode: () => request<{ importMode: ImportMode }>("/settings/import"),
+  saveImportMode: (importMode: ImportMode) => send<{ importMode: ImportMode }>("PUT", "/settings/import", { importMode }),
+  metadata: () => request<{ tmdbApiKey: string | null }>("/settings/metadata"),
+  saveMetadata: (tmdbApiKey: string | null) => send<{ tmdbApiKey: string | null }>("PUT", "/settings/metadata", { tmdbApiKey }),
   folders: (path: string | null) => request<Folder>(`/filesystem${path ? `?path=${encodeURIComponent(path)}` : ""}`),
 };
 

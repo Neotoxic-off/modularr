@@ -60,7 +60,7 @@ export function ReleasesDialog({ item, season, onClose }: { item: LibraryItem; s
                 {decisions.length === 0 ? "No indexer returned a release for this title." : "No release matches your quality profile and version. Show the rejected ones to grab one anyway."}
               </p>
             ) : (
-              <ul className="divide-y divide-hair-2 overflow-hidden rounded-card border border-hair">
+              <ul className="well divide-y divide-hair-2 overflow-hidden rounded-card">
                 {shown.map((d) => (
                   <li key={d.release.id} className={`flex items-center gap-3 px-4 py-3 ${d.approved ? "" : "bg-black/20"}`}>
                     <div className="min-w-0 flex-1">

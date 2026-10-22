@@ -6,7 +6,7 @@ import { api, errorMessage } from "@/lib/api";
 import type { Profile, ProfileItem, Quality } from "@/lib/api";
 import { reloadOptions } from "@/lib/options";
 import { Icon } from "@/components/icons";
-import { Alert, Button, Field, Input, SaveBar, Section, Select, Skeleton, Switch, useAction } from "@/components/ui";
+import { Alert, Button, Chip, Field, Input, SaveBar, Section, Select, Skeleton, Switch, useAction } from "@/components/ui";
 
 // Groups carry their own id (>= 1000); single qualities are keyed by quality id.
 const keyOf = (item: ProfileItem) => (item.quality ?? item.id);
@@ -51,10 +51,7 @@ export function Profiles() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
         {profiles.map((p) => (
-          <button key={p.id} onClick={() => setSelected(p.id)} aria-pressed={p.id === selected}
-            className="cursor-pointer rounded-full border border-hair px-3.5 py-1.5 text-sm text-ink-3 transition hover:text-ink aria-pressed:border-white/40 aria-pressed:bg-fill-2 aria-pressed:text-ink">
-            {p.name}
-          </button>
+          <Chip key={p.id} selected={p.id === selected} onClick={() => setSelected(p.id)}>{p.name}</Chip>
         ))}
       </div>
       {current && (
@@ -129,7 +126,7 @@ function Editor({ profile: initial, qualities, onSaved, onDuplicate, onDeleted }
 
           <div>
             <p className="mb-2 text-sm font-medium">Qualities <span className="font-normal text-ink-3">best first, drag or use the arrows to rank</span></p>
-            <ol className="divide-y divide-hair-2 overflow-hidden rounded-card border border-hair">
+            <ol className="well divide-y divide-hair-2 overflow-hidden rounded-card">
               {ranked.map((item, i) => (
                 <li key={keyOf(item)} draggable onDragStart={() => setDragging(i)} onDragEnd={() => setDragging(null)}
                   onDragOver={(e) => e.preventDefault()} onDrop={() => { if (dragging !== null) move(dragging, i); setDragging(null); }}

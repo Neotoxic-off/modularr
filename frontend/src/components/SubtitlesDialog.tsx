@@ -71,7 +71,7 @@ export function SubtitlesDialog({ target, title, onClose }: { target: SubtitleTa
         {candidates && (candidates.length === 0 ? (
           <p className="rounded-card border border-dashed border-hair px-5 py-8 text-center text-sm text-ink-3">No provider has subtitles for this file.</p>
         ) : (
-          <ul className="divide-y divide-hair-2 overflow-hidden rounded-card border border-hair">
+          <ul className="well divide-y divide-hair-2 overflow-hidden rounded-card">
             {candidates.map((c) => (
               <li key={`${c.provider}${c.id}`} className="flex items-center gap-3 px-4 py-2.5 text-sm">
                 <div className="min-w-0 flex-1">

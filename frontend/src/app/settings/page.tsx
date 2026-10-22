@@ -4,19 +4,20 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/components/AuthGate";
 import { Icon } from "@/components/icons";
 import type { IconName } from "@/components/icons";
-import { Account, Folders, Indexers, Users } from "@/components/settings/General";
+import { Account, Folders, General, Indexers, Users } from "@/components/settings/General";
 import { MediaSettings } from "@/components/settings/MediaSettings";
 import { Profiles } from "@/components/settings/Profiles";
 import { SubtitleSettings } from "@/components/settings/SubtitleSettings";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, Select } from "@/components/ui";
 
-type Tab = "media" | "subtitles" | "profiles" | "folders" | "indexers" | "users" | "account";
+type Tab = "general" | "folders" | "media" | "subtitles" | "profiles" | "indexers" | "users" | "account";
 
 const tabs: readonly { value: Tab; label: string; icon: IconName; admin: boolean }[] = [
-  { value: "media", label: "Media management", icon: "languages", admin: true },
+  { value: "general", label: "General", icon: "settings", admin: true },
+  { value: "folders", label: "Folders", icon: "folder", admin: true },
+  { value: "media", label: "Media", icon: "languages", admin: true },
   { value: "subtitles", label: "Subtitles", icon: "subtitles", admin: true },
   { value: "profiles", label: "Quality profiles", icon: "sliders", admin: true },
-  { value: "folders", label: "Folders", icon: "folder", admin: true },
   { value: "indexers", label: "Indexers", icon: "globe", admin: false },
   { value: "users", label: "Users", icon: "users", admin: true },
   { value: "account", label: "Account", icon: "key", admin: false },
@@ -26,7 +27,7 @@ export default function SettingsPage() {
   const { user } = useSession();
   const isAdmin = user.role === "Admin";
   const available = tabs.filter((t) => !t.admin || isAdmin);
-  const [tab, setTab] = useState<Tab>(isAdmin ? "media" : "indexers");
+  const [tab, setTab] = useState<Tab>(isAdmin ? "general" : "indexers");
 
   // The tab lives in the URL hash so a reload or a shared link lands on the same tab.
   useEffect(() => {
@@ -47,16 +48,20 @@ export default function SettingsPage() {
   return (
     <>
       <PageHeader title="Settings" />
-      <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <nav aria-label="Settings" className="rail -mx-4 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:px-0">
+      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,720px)] lg:gap-8">
+        <Select value={tab} onChange={(e) => select(e.target.value as Tab)} aria-label="Settings section" className="lg:hidden">
+          {available.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+        </Select>
+        <nav aria-label="Settings" className="flex flex-col gap-1 max-lg:hidden">
           {available.map((t) => (
             <button key={t.value} onClick={() => select(t.value)} aria-current={tab === t.value ? "page" : undefined}
-              className="flex shrink-0 cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-ink-3 transition hover:bg-fill-2 hover:text-ink aria-[current=page]:bg-fill-2 aria-[current=page]:text-ink">
-              <Icon name={t.icon} size={16} />{t.label}
+              className="flex h-11 cursor-pointer items-center gap-3 rounded-pill px-4 text-sm font-medium text-ink-2 transition hover:bg-fill hover:text-ink aria-[current=page]:bg-fill-2 aria-[current=page]:text-ink">
+              <Icon name={t.icon} size={18} />{t.label}
             </button>
           ))}
         </nav>
         <div key={tab} className="min-w-0 animate-fade">
+          {tab === "general" && <General />}
           {tab === "media" && <MediaSettings />}
           {tab === "subtitles" && <SubtitleSettings />}
           {tab === "profiles" && <Profiles />}

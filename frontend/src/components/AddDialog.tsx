@@ -76,6 +76,7 @@ const monitors: readonly { value: NonNullable<AddOptions["monitor"]>; label: str
   { value: "All", label: "All" },
   { value: "Latest", label: "Latest" },
   { value: "Future", label: "Future only" },
+  { value: "First", label: "First" },
 ];
 
 function AddSheet({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: OnAdded; onClose: () => void }) {
@@ -133,6 +134,7 @@ function AddSheet({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: O
               <div className="space-y-2">
                 <p className="text-sm font-medium">Seasons</p>
                 <Segmented label="Seasons to monitor" value={monitor} onChange={setMonitor} options={monitors} />
+                <p className="text-[13px] text-ink-3">Fine-tune single seasons on the title page once it is added.</p>
               </div>
             )}
             <details className="group rounded-ctl">

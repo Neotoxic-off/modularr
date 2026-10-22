@@ -63,7 +63,7 @@ export function MediaSettings() {
         ) : (
           <ol className="space-y-2">
             {media.exceptions.map((rule, i) => (
-              <li key={i} className="flex flex-wrap items-center gap-2 rounded-card border border-hair bg-black/20 p-2.5 text-sm">
+              <li key={i} className="flex flex-wrap items-center gap-2 well rounded-card p-2.5 text-sm">
                 <span className="w-5 text-center text-xs text-ink-3 tabular-nums">{i + 1}</span>
                 <span className="text-ink-3">When</span>
                 <Select value={rule.category ?? ""} aria-label="Category" className="w-32"
@@ -99,7 +99,7 @@ export function MediaSettings() {
       <Section title="Category defaults" description="Used when you add a title without choosing a profile or version. Wanted subtitles are set in Subtitles.">
         <div className="grid gap-4 md:grid-cols-3">
           {categories.map(({ key, label }) => (
-            <div key={key} className="space-y-3 rounded-card border border-hair bg-black/20 p-4">
+            <div key={key} className="space-y-3 well rounded-card p-4">
               <p className="font-semibold">{label}</p>
               <Field label="Quality profile">
                 <Select value={media[key].profileId} onChange={(e) => setMedia({ ...media, [key]: { ...media[key], profileId: Number(e.target.value) } })}>

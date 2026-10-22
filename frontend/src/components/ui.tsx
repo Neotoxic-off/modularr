@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import type { ButtonHTMLAttributes, CSSProperties, InputHTMLAttributes, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject, SelectHTMLAttributes } from "react";
 import { createPortal } from "react-dom";
 import { errorMessage } from "@/lib/api";
@@ -76,17 +76,19 @@ export function Field({ label, hint, children }: { label: string; hint?: ReactNo
 }
 
 // The whole row is the switch, so the hit area is the label as well as the track.
-export function Switch({ checked, onChange, label, description, disabled }: {
+// hideLabel keeps the name for assistive tech only, for a switch inside a row that already says what it is.
+export function Switch({ checked, onChange, label, description, disabled, hideLabel = false }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label: string;
   description?: string;
   disabled?: boolean;
+  hideLabel?: boolean;
 }) {
   return (
     <button type="button" role="switch" aria-checked={checked} disabled={disabled} onClick={() => onChange(!checked)}
-      className="group flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-ctl text-left disabled:cursor-default disabled:opacity-40">
-      <span className="min-w-0 flex-1">
+      className={`group flex min-h-11 cursor-pointer items-center gap-3 rounded-ctl text-left disabled:cursor-default disabled:opacity-40 ${hideLabel ? "min-w-11 shrink-0 justify-center" : "w-full"}`}>
+      <span className={hideLabel ? "sr-only" : "min-w-0 flex-1"}>
         <span className="block text-sm font-medium">{label}</span>
         {description && <span className="block text-[13px] text-ink-3">{description}</span>}
       </span>
@@ -94,6 +96,18 @@ export function Switch({ checked, onChange, label, description, disabled }: {
         <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : ""}`} />
       </span>
     </button>
+  );
+}
+
+export function Checkbox({ checked, onChange, label, description }: { checked: boolean; onChange: (checked: boolean) => void; label: string; description?: ReactNode }) {
+  return (
+    <label className="flex min-h-11 cursor-pointer items-start gap-3 py-1 text-sm">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 size-4 shrink-0 cursor-pointer accent-white" />
+      <span className="min-w-0">
+        <span className="block font-medium">{label}</span>
+        {description && <span className="block text-[13px] break-words text-ink-3">{description}</span>}
+      </span>
+    </label>
   );
 }
 
@@ -462,6 +476,77 @@ export function SaveBar({ busy, error, done, label = "Save changes", disabled }:
       </div>
     </div>
   );
+}
+
+const CloseMenu = createContext<() => void>(() => undefined);
+
+// A dropdown of actions: arrow keys move, Escape and outside clicks close it and focus goes back to the trigger.
+export function Menu({ label, trigger, className = "", align = "right", children }: {
+  label: string;
+  trigger?: ReactNode;
+  className?: string;
+  align?: "left" | "right";
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const items = () => [...(root.current?.querySelectorAll<HTMLElement>("[role=menuitem]:not(:disabled)") ?? [])];
+    const outside = (e: MouseEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false); };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setOpen(false);
+        root.current?.querySelector("button")?.focus();
+      }
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      e.preventDefault();
+      const list = items();
+      const at = list.indexOf(document.activeElement as HTMLElement);
+      list[(at + (e.key === "ArrowDown" ? 1 : -1) + list.length) % list.length]?.focus();
+    };
+    document.addEventListener("mousedown", outside);
+    document.addEventListener("keydown", key);
+    items()[0]?.focus();
+    return () => {
+      document.removeEventListener("mousedown", outside);
+      document.removeEventListener("keydown", key);
+    };
+  }, [open]);
+
+  return (
+    <div ref={root} className="relative">
+      <button type="button" onClick={() => setOpen(!open)} aria-haspopup="menu" aria-expanded={open} aria-label={label} title={label}
+        className={className || "glass grid size-11 cursor-pointer place-items-center rounded-full text-ink-2 transition hover:bg-fill-2 hover:text-ink"}>
+        {trigger ?? <Icon name="more" size={20} strokeWidth={3} />}
+      </button>
+      {open && (
+        // Nearly opaque: a menu often opens over another blurred panel, whose own blur cannot reach behind it.
+        <div role="menu" aria-label={label} className={`glass-pop absolute top-full z-40 mt-2 w-64 animate-rise rounded-tile bg-[rgb(20_19_27/.97)] p-2 ${align === "right" ? "right-0" : "left-0"}`}>
+          <CloseMenu value={() => setOpen(false)}>{children}</CloseMenu>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function MenuItem({ icon, href, onClick, danger = false, disabled, className = "", children }: {
+  icon: IconName;
+  href?: string;
+  onClick?: () => void;
+  danger?: boolean;
+  disabled?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  const close = useContext(CloseMenu);
+  const look = `flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-ctl px-3 text-left text-sm font-medium transition hover:bg-fill-2 disabled:opacity-40 ${danger ? "text-bad" : "text-ink-2 hover:text-ink"} ${className}`;
+  const content = <><Icon name={icon} size={17} className="shrink-0" />{children}</>;
+  return href
+    ? <Link role="menuitem" href={href} onClick={close} className={look}>{content}</Link>
+    : <button role="menuitem" type="button" disabled={disabled} onClick={() => { close(); onClick?.(); }} className={look}>{content}</button>;
 }
 
 export function Logo({ markOnly = false }: { markOnly?: boolean }) {

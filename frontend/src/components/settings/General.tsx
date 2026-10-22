@@ -3,17 +3,91 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { api, errorMessage } from "@/lib/api";
-import type { IndexerList, Paths, Role, User } from "@/lib/api";
+import type { ImportMode, IndexerList, Paths, Role, User } from "@/lib/api";
 import { FolderPicker } from "@/components/FolderPicker";
 import { Icon } from "@/components/icons";
 import { Alert, Badge, Button, Empty, Field, Input, SaveBar, Section, Select, Skeleton, Segmented, useAction } from "@/components/ui";
 
 const pathFields: readonly { key: keyof Paths; label: string; hint: string }[] = [
   { key: "downloads", label: "Downloads", hint: "Where torrents download before they are imported." },
-  { key: "movies", label: "Movies", hint: "Imported movies end up here." },
-  { key: "series", label: "Series", hint: "Imported series end up here." },
-  { key: "anime", label: "Anime", hint: "Imported anime end up here." },
+  { key: "movies", label: "Movies", hint: "Your movie library." },
+  { key: "series", label: "Series", hint: "Your series library." },
+  { key: "anime", label: "Anime", hint: "Your anime library." },
 ];
+
+const importModes: readonly { value: ImportMode; label: string; hint: string }[] = [
+  { value: "Move", label: "Move", hint: "Files leave the downloads folder and the torrent is removed. No space is used twice, nothing seeds." },
+  { value: "Hardlink", label: "Hardlink", hint: "Files are linked into the library and the torrent keeps seeding. Across drives they are copied." },
+];
+
+const SAVED_MS = 2000;
+
+function Saved({ at }: { at: number }) {
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    if (!at) return;
+    const timer = setTimeout(() => setNow(Date.now()), SAVED_MS);
+    return () => clearTimeout(timer);
+  }, [at]);
+  return at > now ? <span role="status" className="flex animate-fade items-center gap-1 text-[13px] text-ok"><Icon name="check" size={15} />Saved</span> : null;
+}
+
+// Each setting saves on its own: the mode as it is picked, the key when the field loses focus.
+export function General() {
+  const [mode, setMode] = useState<ImportMode | null>(null);
+  const [key, setKey] = useState<string | null>(null);
+  const [saved, setSaved] = useState({ mode: 0, key: 0 });
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.importMode().then((r) => setMode(r.importMode)).catch((e: unknown) => setError(errorMessage(e)));
+    api.metadata().then((r) => setKey(r.tmdbApiKey ?? "")).catch((e: unknown) => setError(errorMessage(e)));
+  }, []);
+
+  async function saveMode(next: ImportMode) {
+    const previous = mode;
+    setMode(next);
+    try {
+      setMode((await api.saveImportMode(next)).importMode);
+      setSaved((s) => ({ ...s, mode: Date.now() }));
+      setError(null);
+    } catch (e) {
+      setMode(previous);
+      setError(errorMessage(e));
+    }
+  }
+
+  async function saveKey() {
+    try {
+      setKey((await api.saveMetadata(key?.trim() || null)).tmdbApiKey ?? "");
+      setSaved((s) => ({ ...s, key: Date.now() }));
+      setError(null);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {error && <Alert>{error}</Alert>}
+      <Section title="After a download" description="What happens to finished downloads when they join your library." actions={<Saved at={saved.mode} />}>
+        {!mode ? <Skeleton className="h-20" /> : (
+          <div className="space-y-3">
+            <Segmented label="Import mode" value={mode} onChange={(m) => void saveMode(m)} options={importModes} />
+            <p className="text-[13px] text-ink-3">{importModes.find((m) => m.value === mode)?.hint}</p>
+          </div>
+        )}
+      </Section>
+      <Section title="TMDB" description="A TMDB key opens the full movie catalogue in Explore, with every filter." actions={<Saved at={saved.key} />}>
+        {key === null ? <Skeleton className="h-20" /> : (
+          <Field label="API key or read access token" hint="Free from themoviedb.org, under Settings, API. Leave it empty to use the short built-in lists.">
+            <Input type="password" value={key} onChange={(e) => setKey(e.target.value)} onBlur={() => void saveKey()} autoComplete="off" spellCheck={false} className="font-mono text-xs" />
+          </Field>
+        )}
+      </Section>
+    </div>
+  );
+}
 
 export function Folders() {
   const [paths, setPaths] = useState<Paths | null>(null);
@@ -31,7 +105,7 @@ export function Folders() {
   };
 
   return (
-    <Section title="Folders" description="Paths on the server. In Docker, these are paths inside the container, so mount your drives as volumes.">
+    <Section title="Folders" description="Finished downloads are moved here automatically. Paths are on the server: in Docker, inside the container.">
       {!paths ? (loadError ? <Alert>{loadError}</Alert> : <Skeleton className="h-64" />) : (
         <form onSubmit={save} className="space-y-5">
           <div className="grid gap-5 md:grid-cols-2">
@@ -88,7 +162,7 @@ export function Indexers() {
       {!list ? <Skeleton className="h-64" /> : shown.length === 0 ? <Empty icon="globe" title="No indexer matches" /> : (
         <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {shown.map((i) => (
-            <li key={i.id} className="flex items-start gap-3 rounded-card border border-hair bg-black/20 p-3.5">
+            <li key={i.id} className="flex items-start gap-3 well rounded-card p-3.5">
               <span title={!i.enabled ? "Disabled" : i.health.failures > 0 ? "Failing" : "Healthy"}
                 className={`mt-1.5 size-2 shrink-0 rounded-full ${!i.enabled ? "bg-ink-3" : i.health.failures > 0 ? "bg-warn" : "bg-ok shadow-[0_0_8px] shadow-ok/60"}`} />
               <div className="min-w-0 flex-1">
@@ -135,7 +209,7 @@ export function Users({ me }: { me: User }) {
     <Section title="Users" description="Administrators manage settings, accounts and removals. Members browse, add and download.">
       {error && <div className="mb-4"><Alert>{error}</Alert></div>}
       {!users ? <Skeleton className="h-32" /> : (
-        <ul className="mb-6 divide-y divide-hair-2 overflow-hidden rounded-card border border-hair">
+        <ul className="mb-6 well divide-y divide-hair-2 overflow-hidden rounded-card">
           {users.map((u) => (
             <li key={u.id} className="flex items-center gap-3 bg-black/20 px-4 py-3">
               <span className="grid size-8 place-items-center rounded-full bg-fill-2 text-sm font-semibold text-ink uppercase">{u.username[0]}</span>

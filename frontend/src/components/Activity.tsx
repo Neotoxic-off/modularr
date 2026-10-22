@@ -72,7 +72,7 @@ const inScope = (a: Activity, { seriesId, movieId }: Scope) =>
 
 const toastKinds: ReadonlySet<ActivityKind> = new Set(["Grabbed", "Imported", "NothingFound", "DownloadFailed"]);
 
-const isActive = (d: Download) => d.state === "Downloading" || d.state === "ImportPending" || d.state === "Importing";
+export const isActive = (d: Download) => d.state === "Downloading" || d.state === "ImportPending" || d.state === "Importing";
 
 const RETRY_MAX_MS = 30000;
 const SETTLE_MS = 300;

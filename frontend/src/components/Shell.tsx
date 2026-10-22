@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Ambient } from "@/components/Ambient";
 import { useSession } from "@/components/AuthGate";
@@ -14,7 +14,7 @@ import { navGroups as groups, pages, settingsItem as settings, tabs } from "@/co
 import type { NavItem } from "@/components/nav";
 import { SearchPalette } from "@/components/SearchPalette";
 import { ToastProvider } from "@/components/Toasts";
-import { Count, IconButton, Logo, Modal } from "@/components/ui";
+import { Count, IconButton, Logo, Menu, MenuItem, Modal } from "@/components/ui";
 
 const shortcuts = pages.filter((i): i is NavItem & { shortcut: string } => !!i.shortcut);
 
@@ -32,6 +32,10 @@ interface Chrome {
 }
 
 const ChromeContext = createContext<(chrome: Chrome) => void>(() => undefined);
+const SearchContext = createContext<() => void>(() => undefined);
+
+// Opens the search palette, where titles are found and added.
+export const useSearch = () => useContext(SearchContext);
 
 // A page sets the ambient backdrop and header breadcrumb while it is shown.
 export function useChrome({ backdrop, crumb }: Chrome) {
@@ -65,6 +69,7 @@ function Frame({ children }: { children: ReactNode }) {
   const [notifying, setNotifying] = useState(false);
   const [cheatSheet, setCheatSheet] = useState(false);
   const first = useRef(true);
+  const openSearch = useCallback(() => setSearching(true), []);
 
   // Moves focus to the new page's heading so screen readers start there; the first load keeps the browser's focus.
   useEffect(() => {
@@ -101,20 +106,22 @@ function Frame({ children }: { children: ReactNode }) {
 
   return (
     <ChromeContext value={setChrome}>
-      <Ambient src={chrome.backdrop ?? null} />
-      <div id="app" className="flex min-h-dvh">
-        <a href="#content" className="sr-only z-50 rounded-pill bg-white px-4 py-2.5 font-semibold text-canvas focus:not-sr-only focus:fixed focus:top-3 focus:left-3">Skip to content</a>
-        <Rail pathname={pathname} />
-        <div className="flex min-w-0 flex-1 flex-col md:pr-3">
-          <Header pathname={pathname} crumb={chrome.crumb} onSearch={() => setSearching(true)} onNotifications={() => setNotifying(true)} />
-          <OfflineBanner />
-          <main id="content" className="mx-auto w-full max-w-[1600px] min-w-0 flex-1 p-4 pb-28 md:pb-8 lg:p-5">{children}</main>
+      <SearchContext value={openSearch}>
+        <Ambient src={chrome.backdrop ?? null} />
+        <div id="app" className="flex min-h-dvh">
+          <a href="#content" className="sr-only z-50 rounded-pill bg-white px-4 py-2.5 font-semibold text-canvas focus:not-sr-only focus:fixed focus:top-3 focus:left-3">Skip to content</a>
+          <Rail pathname={pathname} />
+          <div className="flex min-w-0 flex-1 flex-col md:pr-3">
+            <Header pathname={pathname} crumb={chrome.crumb} onSearch={openSearch} onNotifications={() => setNotifying(true)} />
+            <OfflineBanner />
+            <main id="content" className="mx-auto w-full max-w-[1600px] min-w-0 flex-1 p-4 pb-28 md:pb-8 lg:p-5">{children}</main>
+          </div>
+          <BottomBar pathname={pathname} />
         </div>
-        <BottomBar pathname={pathname} />
-      </div>
-      {searching && <SearchPalette onClose={() => setSearching(false)} />}
-      {notifying && <NotificationPanel onClose={() => setNotifying(false)} />}
-      {cheatSheet && <CheatSheet onClose={() => setCheatSheet(false)} />}
+        {searching && <SearchPalette onClose={() => setSearching(false)} />}
+        {notifying && <NotificationPanel onClose={() => setNotifying(false)} />}
+        {cheatSheet && <CheatSheet onClose={() => setCheatSheet(false)} />}
+      </SearchContext>
     </ChromeContext>
   );
 }
@@ -237,49 +244,18 @@ function BottomBar({ pathname }: { pathname: string }) {
 
 function UserMenu() {
   const { user, logout } = useSession();
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  const role = user.role === "Admin" ? "Administrator" : "Member";
-
-  useEffect(() => {
-    if (!open) return;
-    const outside = (e: MouseEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false); };
-    const escape = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setOpen(false);
-      root.current?.querySelector("button")?.focus();
-    };
-    document.addEventListener("mousedown", outside);
-    document.addEventListener("keydown", escape);
-    root.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
-    return () => {
-      document.removeEventListener("mousedown", outside);
-      document.removeEventListener("keydown", escape);
-    };
-  }, [open]);
-
-  const item = "flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-ctl px-3 text-sm font-medium text-ink-2 hover:bg-fill-2 hover:text-ink";
-  const close = () => setOpen(false);
-
   return (
-    <div ref={root} className="relative">
-      <button onClick={() => setOpen(!open)} aria-haspopup="menu" aria-expanded={open} aria-label={`Account menu for ${user.username}`}
-        className="grid size-11 cursor-pointer place-items-center rounded-full bg-white font-serif text-[22px] leading-none text-canvas uppercase transition hover:bg-white/85">
-        {user.username[0]}
-      </button>
-      {open && (
-        <div role="menu" aria-label="Account" className="glass-pop absolute top-full right-0 z-50 mt-2 w-64 animate-rise rounded-tile p-2">
-          <div className="mb-1 border-b border-hair-2 px-3 pt-2 pb-3">
-            <p className="truncate text-[15px] font-semibold">{user.username}</p>
-            <p className="text-[13px] text-ink-3">{role}</p>
-          </div>
-          <Link role="menuitem" href="/settings/#account" onClick={close} className={item}><Icon name="user" size={17} />Account</Link>
-          <Link role="menuitem" href="/settings/" onClick={close} className={`${item} md:hidden`}><Icon name="settings" size={17} />Settings</Link>
-          {user.role === "Admin" && <Link role="menuitem" href="/import/" onClick={close} className={`${item} md:hidden`}><Icon name="folder" size={17} />Import</Link>}
-          <button role="menuitem" onClick={logout} className={item}><Icon name="logout" size={17} />Sign out</button>
-        </div>
-      )}
-    </div>
+    <Menu label={`Account menu for ${user.username}`} trigger={user.username[0]}
+      className="grid size-11 cursor-pointer place-items-center rounded-full bg-white font-serif text-[22px] leading-none text-canvas uppercase transition hover:bg-white/85">
+      <div className="mb-1 border-b border-hair-2 px-3 pt-2 pb-3">
+        <p className="truncate text-[15px] font-semibold">{user.username}</p>
+        <p className="text-[13px] text-ink-3">{user.role === "Admin" ? "Administrator" : "Member"}</p>
+      </div>
+      <MenuItem icon="user" href="/settings/#account">Account</MenuItem>
+      <MenuItem icon="settings" href="/settings/" className="md:hidden">Settings</MenuItem>
+      {user.role === "Admin" && <MenuItem icon="folder" href="/import/" className="md:hidden">Import</MenuItem>}
+      <MenuItem icon="logout" onClick={logout}>Sign out</MenuItem>
+    </Menu>
   );
 }
 
