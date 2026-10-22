@@ -27,19 +27,19 @@ export function FolderPicker({ start, onPick, onClose }: { start: string; onPick
       </>}>
       {error && <div className="px-5 pb-3"><Alert>{error}</Alert></div>}
       {!folder ? <div className="p-5"><Spinner /></div> : (
-        <ul className="max-h-[50vh] overflow-y-auto border-t border-line py-1">
+        <ul className="max-h-[50vh] overflow-y-auto border-t border-hair py-1">
           {folder.path !== null && (
             <li>
-              <button onClick={() => setPath(folder.parent)} className="flex w-full cursor-pointer items-center gap-3 px-5 py-2 text-sm text-muted hover:bg-raised">
+              <button onClick={() => setPath(folder.parent)} className="flex w-full cursor-pointer items-center gap-3 px-5 py-2 text-sm text-ink-3 hover:bg-fill-2">
                 <Icon name="up" size={16} />Parent folder
               </button>
             </li>
           )}
-          {folder.directories.length === 0 && <li className="px-5 py-3 text-sm text-muted">No subfolders.</li>}
+          {folder.directories.length === 0 && <li className="px-5 py-3 text-sm text-ink-3">No subfolders.</li>}
           {folder.directories.map((d) => (
             <li key={d.path}>
-              <button onClick={() => setPath(d.path)} className="flex w-full cursor-pointer items-center gap-3 px-5 py-2 text-left text-sm hover:bg-raised">
-                <Icon name="folder" size={16} className="shrink-0 text-accent" /><span className="truncate">{d.name}</span>
+              <button onClick={() => setPath(d.path)} className="flex w-full cursor-pointer items-center gap-3 px-5 py-2 text-left text-sm hover:bg-fill-2">
+                <Icon name="folder" size={16} className="shrink-0 text-ink" /><span className="truncate">{d.name}</span>
               </button>
             </li>
           ))}

@@ -1,43 +1,61 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { api, errorMessage, kindOfDiscovery, titleHref } from "@/lib/api";
 import type { AddOptions, DiscoveryItem, LibraryItem } from "@/lib/api";
-import { defaultsFor, useOptions, versionLabel } from "@/lib/options";
+import { defaultsFor, realLanguages, useOptions } from "@/lib/options";
 import { titleKey } from "@/components/Activity";
-import { kindLabel, PosterArt } from "@/components/Poster";
+import { Icon } from "@/components/icons";
+import { kindLabel } from "@/components/Poster";
 import { useToast } from "@/components/Toasts";
-import { Alert, Button, Field, Modal, Rating, Select, Spinner, Switch } from "@/components/ui";
+import { Alert, Button, Field, Modal, PickList, Rating, Segmented, Select, Spinner, Switch } from "@/components/ui";
 
-type OnAdded = (item: DiscoveryItem, libraryId: number) => void;
+// libraryId is null when the add was undone.
+export type OnAdded = (item: DiscoveryItem, libraryId: number | null) => void;
 
 const AddContext = createContext<(item: DiscoveryItem, onAdded?: OnAdded) => void>(() => undefined);
 
-// Any page or the search palette opens the same "Add…" dialog through this.
+// Any page or the search palette opens the same add sheet through this.
 export const useAddDialog = () => useContext(AddContext);
 
-export const markAdded = (items: readonly DiscoveryItem[], added: DiscoveryItem, libraryId: number) =>
-  items.map((i) => (i.kind === added.kind && i.tmdbId === added.tmdbId && i.tvdbId === added.tvdbId ? { ...i, inLibrary: true, libraryId } : i));
+export const markAdded = (items: readonly DiscoveryItem[], added: DiscoveryItem, libraryId: number | null) =>
+  items.map((i) => (i.kind === added.kind && i.tmdbId === added.tmdbId && i.tvdbId === added.tvdbId ? { ...i, inLibrary: libraryId !== null, libraryId } : i));
 
-// Adds a title and says so at once; the search results follow as live notifications.
+// Adds a title and stays on the page: a toast offers to open it, customize the add, or undo it (files are never deleted).
 export function useAddTitle() {
   const toast = useToast();
-  return useCallback(async (item: DiscoveryItem, options: AddOptions = {}): Promise<LibraryItem> => {
+  const openAdd = useAddDialog();
+  return useCallback(async (item: DiscoveryItem, options: AddOptions = {}, onAdded?: OnAdded): Promise<LibraryItem> => {
     const added = await api.add(item, options);
     const kind = kindOfDiscovery(item);
+    const key = titleKey({ movieId: kind === "movie" ? added.id : null, seriesId: kind === "movie" ? null : added.id }) ?? item.title;
     const searching = options.searchNow !== false && options.monitor !== "None";
+    onAdded?.(item, added.id);
+    const undo = async () => {
+      try {
+        await api.remove(kind, added.id, false);
+        onAdded?.(item, null);
+        return true;
+      } catch (e) {
+        toast({ key, icon: "alert", tone: "bad", title: item.title, message: `Could not undo: ${errorMessage(e)}` });
+        return false;
+      }
+    };
     toast({
-      key: titleKey({ movieId: kind === "movie" ? added.id : null, seriesId: kind === "movie" ? null : added.id }) ?? item.title,
-      icon: searching ? "search" : "plus",
-      tone: "accent",
+      key,
+      icon: searching ? "search" : "check",
+      tone: searching ? "seek" : "ok",
       title: item.title,
-      message: searching ? "Added. Searching for releases…" : "Added to your library",
-      href: titleHref(kind, added.id),
+      message: searching ? "Added. Searching for releases…" : "Added to your library.",
+      actions: [
+        { label: "Open", href: titleHref(kind, added.id) },
+        { label: "Customize", onClick: () => void undo().then((ok) => ok && openAdd(item, onAdded)) },
+        { label: "Undo", onClick: () => void undo() },
+      ],
     });
     return added;
-  }, [toast]);
+  }, [toast, openAdd]);
 }
 
 export function AddDialogProvider({ children }: { children: ReactNode }) {
@@ -47,25 +65,34 @@ export function AddDialogProvider({ children }: { children: ReactNode }) {
   return (
     <AddContext value={show}>
       {children}
-      {open && <AddDialog key={`${open.item.kind}${open.item.tmdbId}${open.item.tvdbId}`} item={open.item} onAdded={open.onAdded} onClose={close} />}
+      {open && <AddSheet key={`${open.item.kind}${open.item.tmdbId}${open.item.tvdbId}`} item={open.item} onAdded={open.onAdded} onClose={close} />}
     </AddContext>
   );
 }
 
-function AddDialog({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: OnAdded; onClose: () => void }) {
-  const router = useRouter();
+const mainVersions = ["VO", "VF", "VOSTFR", "MULTi"];
+
+const monitors: readonly { value: NonNullable<AddOptions["monitor"]>; label: string }[] = [
+  { value: "All", label: "All" },
+  { value: "Latest", label: "Latest" },
+  { value: "Future", label: "Future only" },
+];
+
+function AddSheet({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: OnAdded; onClose: () => void }) {
   const addTitle = useAddTitle();
   const options = useOptions();
   const kind = kindOfDiscovery(item);
-  const [profile, setProfile] = useState("");
-  const [version, setVersion] = useState("");
+  const defaults = options && defaultsFor(options.media, kind);
+  const [version, setVersion] = useState<string | null>(null);
+  const [subtitles, setSubtitles] = useState<string[] | null>(null);
   const [monitor, setMonitor] = useState<NonNullable<AddOptions["monitor"]>>("All");
+  const [profile, setProfile] = useState("");
   const [searchNow, setSearchNow] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const defaults = options && defaultsFor(options.media, kind);
-  const defaultProfile = options?.profiles.find((p) => p.id === defaults?.profileId)?.name;
+  const defaultVersion = defaults?.version ?? options?.media.defaultVersion ?? "VO";
+  const versions = [...new Set([defaultVersion, ...mainVersions])].filter((v) => options?.versions.includes(v));
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -74,13 +101,12 @@ function AddDialog({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: 
     try {
       const added = await addTitle(item, {
         qualityProfileId: profile ? Number(profile) : null,
-        version: version || null,
+        version: version && version !== defaultVersion ? version : null,
         searchNow,
         ...(kind !== "movie" && { monitor }),
-      });
-      onAdded?.(item, added.id);
+      }, onAdded);
+      if (subtitles) await api.update(kind, added.id, { subtitles });
       onClose();
-      router.push(titleHref(kind, added.id));
     } catch (e) {
       setError(errorMessage(e));
       setBusy(false);
@@ -92,43 +118,40 @@ function AddDialog({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: 
       description={<span className="flex items-center gap-3">{kindLabel[item.kind]}{item.year && <span>{item.year}</span>}<Rating value={item.rating} /></span>}
       footer={<>
         <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" form="add-form" disabled={busy || !options}>{busy ? <Spinner /> : "Add to library"}</Button>
+        <Button variant="primary" form="add-form" loading={busy} disabled={!options}>{searchNow ? "Add & search" : "Add"}</Button>
       </>}>
-      <form id="add-form" onSubmit={submit} className="flex gap-5 px-5 pt-2 pb-5">
-        <PosterArt src={item.poster} title={item.title} className="hidden w-28 shrink-0 self-start shadow-xl shadow-black/50 sm:block" />
-        <div className="min-w-0 flex-1 space-y-4">
-          {item.overview && <p className="line-clamp-3 text-sm leading-relaxed text-muted">{item.overview}</p>}
-          {!options ? <div className="flex justify-center py-8 text-muted"><Spinner /></div> : (
-            <>
-              <div className="grid gap-4 sm:grid-cols-2">
+      <form id="add-form" onSubmit={submit} className="space-y-6 px-5 pt-2 pb-5">
+        {!options || !defaults ? <div className="flex justify-center py-8 text-ink-2"><Spinner /></div> : (
+          <>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Version</p>
+              <Segmented label="Version" value={version ?? defaultVersion} onChange={setVersion} options={versions.map((v) => ({ value: v, label: v }))} />
+            </div>
+            <PickList label="Subtitles" values={subtitles ?? defaults.subtitles} choices={realLanguages(options).map((l) => l.name)}
+              onChange={setSubtitles} empty="No subtitles" hint="Subtitles never change the audio." />
+            {kind !== "movie" && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Seasons</p>
+                <Segmented label="Seasons to monitor" value={monitor} onChange={setMonitor} options={monitors} />
+              </div>
+            )}
+            <details className="group rounded-ctl">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-medium text-ink-2 hover:text-ink">
+                <Icon name="chevronRight" size={16} className="transition group-open:rotate-90" />More options
+              </summary>
+              <div className="space-y-4 pt-2">
                 <Field label="Quality profile">
                   <Select value={profile} onChange={(e) => setProfile(e.target.value)}>
-                    <option value="">Default ({defaultProfile ?? "none"})</option>
+                    <option value="">Default ({options.profiles.find((p) => p.id === defaults.profileId)?.name ?? "none"})</option>
                     {options.profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </Select>
                 </Field>
-                <Field label="Version">
-                  <Select value={version} onChange={(e) => setVersion(e.target.value)}>
-                    <option value="">Use default ({defaults?.version ?? options.media.defaultVersion})</option>
-                    {options.versions.map((v) => <option key={v} value={v}>{versionLabel(v)}</option>)}
-                  </Select>
-                </Field>
-                {kind !== "movie" && (
-                  <Field label="Monitor">
-                    <Select value={monitor} onChange={(e) => setMonitor(e.target.value as typeof monitor)}>
-                      <option value="All">All episodes</option>
-                      <option value="Future">Future episodes only</option>
-                      <option value="None">Nothing for now</option>
-                    </Select>
-                  </Field>
-                )}
+                <Switch checked={searchNow} onChange={setSearchNow} label="Search now" description="Looks for releases as soon as it is added." />
               </div>
-              <Switch checked={searchNow && monitor !== "None"} onChange={setSearchNow} disabled={monitor === "None"}
-                label="Start searching right away" description="Looks for releases on every indexer as soon as it is added." />
-            </>
-          )}
-          {error && <Alert>{error}</Alert>}
-        </div>
+            </details>
+          </>
+        )}
+        {error && <Alert>{error}</Alert>}
       </form>
     </Modal>
   );

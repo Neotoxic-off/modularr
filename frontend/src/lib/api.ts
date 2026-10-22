@@ -27,11 +27,13 @@ export interface DiscoveryItem {
   overview: string | null;
   status: string | null;
   genres: string[];
+  language?: string | null;
   poster: string | null;
   backdrop: string | null;
   rating: number | null;
   libraryId: number | null;
   inLibrary: boolean;
+  hasFile?: boolean;
 }
 
 export interface DiscoverList {
@@ -67,23 +69,36 @@ interface ItemBase {
 export interface Movie extends ItemBase {
   tmdbId: number;
   imdbId: string | null;
-  // Set by the /movies list only.
-  hasFile: boolean | null;
+  hasFile: boolean;
+}
+
+export interface Season {
+  number: number;
+  monitored: boolean;
+  episodes: number;
+  episodesWithFile: number;
+  // Monitored episodes already aired without a file.
+  missing: number;
+  hasFile: boolean;
 }
 
 export interface Series extends ItemBase {
   tvdbId: number;
   seriesType: "Standard" | "Daily" | "Anime";
   added: string;
-  seasons: { number: number; monitored: boolean }[];
+  seasons: Season[];
   episodes: number;
   episodesWithFile: number;
+  missing: number;
+  // Every monitored episode has a file.
+  hasFile: boolean;
 }
 
 export type LibraryItem = Movie | Series;
 
 export interface Episode {
   id: number;
+  seriesId: number;
   seasonNumber: number;
   episodeNumber: number;
   absoluteEpisodeNumber: number | null;
@@ -95,7 +110,7 @@ export interface Episode {
 
 export interface SeriesDetail {
   series: Series;
-  seasons: { number: number; monitored: boolean; episodes: number; episodesWithFile: number }[];
+  seasons: Season[];
   episodes: Episode[];
 }
 
@@ -115,7 +130,7 @@ export interface AddOptions {
   qualityProfileId?: number | null;
   version?: string | null;
   searchNow?: boolean;
-  monitor?: "All" | "Future" | "None";
+  monitor?: "All" | "Latest" | "Future" | "None";
 }
 
 export interface Release {
@@ -349,6 +364,51 @@ export interface DownloadProgress {
   eta: number | null;
 }
 
+export interface AiringEpisode {
+  id: number;
+  seriesId: number;
+  seriesTitle: string;
+  poster: string | null;
+  seasonNumber: number;
+  episodeNumber: number;
+  title: string | null;
+  airDate: string;
+  hasFile: boolean;
+  monitored: boolean;
+}
+
+// Storage sizes cover the whole disks holding the library and downloads; libraryBytes is the imported files only.
+export interface Dashboard {
+  counts: { movies: number; series: number; anime: number; episodes: number; episodesWithFile: number; missing: number };
+  storage: { usedBytes: number; freeBytes: number; totalBytes: number; libraryBytes: number };
+  subtitles: { covered: number; total: number };
+  inProgress: Download[];
+  // Monday to Sunday of the current week.
+  airing: AiringEpisode[];
+  recent: Activity[];
+}
+
+export type ExploreSort = "popularity" | "rating" | "date" | "title";
+
+export interface ExploreQuery {
+  page?: number;
+  genre?: string;
+  yearFrom?: number;
+  yearTo?: number;
+  status?: "released" | "upcoming" | "continuing" | "ended";
+  sort?: ExploreSort;
+}
+
+// Loading: the series index is still filling in the background; limited: movies without a TMDB key.
+export interface ExplorePage {
+  items: DiscoveryItem[];
+  page: number;
+  hasMore: boolean;
+  limited: boolean;
+  loading: boolean;
+  error: string | null;
+}
+
 export interface ActivityQuery {
   before?: number;
   limit?: number;
@@ -371,6 +431,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   return response.status === 204 || response.status === 202 ? (undefined as T) : ((await response.json()) as T);
 }
+
+const query = (params: object) =>
+  new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== "").map(([k, v]) => [k, String(v)])).toString();
 
 const send = <T>(method: string, path: string, body?: unknown) =>
   request<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -403,6 +466,10 @@ export const api = {
     request<DiscoveryItem[]>(`/lookup?type=all&term=${encodeURIComponent(term)}`, { signal }),
   discover: (kind: Kind, list: string) => request<DiscoverList>(`/discover/${kind === "movie" ? "movies" : kind}?list=${list}`),
 
+  explore: (kind: Kind, filter: ExploreQuery) => request<ExplorePage>(`/explore/${kind === "movie" ? "movies" : kind}?${query(filter)}`),
+  exploreGenres: (kind: Kind) => request<string[]>(`/explore/${kind === "movie" ? "movies" : kind}/genres`),
+  dashboard: () => request<Dashboard>("/dashboard"),
+
   movies: () => request<Movie[]>("/movies"),
   movie: (id: number) => request<MovieDetail>(`/movies/${id}`),
   series: () => request<Series[]>("/series"),
@@ -433,8 +500,8 @@ export const api = {
   removeDownload: (id: number, deleteData: boolean, blocklist: boolean) =>
     send<void>("DELETE", `/downloads/${id}?deleteData=${deleteData}&blocklist=${blocklist}`),
 
-  activity: (query: ActivityQuery = {}) =>
-    request<Activity[]>(`/activity?${new URLSearchParams(Object.entries(query).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)]))}`),
+  activity: (filter: ActivityQuery = {}) =>
+    request<Activity[]>(`/activity?${query(filter)}`),
   unreadCount: () => request<{ count: number }>("/activity/unread-count"),
   markRead: (upTo?: number) => send<void>("POST", `/activity/read${upTo === undefined ? "" : `?upTo=${upTo}`}`),
 
@@ -452,7 +519,7 @@ export const api = {
   saveMedia: (media: MediaSettings) => send<MediaSettings>("PUT", "/settings/media", media),
   subtitleSettings: () => request<SubtitleSettings>("/settings/subtitles"),
   saveSubtitleSettings: (settings: SubtitleSettings) => send<SubtitleSettings>("PUT", "/settings/subtitles", settings),
-  subtitles: (target: SubtitleTarget) => request<SubtitleStatus>(`/subtitles?${new URLSearchParams(Object.entries(target).map(([k, v]) => [k, String(v)]))}`),
+  subtitles: (target: SubtitleTarget) => request<SubtitleStatus>(`/subtitles?${query(target)}`),
   searchSubtitles: (target: SubtitleTarget, language?: string) => send<SubtitleCandidate[]>("POST", "/subtitles/search", { ...target, language }),
   downloadSubtitle: (target: SubtitleTarget, candidate: SubtitleCandidate) => send<SubtitleFile>("POST", "/subtitles/download", { ...target, ...candidate }),
   paths: () => request<Paths>("/settings/paths"),
@@ -494,3 +561,20 @@ export function formatAgo(iso: string, style: keyof typeof relative = "long"): s
 }
 
 export const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+// A local calendar day as the API writes air dates: YYYY-MM-DD.
+export const isoDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+export const episodeCode = (e: { seasonNumber: number; episodeNumber: number }) => `S${pad(e.seasonNumber)}E${pad(e.episodeNumber)}`;
+
+// Monday to Sunday of the current week, the range the dashboard's airing list covers.
+export function currentWeek(): Date[] {
+  const monday = new Date();
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  return Array.from({ length: 7 }, (_, i) => new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i));
+}
+
+export const libraryHref: Record<Kind, string> = { movie: "/movies/", series: "/series/", anime: "/anime/" };

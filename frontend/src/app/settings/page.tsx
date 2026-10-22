@@ -51,7 +51,7 @@ export default function SettingsPage() {
         <nav aria-label="Settings" className="rail -mx-4 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:flex-col lg:px-0">
           {available.map((t) => (
             <button key={t.value} onClick={() => select(t.value)} aria-current={tab === t.value ? "page" : undefined}
-              className="flex shrink-0 cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-muted transition hover:bg-raised/70 hover:text-foreground aria-[current=page]:bg-raised aria-[current=page]:text-foreground">
+              className="flex shrink-0 cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-ink-3 transition hover:bg-fill-2 hover:text-ink aria-[current=page]:bg-fill-2 aria-[current=page]:text-ink">
               <Icon name={t.icon} size={16} />{t.label}
             </button>
           ))}

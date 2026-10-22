@@ -6,7 +6,7 @@ import { api, errorMessage, titleHref } from "@/lib/api";
 import type { DiscoveryItem, ImportOutcome, ImportProposal, ImportProposals, LibraryRoot, MatchConfidence } from "@/lib/api";
 import { Icon } from "@/components/icons";
 import { PosterArt } from "@/components/Poster";
-import { Alert, Badge, Button, Empty, Input, Modal, PageHeader, Skeleton, Spinner, Tabs } from "@/components/ui";
+import { Alert, Badge, Button, Empty, Input, Modal, PageHeader, Skeleton, Spinner, Segmented } from "@/components/ui";
 import type { Tone } from "@/components/ui";
 
 const roots: readonly { value: LibraryRoot; label: string }[] = [
@@ -16,9 +16,9 @@ const roots: readonly { value: LibraryRoot; label: string }[] = [
 ];
 
 const confidence: Record<MatchConfidence, { tone: Tone; label: string }> = {
-  High: { tone: "green", label: "Sure match" },
-  Medium: { tone: "accent", label: "Likely match" },
-  Low: { tone: "amber", label: "Unsure match" },
+  High: { tone: "ok", label: "Sure match" },
+  Medium: { tone: "live", label: "Likely match" },
+  Low: { tone: "warn", label: "Unsure match" },
   None: { tone: "neutral", label: "No match" },
 };
 
@@ -81,9 +81,9 @@ export function LibraryImport() {
       <PageHeader title="Library import" description="Folders in your library that no title owns yet. Importing adds the title with its files; nothing is searched, moved or renamed." />
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <Tabs label="Library folder" value={root} onChange={(r) => { setRoot(r); setProposals(null); setError(null); setOutcomes(null); }} options={roots} />
+        <Segmented label="Library folder" value={root} onChange={(r) => { setRoot(r); setProposals(null); setError(null); setOutcomes(null); }} options={roots} />
         {proposals && (
-          <p className="text-sm text-muted">
+          <p className="text-sm text-ink-3">
             {proposals.total === 0 ? "Every folder belongs to a title." : proposals.total > items.length
               ? `Showing ${items.length} of ${proposals.total} folders. Import these to see the next ones.`
               : `${proposals.total} ${proposals.total === 1 ? "folder" : "folders"} to import`}
@@ -96,7 +96,7 @@ export function LibraryImport() {
         {outcomes && <Outcomes outcomes={outcomes} onDismiss={() => setOutcomes(null)} />}
 
         {!proposals && !error ? (
-          <div className="space-y-2">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
+          <div className="space-y-2">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-20 rounded-card" />)}</div>
         ) : proposals && items.length === 0 ? (
           <Empty icon="folder" title="Nothing to import here">
             <p>Every folder in this library already belongs to a title. New folders show up here as soon as they appear on disk.</p>
@@ -105,25 +105,25 @@ export function LibraryImport() {
           <>
             <div className="flex flex-wrap items-center gap-3 px-1 text-sm">
               <label className="flex cursor-pointer items-center gap-2.5">
-                <input type="checkbox" className="size-4 cursor-pointer accent-[var(--color-accent-strong)]"
+                <input type="checkbox" className="size-4 cursor-pointer accent-white"
                   checked={chosen.length > 0 && chosen.length === importable.length}
                   ref={(box) => { if (box) box.indeterminate = chosen.length > 0 && chosen.length < importable.length; }}
                   disabled={importable.length === 0}
                   onChange={(e) => setSelected(new Set(e.target.checked ? importable.map((p) => p.folder) : []))} />
                 Select all with a match
               </label>
-              <span className="ml-auto text-muted tabular-nums">{chosen.length} selected</span>
+              <span className="ml-auto text-ink-3 tabular-nums">{chosen.length} selected</span>
             </div>
 
-            <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+            <ul className="divide-y divide-hair-2 overflow-hidden rounded-tile border border-hair bg-fill">
               {items.map((p) => (
                 <Row key={p.folder} proposal={p} match={matches.get(p.folder) ?? null} selected={selected.has(p.folder)}
                   onToggle={() => toggle(p.folder)} onChange={() => setChanging(p)} />
               ))}
             </ul>
 
-            <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-end gap-3 rounded-2xl border border-line bg-surface/90 px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur-xl lg:bottom-4">
-              <span className="mr-auto text-sm text-muted">{chosen.length === 0 ? "Select the folders to import." : `${chosen.length} ${chosen.length === 1 ? "title" : "titles"} added with their files, no search.`}</span>
+            <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-end gap-3 rounded-tile border border-hair bg-fill px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur-xl lg:bottom-4">
+              <span className="mr-auto text-sm text-ink-3">{chosen.length === 0 ? "Select the folders to import." : `${chosen.length} ${chosen.length === 1 ? "title" : "titles"} added with their files, no search.`}</span>
               <Button variant="primary" onClick={importChosen} disabled={importing || chosen.length === 0}>
                 {importing ? <Spinner /> : <Icon name="download" size={16} />}Import {chosen.length > 0 && chosen.length}
               </Button>
@@ -152,25 +152,25 @@ function Row({ proposal, match, selected, onToggle, onChange }: {
   onChange: () => void;
 }) {
   const changed = match !== proposal.match;
-  const badge = changed ? { tone: "accent" as Tone, label: "Chosen by you" } : confidence[proposal.confidence];
+  const badge = changed ? { tone: "live" as Tone, label: "Chosen by you" } : confidence[proposal.confidence];
   const name = folderName(proposal.folder);
   return (
-    <li className={`flex items-center gap-3 px-4 py-3 transition sm:gap-4 ${selected ? "bg-accent/[0.04]" : ""}`}>
+    <li className={`flex items-center gap-3 px-4 py-3 transition sm:gap-4 ${selected ? "bg-fill" : ""}`}>
       <input type="checkbox" checked={selected} onChange={onToggle} disabled={!match} aria-label={`Import ${name}`}
-        className="size-4 shrink-0 cursor-pointer accent-[var(--color-accent-strong)] disabled:cursor-not-allowed" />
+        className="size-4 shrink-0 cursor-pointer accent-white disabled:cursor-not-allowed" />
       <PosterArt src={match?.poster ?? null} title={match?.title ?? name} className="w-11 shrink-0 rounded-md" />
       <div className="grid min-w-0 flex-1 gap-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] md:items-center md:gap-6">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 truncate text-sm font-medium" title={proposal.folder}><Icon name="folder" size={14} className="shrink-0 text-muted" />{name}</p>
+          <p className="flex items-center gap-1.5 truncate text-sm font-medium" title={proposal.folder}><Icon name="folder" size={14} className="shrink-0 text-ink-3" />{name}</p>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
           {match ? (
             <span className="min-w-0 truncate text-sm">
-              <Icon name="chevronRight" size={14} className="mr-1 inline text-muted max-md:hidden" />
-              {match.title}{match.year && <span className="text-muted"> ({match.year})</span>}
+              <Icon name="chevronRight" size={14} className="mr-1 inline text-ink-3 max-md:hidden" />
+              {match.title}{match.year && <span className="text-ink-3"> ({match.year})</span>}
             </span>
           ) : (
-            <span className="text-sm text-muted">No title found for “{proposal.parsed.lookupTerm}”</span>
+            <span className="text-sm text-ink-3">No title found for “{proposal.parsed.lookupTerm}”</span>
           )}
           <Badge tone={badge.tone}>{badge.label}</Badge>
         </div>
@@ -210,28 +210,28 @@ function MatchPicker({ proposal, current, root, onPick, onClose }: {
     <Modal onClose={onClose} title="Change match" description={<span title={proposal.folder}>For the folder “{folderName(proposal.folder)}”</span>}>
       <div className="space-y-3 px-5 pb-5">
         <div className="relative">
-          <Icon name="search" size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
+          <Icon name="search" size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-3" />
           <Input value={term} onChange={(e) => setTerm(e.target.value)} aria-label="Search a title" placeholder="Title, year, or tmdb:603 / tvdb:81189" className="pl-9" />
         </div>
         {error && <Alert>{error}</Alert>}
         {query.length < 2 ? null : !results && !error ? (
           <div className="space-y-2">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-16" />)}</div>
         ) : results && results.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-line px-5 py-8 text-center text-sm text-muted">No title matches “{query}”. Try the original title or an id.</p>
+          <p className="rounded-card border border-dashed border-hair px-5 py-8 text-center text-sm text-ink-3">No title matches “{query}”. Try the original title or an id.</p>
         ) : results && (
-          <ul className="max-h-[50vh] divide-y divide-line overflow-y-auto rounded-xl border border-line">
+          <ul className="max-h-[50vh] divide-y divide-hair-2 overflow-y-auto rounded-card border border-hair">
             {results.map((item) => {
               const isCurrent = item.kind === current?.kind && item.tmdbId === current.tmdbId && item.tvdbId === current.tvdbId;
               return (
                 <li key={`${item.kind}${item.tmdbId}${item.tvdbId}`}>
                   <button onClick={() => onPick(item)} disabled={item.inLibrary} aria-current={isCurrent || undefined}
-                    className="flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left transition hover:bg-raised disabled:cursor-not-allowed disabled:opacity-50">
+                    className="flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left transition hover:bg-fill-2 disabled:cursor-not-allowed disabled:opacity-50">
                     <PosterArt src={item.poster} title={item.title} className="w-9 shrink-0 rounded-md" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium">{item.title}</span>
-                      <span className="block text-xs text-muted">{item.year ?? "Year unknown"}{item.inLibrary && ", already in your library"}</span>
+                      <span className="block text-xs text-ink-3">{item.year ?? "Year unknown"}{item.inLibrary && ", already in your library"}</span>
                     </span>
-                    {isCurrent && <Badge tone="accent"><Icon name="check" size={11} />Current</Badge>}
+                    {isCurrent && <Badge tone="live"><Icon name="check" size={11} />Current</Badge>}
                   </button>
                 </li>
               );
@@ -247,9 +247,9 @@ function Outcomes({ outcomes, onDismiss }: { outcomes: ImportOutcome[]; onDismis
   const failed = outcomes.filter((o) => o.error);
   const added = outcomes.filter((o) => !o.error);
   return (
-    <div role="status" className="animate-fade space-y-2 rounded-2xl border border-line bg-surface p-4 text-sm">
+    <div role="status" className="animate-fade space-y-2 rounded-tile border border-hair bg-fill p-4 text-sm">
       <div className="flex items-center gap-2">
-        <Icon name={failed.length ? "alert" : "check"} size={16} className={failed.length ? "text-amber-200" : "text-emerald-300"} />
+        <Icon name={failed.length ? "alert" : "check"} size={16} className={failed.length ? "text-warn" : "text-ok"} />
         <p className="flex-1">
           {added.length} {added.length === 1 ? "title" : "titles"} imported with {added.reduce((n, o) => n + o.files, 0)} files
           {failed.length > 0 && `, ${failed.length} failed`}.
@@ -259,10 +259,10 @@ function Outcomes({ outcomes, onDismiss }: { outcomes: ImportOutcome[]; onDismis
       <ul className="space-y-1 pl-6">
         {added.map((o) => (
           <li key={o.folder} className="truncate">
-            <Link className="text-accent hover:underline" href={o.movieId !== null ? titleHref("movie", o.movieId) : titleHref("series", o.seriesId ?? 0)}>{folderName(o.folder)}</Link>
+            <Link className="text-ink hover:underline" href={o.movieId !== null ? titleHref("movie", o.movieId) : titleHref("series", o.seriesId ?? 0)}>{folderName(o.folder)}</Link>
           </li>
         ))}
-        {failed.map((o) => <li key={o.folder} className="text-red-300">{folderName(o.folder)}: {o.error}</li>)}
+        {failed.map((o) => <li key={o.folder} className="text-bad">{folderName(o.folder)}: {o.error}</li>)}
       </ul>
     </div>
   );

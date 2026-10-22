@@ -22,7 +22,7 @@ export function MediaSettings() {
   const media = draft ?? options?.media;
   const { busy, error, done, run } = useAction();
 
-  if (!options || !media) return <Skeleton className="h-96 rounded-2xl" />;
+  if (!options || !media) return <Skeleton className="h-96 rounded-tile" />;
 
   const versions = options.versions;
   // Conditions match an item's real original language: Any and Original make no sense there.
@@ -51,7 +51,7 @@ export function MediaSettings() {
             {versions.map((v) => <option key={v} value={v}>{versionLabel(v)}</option>)}
           </Select>
         </div>
-        <p className="mt-3 text-xs text-muted">“Any version” turns the check off. VO follows each title’s own original language; VF also covers VFF, TRUEFRENCH and FRENCH releases.</p>
+        <p className="mt-3 text-xs text-ink-3">“Any version” turns the check off. VO follows each title’s own original language; VF also covers VFF, TRUEFRENCH and FRENCH releases.</p>
       </Section>
 
       <Section title="Version exceptions" description="Checked from top to bottom; the first rule that matches a title wins over the category and default version."
@@ -59,25 +59,25 @@ export function MediaSettings() {
           <Icon name="plus" size={14} />Add rule
         </Button>}>
         {media.exceptions.length === 0 ? (
-          <p className="text-sm text-muted">No exceptions. For example, add one so anime comes in VOSTFR.</p>
+          <p className="text-sm text-ink-3">No exceptions. For example, add one so anime comes in VOSTFR.</p>
         ) : (
           <ol className="space-y-2">
             {media.exceptions.map((rule, i) => (
-              <li key={i} className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-background/40 p-2.5 text-sm">
-                <span className="w-5 text-center text-xs text-muted tabular-nums">{i + 1}</span>
-                <span className="text-muted">When</span>
+              <li key={i} className="flex flex-wrap items-center gap-2 rounded-card border border-hair bg-black/20 p-2.5 text-sm">
+                <span className="w-5 text-center text-xs text-ink-3 tabular-nums">{i + 1}</span>
+                <span className="text-ink-3">When</span>
                 <Select value={rule.category ?? ""} aria-label="Category" className="w-32"
                   onChange={(e) => setRule(i, { ...rule, category: (e.target.value || null) as Category | null })}>
                   <option value="">any category</option>
                   {(Object.keys(categoryNames) as Category[]).map((c) => <option key={c} value={c}>{categoryNames[c]}</option>)}
                 </Select>
-                <span className="text-muted">in</span>
+                <span className="text-ink-3">in</span>
                 <Select value={rule.originalLanguage ?? ""} aria-label="Original language" className="w-40"
                   onChange={(e) => setRule(i, { ...rule, originalLanguage: e.target.value || null })}>
                   <option value="">any original language</option>
                   {languages.map((l) => <option key={l} value={l}>{l}</option>)}
                 </Select>
-                <span className="text-muted">want</span>
+                <span className="text-ink-3">want</span>
                 <Select value={rule.version} aria-label="Wanted version" className="w-48"
                   onChange={(e) => setRule(i, { ...rule, version: e.target.value })}>
                   {versions.map((v) => <option key={v} value={v}>{versionLabel(v)}</option>)}
@@ -88,7 +88,7 @@ export function MediaSettings() {
                   <Button type="button" variant="ghost" size="sm" onClick={() => setMedia({ ...media, exceptions: media.exceptions.filter((_, n) => n !== i) })} aria-label={`Delete rule ${i + 1}`}><Icon name="trash" size={14} /></Button>
                 </span>
                 {rule.category === null && rule.originalLanguage === null && (
-                  <p className="basis-full pl-7 text-xs text-amber-200">Pick a category or an original language, otherwise the rule matches everything.</p>
+                  <p className="basis-full pl-7 text-xs text-warn">Pick a category or an original language, otherwise the rule matches everything.</p>
                 )}
               </li>
             ))}
@@ -99,8 +99,8 @@ export function MediaSettings() {
       <Section title="Category defaults" description="Used when you add a title without choosing a profile or version. Wanted subtitles are set in Subtitles.">
         <div className="grid gap-4 md:grid-cols-3">
           {categories.map(({ key, label }) => (
-            <div key={key} className="space-y-3 rounded-xl border border-line bg-background/40 p-4">
-              <p className="font-display font-semibold">{label}</p>
+            <div key={key} className="space-y-3 rounded-card border border-hair bg-black/20 p-4">
+              <p className="font-semibold">{label}</p>
               <Field label="Quality profile">
                 <Select value={media[key].profileId} onChange={(e) => setMedia({ ...media, [key]: { ...media[key], profileId: Number(e.target.value) } })}>
                   {options.profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}

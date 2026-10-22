@@ -24,7 +24,7 @@ export function Profiles() {
   }, []);
 
   if (error) return <Alert>{error}</Alert>;
-  if (!profiles) return <Skeleton className="h-96 rounded-2xl" />;
+  if (!profiles) return <Skeleton className="h-96 rounded-tile" />;
 
   const current = profiles.find((p) => p.id === selected) ?? null;
 
@@ -52,7 +52,7 @@ export function Profiles() {
       <div className="flex flex-wrap items-center gap-2">
         {profiles.map((p) => (
           <button key={p.id} onClick={() => setSelected(p.id)} aria-pressed={p.id === selected}
-            className="cursor-pointer rounded-full border border-line px-3.5 py-1.5 text-sm text-muted transition hover:text-foreground aria-pressed:border-accent/60 aria-pressed:bg-accent/10 aria-pressed:text-foreground">
+            className="cursor-pointer rounded-full border border-hair px-3.5 py-1.5 text-sm text-ink-3 transition hover:text-ink aria-pressed:border-white/40 aria-pressed:bg-fill-2 aria-pressed:text-ink">
             {p.name}
           </button>
         ))}
@@ -128,20 +128,20 @@ function Editor({ profile: initial, qualities, onSaved, onDuplicate, onDeleted }
           </div>
 
           <div>
-            <p className="mb-2 text-sm font-medium">Qualities <span className="font-normal text-muted">best first, drag or use the arrows to rank</span></p>
-            <ol className="divide-y divide-line overflow-hidden rounded-xl border border-line">
+            <p className="mb-2 text-sm font-medium">Qualities <span className="font-normal text-ink-3">best first, drag or use the arrows to rank</span></p>
+            <ol className="divide-y divide-hair-2 overflow-hidden rounded-card border border-hair">
               {ranked.map((item, i) => (
                 <li key={keyOf(item)} draggable onDragStart={() => setDragging(i)} onDragEnd={() => setDragging(null)}
                   onDragOver={(e) => e.preventDefault()} onDrop={() => { if (dragging !== null) move(dragging, i); setDragging(null); }}
-                  className={`flex items-center gap-3 bg-background/40 px-3 py-1 transition ${dragging === i ? "opacity-40" : ""} ${item.allowed ? "" : "text-muted"}`}>
-                  <span className="cursor-grab text-muted active:cursor-grabbing" aria-hidden="true"><Icon name="list" size={14} /></span>
+                  className={`flex items-center gap-3 bg-black/20 px-3 py-1 transition ${dragging === i ? "opacity-40" : ""} ${item.allowed ? "" : "text-ink-3"}`}>
+                  <span className="cursor-grab text-ink-3 active:cursor-grabbing" aria-hidden="true"><Icon name="list" size={14} /></span>
                   <input type="checkbox" checked={item.allowed} onChange={(e) => toggle(i, e.target.checked)} aria-label={`Allow ${name(item)}`}
-                    className="size-4 cursor-pointer accent-[var(--color-accent-strong)]" />
+                    className="size-4 cursor-pointer accent-white" />
                   <span className="min-w-0 flex-1 truncate text-sm">
                     {name(item)}
-                    {item.items.length > 0 && <span className="ml-2 text-xs text-muted">{item.items.map(name).join(", ")}</span>}
+                    {item.items.length > 0 && <span className="ml-2 text-xs text-ink-3">{item.items.map(name).join(", ")}</span>}
                   </span>
-                  {profile.upgradeAllowed && keyOf(item) === profile.cutoff && <span className="rounded bg-accent/15 px-1.5 text-[11px] text-accent">Cutoff</span>}
+                  {profile.upgradeAllowed && keyOf(item) === profile.cutoff && <span className="rounded bg-fill-2 px-1.5 text-[11px] text-ink">Cutoff</span>}
                   <span className="flex">
                     <Button type="button" variant="ghost" size="sm" className="!h-7 !px-1.5" disabled={i === 0} onClick={() => move(i, i - 1)} aria-label={`Rank ${name(item)} higher`}><Icon name="up" size={14} /></Button>
                     <Button type="button" variant="ghost" size="sm" className="!h-7 !px-1.5" disabled={i === ranked.length - 1} onClick={() => move(i, i + 1)} aria-label={`Rank ${name(item)} lower`}><Icon name="down" size={14} /></Button>
@@ -151,9 +151,9 @@ function Editor({ profile: initial, qualities, onSaved, onDuplicate, onDeleted }
             </ol>
           </div>
         </div>
-        <div className="mt-6 border-t border-line pt-4">
+        <div className="mt-6 border-t border-hair pt-4">
           <SaveBar busy={busy} error={error} done={done} disabled={allowed.length === 0} />
-          {allowed.length === 0 && <p className="mt-2 text-xs text-amber-200">Allow at least one quality.</p>}
+          {allowed.length === 0 && <p className="mt-2 text-xs text-warn">Allow at least one quality.</p>}
         </div>
       </Section>
     </form>

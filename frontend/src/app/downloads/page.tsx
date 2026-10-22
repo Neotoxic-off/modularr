@@ -6,7 +6,7 @@ import { api, errorMessage, formatEta, formatSize, titleHref } from "@/lib/api";
 import type { Download, DownloadState } from "@/lib/api";
 import { useActivity, useActivityRefresh } from "@/components/Activity";
 import { Icon } from "@/components/icons";
-import { Alert, Badge, Button, Empty, Modal, PageHeader, Skeleton, Spinner, Switch, Tabs } from "@/components/ui";
+import { Alert, Badge, Button, Empty, Modal, PageHeader, Skeleton, Spinner, Switch, Segmented } from "@/components/ui";
 import type { Tone } from "@/components/ui";
 
 type Group = "active" | "completed" | "failed" | "all";
@@ -19,9 +19,9 @@ const groupOf: Record<DownloadState, Group | null> = {
 };
 
 const stateLabel: Record<DownloadState, [string, Tone]> = {
-  Downloading: ["Downloading", "accent"], ImportPending: ["Waiting to import", "neutral"], Importing: ["Importing", "accent"],
-  Imported: ["Imported", "green"], ImportBlocked: ["Import blocked", "amber"], FailedPending: ["Failed", "red"],
-  Failed: ["Failed", "red"], Ignored: ["Removed", "neutral"],
+  Downloading: ["Downloading", "live"], ImportPending: ["Waiting to import", "neutral"], Importing: ["Importing", "live"],
+  Imported: ["Imported", "ok"], ImportBlocked: ["Import blocked", "warn"], FailedPending: ["Failed", "bad"],
+  Failed: ["Failed", "bad"], Ignored: ["Removed", "neutral"],
 };
 
 const POLL_MS = 2000;
@@ -61,9 +61,9 @@ export default function DownloadsPage() {
   return (
     <>
       <PageHeader title="Downloads" description={downloads && (count("active") > 0
-        ? <span><span className="text-foreground tabular-nums">{count("active")}</span> active, <span className="text-foreground tabular-nums">{formatSize(speed)}/s</span> in total</span>
+        ? <span><span className="text-ink tabular-nums">{count("active")}</span> active, <span className="text-ink tabular-nums">{formatSize(speed)}/s</span> in total</span>
         : "Nothing downloading right now.")}>
-        <Tabs label="Show" value={group} onChange={setGroup} options={[
+        <Segmented label="Show" value={group} onChange={setGroup} options={[
           { value: "active", label: "Active", count: count("active") },
           { value: "completed", label: "Completed", count: count("completed") },
           { value: "failed", label: "Failed", count: count("failed") },
@@ -78,7 +78,7 @@ export default function DownloadsPage() {
           Releases grabbed for your titles show up here with live progress.
         </Empty>
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+        <ul className="divide-y divide-hair-2 overflow-hidden rounded-tile border border-hair bg-fill">
           {shown.map((d) => (
             <Row key={d.id} download={d}
               onToggle={() => act(d.status === "Paused" ? api.resume(d.id) : api.pause(d.id))}
@@ -99,16 +99,16 @@ function Row({ download: d, onToggle, onRemove }: { download: Download; onToggle
   const href = d.movieId !== null ? titleHref("movie", d.movieId) : d.seriesId !== null ? titleHref("series", d.seriesId) : null;
 
   return (
-    <li className="px-4 py-4 transition hover:bg-raised/30 sm:px-5">
+    <li className="px-4 py-4 transition hover:bg-fill-2 sm:px-5">
       <div className="flex items-start gap-3">
-        <span className={`mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg ${d.category === "movies" ? "bg-sky-400/10 text-sky-300" : "bg-accent/10 text-accent"}`}>
+        <span className={`mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg ${d.category === "movies" ? "bg-fill-2 text-live" : "bg-fill-2 text-ink"}`}>
           <Icon name={d.category === "movies" ? "film" : "tv"} size={16} />
         </span>
         <div className="min-w-0 flex-1">
           {href
-            ? <Link href={href} className="block truncate text-sm font-medium hover:text-accent" title={d.releaseTitle}>{d.releaseTitle}</Link>
+            ? <Link href={href} className="block truncate text-sm font-medium hover:text-ink" title={d.releaseTitle}>{d.releaseTitle}</Link>
             : <p className="truncate text-sm font-medium" title={d.releaseTitle}>{d.releaseTitle}</p>}
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-3">
             <Badge tone={paused ? "neutral" : tone}>{paused ? "Paused" : label}</Badge>
             <span className="tabular-nums">{formatSize(d.size)}</span>
             <span>{d.indexer}</span>
@@ -119,7 +119,7 @@ function Row({ download: d, onToggle, onRemove }: { download: Download; onToggle
               </>
             )}
           </div>
-          {d.message && <p className="mt-1.5 text-xs text-amber-200/85">{d.message}</p>}
+          {d.message && <p className="mt-1.5 text-xs text-warn">{d.message}</p>}
         </div>
         <div className="flex shrink-0 gap-0.5">
           {active && (
@@ -135,10 +135,10 @@ function Row({ download: d, onToggle, onRemove }: { download: Download; onToggle
 
       {active && (
         <div className="mt-3 flex items-center gap-3 sm:pl-12">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-line" role="progressbar" aria-label="Progress" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
-            <div className={`h-full rounded-full transition-[width] duration-700 ${paused ? "bg-muted" : "bg-gradient-to-r from-accent-strong to-accent"}`} style={{ width: `${progress}%` }} />
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-fill-2" role="progressbar" aria-label="Progress" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+            <div className={`h-full rounded-full transition-[width] duration-700 ${paused ? "bg-ink-3" : "bg-gradient-to-r from-white to-white"}`} style={{ width: `${progress}%` }} />
           </div>
-          <span className="w-10 text-right text-xs text-muted tabular-nums">{progress}%</span>
+          <span className="w-10 text-right text-xs text-ink-3 tabular-nums">{progress}%</span>
         </div>
       )}
     </li>

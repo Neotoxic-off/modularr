@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { api, errorMessage, formatAgo, formatRuntime, isSeries, kindOf } from "@/lib/api";
+import { api, errorMessage, formatAgo, formatRuntime, isSeries, kindOf, libraryHref } from "@/lib/api";
 import type { Episode, ItemPatch, Kind, LibraryItem, MovieDetail, SeriesDetail, SubtitleTarget } from "@/lib/api";
 import { realLanguages, useOptions, versionLabel } from "@/lib/options";
 import { useTitleEvents } from "@/components/Activity";
@@ -12,13 +12,13 @@ import { ActivityTimeline } from "@/components/ActivityFeed";
 import { useSession } from "@/components/AuthGate";
 import { Icon } from "@/components/icons";
 import { PosterArt } from "@/components/Poster";
+import { useChrome } from "@/components/Shell";
 import { ReleasesDialog } from "@/components/ReleasesDialog";
 import { SubtitleSummary, SubtitlesDialog } from "@/components/SubtitlesDialog";
 import { Alert, Badge, Button, Empty, Field, Modal, PickList, Rating, Select, Skeleton, Spinner, Switch } from "@/components/ui";
 
 type Detail = { item: LibraryItem; hasFile?: boolean; seasons?: SeriesDetail["seasons"]; episodes?: Episode[] };
 
-const libraryHref: Record<Kind, string> = { movie: "/movies/", series: "/series/", anime: "/anime/" };
 const libraryName: Record<Kind, string> = { movie: "Movies", series: "Series", anime: "Anime" };
 
 export function TitleView({ type, id }: { type: "movie" | "series"; id: number }) {
@@ -95,27 +95,30 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
   }
 
   const runtime = formatRuntime(item.runtime);
+  // The server refuses searches and grabs for files already on disk, so nothing offers them.
+  const hasFile = isSeries(item) ? item.hasFile : !!detail.hasFile;
+  useChrome({ backdrop: item.backdrop, crumb: { label: libraryName[kind], href: libraryHref[kind], title: item.title } });
   const status = isSeries(item)
     ? { done: item.episodes > 0 && item.episodesWithFile >= item.episodes, label: `${item.episodesWithFile} of ${item.episodes} episodes` }
     : { done: !!detail.hasFile, label: detail.hasFile ? "Downloaded" : "Missing" };
 
   return (
     <>
-      <section className="relative -mx-4 -mt-6 sm:-mx-6 lg:-mx-10 lg:-mt-8">
-        <div className="absolute inset-0 h-[min(70vh,560px)] overflow-hidden">
+      <section className="relative overflow-hidden rounded-panel ring-1 ring-white/10">
+        <div className="absolute inset-0">
           {item.backdrop && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={item.backdrop} alt="" className="h-full w-full animate-fade object-cover object-[50%_20%] opacity-60" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/75 to-background/20" />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/90 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/75 to-canvas/20" />
+          <div className="absolute inset-0 bg-gradient-to-r from-canvas/90 to-transparent" />
         </div>
 
-        <div className="relative px-4 pt-6 sm:px-6 lg:px-10 lg:pt-8">
-          <Link href={libraryHref[kind]} className="inline-flex items-center gap-1 text-sm text-white/70 hover:text-white">
+        <div className="relative p-5 sm:p-6 lg:p-8">
+          <Link href={libraryHref[kind]} className="inline-flex min-h-11 items-center gap-1 text-sm text-ink-2 hover:text-ink md:hidden">
             <Icon name="chevronLeft" size={16} />{libraryName[kind]}
           </Link>
-          <div className="mt-[12vh] flex flex-col gap-6 sm:flex-row sm:items-end lg:mt-[18vh] lg:gap-10">
+          <div className="mt-[6vh] flex flex-col gap-6 sm:flex-row sm:items-end md:mt-[14vh] lg:gap-10">
             <PosterArt src={item.poster} title={item.title} className="w-32 shrink-0 shadow-2xl shadow-black/70 sm:w-48 lg:w-56" />
             <div className="min-w-0 flex-1 animate-rise">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-white/75">
@@ -125,22 +128,24 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
                 <Rating value={item.rating} className="text-sm" />
                 {isSeries(item) && <span>{item.seasons.filter((s) => s.number > 0).length} seasons</span>}
               </div>
-              <h1 className="mt-2 font-display text-4xl leading-[0.95] font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">{item.title}</h1>
+              <h1 className="mt-2 scrim-text font-serif text-[clamp(40px,6vw,64px)] leading-none text-balance">{item.title}</h1>
               {item.genres.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-1.5">
                   {item.genres.map((g) => <span key={g} className="rounded-full bg-white/[0.07] px-2.5 py-1 text-xs text-white/80 ring-1 ring-white/10">{g}</span>)}
                 </div>
               )}
               <div className="mt-6 flex flex-wrap items-center gap-2.5">
-                <Button variant="primary" size="lg" onClick={() => search()} disabled={searching !== null}>
-                  {searching === "all" ? <Spinner /> : <Icon name="bolt" size={16} />}Search now
-                </Button>
-                <Button variant="glass" size="lg" onClick={() => setReleases({})}><Icon name="list" size={16} />Browse releases</Button>
-                <Button variant="ghost" size="lg" onClick={rescan} disabled={scanning} title="Look for files added or deleted in the folder">
+                {!hasFile && (
+                  <>
+                    <Button variant="primary" onClick={() => search()} loading={searching === "all"} disabled={searching !== null} icon="bolt">Search now</Button>
+                    <Button variant="glass" onClick={() => setReleases({})} icon="list">Choose a release</Button>
+                  </>
+                )}
+                <Button variant="ghost" onClick={rescan} disabled={scanning} title="Look for files added or deleted in the folder">
                   {scanning ? <Spinner /> : <Icon name="folder" size={16} />}Rescan folder
                 </Button>
                 {user.role === "Admin" && (
-                  <Button variant="ghost" size="lg" onClick={() => setRemoving(true)} aria-label="Remove from library"><Icon name="trash" size={16} />Remove</Button>
+                  <Button variant="ghost" onClick={() => setRemoving(true)} aria-label="Remove from library"><Icon name="trash" size={16} />Remove</Button>
                 )}
               </div>
             </div>
@@ -150,22 +155,22 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-8">
-          {notice && <p role="status" className="flex animate-fade items-center gap-2 rounded-lg bg-accent/10 px-4 py-2.5 text-sm text-accent"><Icon name="check" size={16} />{notice}</p>}
+          {notice && <p role="status" className="flex animate-fade items-center gap-2 rounded-lg bg-fill-2 px-4 py-2.5 text-sm text-ink"><Icon name="check" size={16} />{notice}</p>}
           {error && <Alert>{error}</Alert>}
-          {item.overview && <p className="max-w-[68ch] text-[15px] leading-7 text-foreground/85">{item.overview}</p>}
+          {item.overview && <p className="max-w-[68ch] text-[15px] leading-7 text-ink-2">{item.overview}</p>}
           {isSeries(item) && detail.seasons && detail.episodes && (
             <Seasons seasons={detail.seasons} episodes={detail.episodes} searching={searching}
               onSearch={search} onReleases={(season) => setReleases({ season })}
               onSubtitles={(e) => setSubtitles({ target: { episodeId: e.id }, title: `${item.title} S${String(e.seasonNumber).padStart(2, "0")}E${String(e.episodeNumber).padStart(2, "0")}` })} />
           )}
-          <ActivityTimeline scope={scope} itemTitle={item.title} />
+          <ActivityTimeline scope={scope} />
         </div>
 
         <aside className="space-y-4">
-          <div className="space-y-4 rounded-2xl border border-line bg-surface p-5">
+          <div className="space-y-4 rounded-tile border border-hair bg-fill p-5">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-muted">Status</span>
-              <Badge tone={status.done ? "green" : "amber"}>{status.label}</Badge>
+              <span className="text-sm text-ink-3">Status</span>
+              <Badge tone={status.done ? "ok" : "warn"}>{status.label}</Badge>
             </div>
             <Switch checked={item.monitored} onChange={(monitored) => patch({ monitored })} label="Monitored"
               description={item.monitored ? "New and missing releases are grabbed automatically." : "Nothing is grabbed automatically."} />
@@ -174,7 +179,7 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
             )}
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-line bg-surface p-5">
+          <div className="space-y-4 rounded-tile border border-hair bg-fill p-5">
             {!options ? <Spinner /> : (
               <>
                 <Field label="Quality profile">
@@ -195,9 +200,8 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
             )}
           </div>
 
-          <dl className="space-y-3 rounded-2xl border border-line bg-surface p-5 text-sm">
+          <dl className="space-y-3 rounded-tile border border-hair bg-fill p-5 text-sm">
             <Info label="Original language">{item.originalLanguage}</Info>
-            <Info label="Looking for">{versionLabel(item.wantedVersion)}{item.wantedSubtitles.length > 0 && `, subtitles ${item.wantedSubtitles.join(", ")}`}</Info>
             <Info label="Last search">
               {item.lastSearch ? <span title={new Date(item.lastSearch.time).toLocaleString()}>{item.lastSearch.result}, {formatAgo(item.lastSearch.time)}</span> : "Not yet"}
             </Info>
@@ -216,7 +220,7 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
 function Info({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[128px_minmax(0,1fr)] gap-3">
-      <dt className="text-muted">{label}</dt>
+      <dt className="text-ink-3">{label}</dt>
       <dd className="min-w-0">{children}</dd>
     </div>
   );
@@ -238,8 +242,8 @@ function Seasons({ seasons, episodes, searching, onSearch, onReleases, onSubtitl
 
   return (
     <section aria-label="Seasons">
-      <h2 className="mb-4 font-display text-xl font-semibold">Seasons</h2>
-      <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+      <h2 className="mb-4 text-[17px] font-semibold">Seasons</h2>
+      <div className="divide-y divide-hair-2 overflow-hidden rounded-tile border border-hair bg-fill">
         {ordered.map((season) => {
           const expanded = open.has(season.number);
           const ratio = season.episodes ? season.episodesWithFile / season.episodes : 0;
@@ -250,39 +254,43 @@ function Seasons({ seasons, episodes, searching, onSearch, onReleases, onSubtitl
                 <button aria-expanded={expanded} aria-controls={panel}
                   onClick={() => setOpen((o) => { const n = new Set(o); if (!n.delete(season.number)) n.add(season.number); return n; })}
                   className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left">
-                  <Icon name="chevronDown" size={16} className={`shrink-0 text-muted transition-transform ${expanded ? "" : "-rotate-90"}`} />
+                  <Icon name="chevronDown" size={16} className={`shrink-0 text-ink-3 transition-transform ${expanded ? "" : "-rotate-90"}`} />
                   <span className="font-medium">{season.number === 0 ? "Specials" : `Season ${season.number}`}</span>
                   {!season.monitored && <Badge>Unmonitored</Badge>}
-                  <span className="ml-auto hidden items-center gap-2.5 text-xs text-muted tabular-nums sm:flex">
-                    <span className="h-1 w-20 overflow-hidden rounded-full bg-line">
-                      <span className={`block h-full rounded-full ${ratio >= 1 ? "bg-emerald-400" : "bg-accent"}`} style={{ width: `${ratio * 100}%` }} />
+                  <span className="ml-auto hidden items-center gap-2.5 text-xs text-ink-3 tabular-nums sm:flex">
+                    <span className="h-1 w-20 overflow-hidden rounded-full bg-fill-2">
+                      <span className={`block h-full rounded-full ${ratio >= 1 ? "bg-ok" : "bg-ink"}`} style={{ width: `${ratio * 100}%` }} />
                     </span>
                     {season.episodesWithFile}/{season.episodes}
                   </span>
                 </button>
-                <Button variant="ghost" size="sm" onClick={() => onSearch(season.number)} disabled={searching !== null} aria-label={`Search season ${season.number}`} title="Search this season">
-                  {searching === season.number ? <Spinner /> : <Icon name="bolt" size={14} />}<span className="hidden sm:inline">Search</span>
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => onReleases(season.number)} aria-label={`Browse releases for season ${season.number}`} title="Browse releases">
-                  <Icon name="list" size={14} />
-                </Button>
+                {season.hasFile ? <Badge tone="ok"><Icon name="check" size={12} />Complete</Badge> : (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => onSearch(season.number)} disabled={searching !== null} aria-label={`Search season ${season.number}`} title="Search this season">
+                      {searching === season.number ? <Spinner /> : <Icon name="bolt" size={14} />}<span className="hidden sm:inline">Search</span>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => onReleases(season.number)} aria-label={`Choose a release for season ${season.number}`} title="Choose a release">
+                      <Icon name="list" size={14} />
+                    </Button>
+                  </>
+                )}
               </div>
               {expanded && (
-                <ol id={panel} className="animate-fade border-t border-line bg-background/30">
+                <ol id={panel} className="animate-fade border-t border-hair bg-black/20">
                   {episodes.filter((e) => e.seasonNumber === season.number).map((e) => {
                     const aired = e.airDate !== null && e.airDate <= today;
                     return (
                       <li key={e.id} className="flex items-center gap-3 px-4 py-2.5 text-sm sm:pl-11">
-                        <span className="w-8 shrink-0 text-xs text-muted tabular-nums">{e.episodeNumber}</span>
-                        <span className={`min-w-0 flex-1 truncate ${e.monitored ? "" : "text-muted"}`}>{e.title ?? `Episode ${e.episodeNumber}`}</span>
-                        <span className="hidden w-24 shrink-0 text-right text-xs text-muted tabular-nums sm:block">{e.airDate ?? "TBA"}</span>
+                        <span className="w-8 shrink-0 text-xs text-ink-3 tabular-nums">{e.episodeNumber}</span>
+                        <span className={`min-w-0 flex-1 truncate ${e.monitored ? "" : "text-ink-3"}`}>{e.title ?? `Episode ${e.episodeNumber}`}</span>
+                        <span className="hidden w-24 shrink-0 text-right text-xs text-ink-3 tabular-nums sm:block">{e.airDate ?? "TBA"}</span>
                         {e.hasFile && (
                           <Button variant="ghost" size="sm" onClick={() => onSubtitles(e)} aria-label={`Subtitles of episode ${e.episodeNumber}`} title="Subtitles">
                             <Icon name="subtitles" size={14} />
                           </Button>
                         )}
                         <span className="w-20 shrink-0 text-right">
-                          {e.hasFile ? <Badge tone="green">On disk</Badge> : !aired ? <Badge>Upcoming</Badge> : <Badge tone={e.monitored ? "amber" : "neutral"}>Missing</Badge>}
+                          {e.hasFile ? <Badge tone="ok">On disk</Badge> : !aired ? <Badge>Upcoming</Badge> : <Badge tone={e.monitored ? "warn" : "neutral"}>Missing</Badge>}
                         </span>
                       </li>
                     );
@@ -332,7 +340,7 @@ function TitleSkeleton() {
   return (
     <div className="space-y-8 pt-[20vh]">
       <div className="flex items-end gap-8">
-        <Skeleton className="aspect-[2/3] w-32 rounded-xl sm:w-48" />
+        <Skeleton className="aspect-[2/3] w-32 rounded-card sm:w-48" />
         <div className="flex-1 space-y-3">
           <Skeleton className="h-4 w-40" />
           <Skeleton className="h-12 w-2/3" />

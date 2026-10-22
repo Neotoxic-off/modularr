@@ -36,7 +36,26 @@ export const kindIcon: Record<ActivityKind, IconName> = {
   ScanCompleted: "folder",
 };
 
-export const levelTone: Record<Activity["level"], Tone> = { Info: "accent", Success: "green", Warning: "amber", Error: "red" };
+// What each event is called on the timeline, and the status colour it carries.
+export const eventLook: Record<ActivityKind, { label: string; tone: Tone }> = {
+  Added: { label: "Added", tone: "neutral" },
+  SearchStarted: { label: "Searching", tone: "seek" },
+  SearchCompleted: { label: "Found", tone: "seek" },
+  NothingFound: { label: "Nothing found", tone: "warn" },
+  SearchFailed: { label: "Search failed", tone: "bad" },
+  Grabbed: { label: "Grabbed", tone: "live" },
+  DownloadStarted: { label: "Downloading", tone: "live" },
+  DownloadStalled: { label: "Stalled", tone: "warn" },
+  DownloadFailed: { label: "Failed", tone: "bad" },
+  Blocklisted: { label: "Blocklisted", tone: "bad" },
+  Regrabbed: { label: "Grabbed again", tone: "live" },
+  Imported: { label: "Imported", tone: "ok" },
+  ImportFailed: { label: "Import failed", tone: "bad" },
+  Removed: { label: "Removed", tone: "neutral" },
+  SubtitleDownloaded: { label: "Subtitles", tone: "subs" },
+  SubtitlesMissing: { label: "Subtitles missing", tone: "subs" },
+  ScanCompleted: { label: "Scanned", tone: "neutral" },
+};
 
 // A removed title's page no longer loads.
 export const activityHref = (a: Pick<Activity, "kind" | "movieId" | "seriesId">) =>
@@ -161,7 +180,7 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
     const unsubscribe = subscribe((a) => {
       if (a.downloadId !== null) active.run();
       if (toastKinds.has(a.kind) || a.level === "Error") {
-        toast({ key: titleKey(a) ?? `activity:${a.id}`, icon: kindIcon[a.kind], tone: levelTone[a.level], title: a.title, message: a.message, href: activityHref(a) });
+        toast({ key: titleKey(a) ?? `activity:${a.id}`, icon: kindIcon[a.kind], tone: a.level === "Error" ? "bad" : eventLook[a.kind].tone, title: a.title, message: a.message, href: activityHref(a) });
       }
     });
     return () => { unsubscribe(); active.cancel(); };
@@ -205,7 +224,7 @@ export function useActivityFeed(scope: Scope) {
     if (last) load(last.id);
   };
 
-  return { items, setItems, more, loadMore, error };
+  return { items, setItems, more, loadMore, error, reload: () => load() };
 }
 
 // Runs onEvent once a burst of matching live activities has settled.

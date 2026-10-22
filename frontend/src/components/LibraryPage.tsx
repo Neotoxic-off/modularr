@@ -1,12 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { api, errorMessage, isSeries, kindOf, titleHref } from "@/lib/api";
+import { api, errorMessage, isSeries, kindOf, libraryHref, titleHref } from "@/lib/api";
 import type { Kind, LibraryItem } from "@/lib/api";
 import { useSession } from "@/components/AuthGate";
 import { Icon } from "@/components/icons";
-import { LibraryCard, overlayTag, PosterGrid, PosterSkeleton } from "@/components/Poster";
-import { Alert, Button, Empty, Input, PageHeader, Select, Spinner, Tabs } from "@/components/ui";
+import { PosterCard, PosterGrid, PosterSkeleton } from "@/components/Poster";
+import { Alert, Button, Empty, Input, PageHeader, Select, Spinner, Segmented } from "@/components/ui";
 
 type Filter = "all" | "missing" | "downloaded";
 type Sort = "title" | "added" | "year";
@@ -23,6 +24,7 @@ export function LibraryPage({ kind }: { kind: Kind }) {
   const [scan, setScan] = useState<{ busy: boolean; notice: string | null }>({ busy: false, notice: null });
   const [reload, setReload] = useState(0);
   const { user } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
     (kind === "movie" ? api.movies() : api.series())
@@ -43,13 +45,10 @@ export function LibraryPage({ kind }: { kind: Kind }) {
     }
   }
 
-  const complete = (item: LibraryItem): boolean | undefined =>
-    isSeries(item) ? item.episodes > 0 && item.episodesWithFile >= item.episodes : item.hasFile ?? undefined;
-
   const needle = term.trim().toLowerCase();
   const shown = (items ?? [])
     .filter((i) => !needle || i.title.toLowerCase().includes(needle))
-    .filter((i) => filter === "all" || (filter === "downloaded") === complete(i))
+    .filter((i) => filter === "all" || (filter === "downloaded") === i.hasFile)
     .sort((a, b) => sort === "title" ? a.title.localeCompare(b.title) : sort === "year" ? b.year - a.year : b.id - a.id);
 
   const series = (items ?? []).filter(isSeries);
@@ -58,11 +57,14 @@ export function LibraryPage({ kind }: { kind: Kind }) {
 
   return (
     <>
+      {/* Phone: the Library tab lands here; the three libraries are one switch away. */}
+      <Segmented label="Library" value={kind} className="mb-4 md:hidden" onChange={(k) => router.push(libraryHref[k])}
+        options={(["movie", "series", "anime"] as const).map((k) => ({ value: k, label: titles[k] }))} />
       <PageHeader title={titles[kind]} description={items && (
         <span className="flex flex-wrap gap-x-4 gap-y-1">
-          <span><span className="text-foreground tabular-nums">{items.length}</span> {items.length === 1 ? "title" : "titles"}</span>
-          <span><span className="text-foreground tabular-nums">{items.filter((i) => i.monitored).length}</span> monitored</span>
-          {kind !== "movie" && <span><span className="text-foreground tabular-nums">{withFile}</span> of {episodes} episodes on disk</span>}
+          <span><span className="text-ink tabular-nums">{items.length}</span> {items.length === 1 ? "title" : "titles"}</span>
+          <span><span className="text-ink tabular-nums">{items.filter((i) => i.monitored).length}</span> monitored</span>
+          {kind !== "movie" && <span><span className="text-ink tabular-nums">{withFile}</span> of {episodes} episodes on disk</span>}
         </span>
       )}>
         {user.role === "Admin" && (
@@ -73,13 +75,13 @@ export function LibraryPage({ kind }: { kind: Kind }) {
       </PageHeader>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <Tabs label="Filter" value={filter} onChange={setFilter} options={[
+        <Segmented label="Filter" value={filter} onChange={setFilter} options={[
           { value: "all", label: "All" },
           { value: "missing", label: "Missing" },
           { value: "downloaded", label: "Downloaded" },
         ]} />
         <div className="relative min-w-40 flex-1 sm:max-w-64">
-          <Icon name="search" size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
+          <Icon name="search" size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-3" />
           <Input value={term} onChange={(e) => setTerm(e.target.value)} placeholder={`Filter ${titles[kind].toLowerCase()}`} aria-label={`Filter ${titles[kind].toLowerCase()}`} className="pl-9" />
         </div>
         <Select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort by" className="ml-auto w-40">
@@ -90,13 +92,13 @@ export function LibraryPage({ kind }: { kind: Kind }) {
       </div>
 
       {error && <div className="mb-6"><Alert>{error}</Alert></div>}
-      {scan.notice && <p role="status" className="mb-6 flex animate-fade items-center gap-2 rounded-lg bg-accent/10 px-4 py-2.5 text-sm text-accent"><Icon name="check" size={16} />{scan.notice}</p>}
+      {scan.notice && <p role="status" className="mb-6 flex animate-fade items-center gap-2 rounded-lg bg-fill-2 px-4 py-2.5 text-sm text-ink"><Icon name="check" size={16} />{scan.notice}</p>}
 
       {!items ? (
         <PosterGrid>{Array.from({ length: 12 }, (_, i) => <PosterSkeleton key={i} />)}</PosterGrid>
       ) : items.length === 0 ? (
         <Empty icon={kind === "movie" ? "film" : kind === "series" ? "tv" : "sparkles"} title={`No ${nouns[kind]} yet`}>
-          <p>Find something on Discover or press Ctrl K to search, then add it here.</p>
+          <p>Find something in Explore or press Ctrl K to search, then add it here.</p>
         </Empty>
       ) : shown.length === 0 ? (
         <Empty icon="search" title="Nothing matches these filters">
@@ -104,16 +106,11 @@ export function LibraryPage({ kind }: { kind: Kind }) {
         </Empty>
       ) : (
         <PosterGrid>
-          {shown.map((item) => {
-            const done = complete(item);
-            return (
-              <LibraryCard key={item.id} href={titleHref(kind, item.id)} title={item.title} year={item.year} poster={item.poster} rating={item.rating}
-                progress={isSeries(item) && item.episodes > 0 ? item.episodesWithFile / item.episodes : undefined}
-                status={!item.monitored ? <span className={`text-white/80 ${overlayTag}`}>Unmonitored</span>
-                  : isSeries(item) ? undefined
-                  : <span className={`${done ? "text-emerald-300" : "text-amber-200"} ${overlayTag}`}>{done ? "Downloaded" : "Missing"}</span>} />
-            );
-          })}
+          {shown.map((item) => (
+            <PosterCard key={item.id} href={titleHref(kind, item.id)} title={item.title} year={item.year} poster={item.poster} rating={item.rating}
+              fraction={isSeries(item) ? `${item.episodesWithFile}/${item.episodes}` : undefined}
+              status={!item.monitored ? { state: "unmonitored" } : item.hasFile ? { state: "library" } : { state: "missing" }} />
+          ))}
         </PosterGrid>
       )}
     </>

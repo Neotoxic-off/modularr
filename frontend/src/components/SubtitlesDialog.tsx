@@ -49,15 +49,15 @@ export function SubtitlesDialog({ target, title, onClose }: { target: SubtitleTa
   }
 
   return (
-    <Modal size="lg" onClose={onClose} title={`Subtitles for ${title}`}
+    <Modal onClose={onClose} title={`Subtitles for ${title}`}
       description={status && (status.missing.length > 0 ? `Missing: ${status.missing.join(", ")}.` : "Every wanted language is there.")}>
       <div className="space-y-4 px-5 pb-5">
         {error && <Alert>{error}</Alert>}
         {!status ? <Skeleton className="h-10" /> : (
           <div className="flex flex-wrap gap-1.5">
-            {status.present.length === 0 && <span className="text-sm text-muted">No subtitle next to the file yet.</span>}
+            {status.present.length === 0 && <span className="text-sm text-ink-3">No subtitle next to the file yet.</span>}
             {status.present.map((s) => (
-              <Badge key={s.file} tone="green">{s.language}{s.hearingImpaired && " HI"}{s.forced && " forced"}</Badge>
+              <Badge key={s.file} tone="ok">{s.language}{s.hearingImpaired && " HI"}{s.forced && " forced"}</Badge>
             ))}
           </div>
         )}
@@ -69,16 +69,16 @@ export function SubtitlesDialog({ target, title, onClose }: { target: SubtitleTa
           <Button variant="primary" onClick={search} disabled={searching}>{searching ? <Spinner /> : <Icon name="search" size={16} />}Search</Button>
         </div>
         {candidates && (candidates.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-line px-5 py-8 text-center text-sm text-muted">No provider has subtitles for this file.</p>
+          <p className="rounded-card border border-dashed border-hair px-5 py-8 text-center text-sm text-ink-3">No provider has subtitles for this file.</p>
         ) : (
-          <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
+          <ul className="divide-y divide-hair-2 overflow-hidden rounded-card border border-hair">
             {candidates.map((c) => (
               <li key={`${c.provider}${c.id}`} className="flex items-center gap-3 px-4 py-2.5 text-sm">
                 <div className="min-w-0 flex-1">
                   <p className="truncate" title={c.release}>{c.release || "Unnamed release"}</p>
-                  <p className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                  <p className="flex flex-wrap items-center gap-2 text-xs text-ink-3">
                     <span>{c.language}</span><span>{c.provider}</span><span>{c.downloads} downloads</span>
-                    {c.hashMatch && <Badge tone="green">Matches the file</Badge>}
+                    {c.hashMatch && <Badge tone="ok">Matches the file</Badge>}
                     {c.hearingImpaired && <Badge>HI</Badge>}
                     {c.forced && <Badge>Forced</Badge>}
                   </p>
@@ -107,14 +107,14 @@ export function SubtitleSummary({ target, onOpen }: { target: SubtitleTarget; on
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-muted">Subtitles</span>
+        <span className="text-sm text-ink-3">Subtitles</span>
         <Button size="sm" variant="ghost" onClick={onOpen}><Icon name="search" size={14} />Find</Button>
       </div>
-      {error ? <p className="text-xs text-red-300">{error}</p> : !status ? <Skeleton className="h-6" /> : (
+      {error ? <p className="text-xs text-bad">{error}</p> : !status ? <Skeleton className="h-6" /> : (
         <div className="flex flex-wrap gap-1.5">
-          {status.present.map((s) => <Badge key={s.file} tone="green"><Icon name="check" size={11} />{s.language}{s.hearingImpaired && " HI"}{s.forced && " forced"}</Badge>)}
-          {status.missing.map((l) => <Badge key={l} tone="amber">{l} missing</Badge>)}
-          {status.present.length === 0 && status.missing.length === 0 && <span className="text-xs text-muted">None wanted for this title.</span>}
+          {status.present.map((s) => <Badge key={s.file} tone="ok"><Icon name="check" size={11} />{s.language}{s.hearingImpaired && " HI"}{s.forced && " forced"}</Badge>)}
+          {status.missing.map((l) => <Badge key={l} tone="warn">{l} missing</Badge>)}
+          {status.present.length === 0 && status.missing.length === 0 && <span className="text-xs text-ink-3">None wanted for this title.</span>}
         </div>
       )}
     </div>

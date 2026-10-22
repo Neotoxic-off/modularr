@@ -1,55 +1,81 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
-import type { ButtonHTMLAttributes, InputHTMLAttributes, KeyboardEvent as ReactKeyboardEvent, ReactNode, SelectHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, CSSProperties, InputHTMLAttributes, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject, SelectHTMLAttributes } from "react";
+import { createPortal } from "react-dom";
 import { errorMessage } from "@/lib/api";
 import { Icon } from "@/components/icons";
+import type { IconName } from "@/components/icons";
 
 const variants = {
-  primary: "bg-accent-strong text-white shadow-[0_1px_0_rgba(255,255,255,0.15)_inset,0_8px_24px_-10px_var(--color-accent-strong)] hover:bg-accent",
-  secondary: "bg-raised text-foreground ring-1 ring-line hover:bg-line",
-  ghost: "text-muted hover:bg-raised hover:text-foreground",
-  danger: "bg-red-500/15 text-red-200 ring-1 ring-red-500/25 hover:bg-red-500/25",
-  glass: "bg-white/10 text-white ring-1 ring-white/15 backdrop-blur-md hover:bg-white/20",
+  primary: "bg-white text-canvas hover:bg-white/85",
+  glass: "glass text-ink hover:bg-fill-2",
+  ghost: "text-ink-2 hover:bg-fill hover:text-ink",
+  danger: "bg-bad/15 text-bad ring-1 ring-bad/30 hover:bg-bad/25",
 } as const;
 
-const sizes = { sm: "h-8 px-2.5 text-xs", md: "h-9 px-3.5 text-sm", lg: "h-11 px-5 text-sm" } as const;
+const sizes = { sm: "h-9 px-4 text-[13px]", md: "h-11 px-5 text-sm" } as const;
 
-export function Button({ variant = "secondary", size = "md", className = "", ...props }:
-  ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof variants; size?: keyof typeof sizes }) {
+// A spinner takes the icon's place while loading, so the label and the width stay put.
+export function Button({ variant = "glass", size = "md", icon, loading = false, className = "", children, disabled, ...props }:
+  ButtonHTMLAttributes<HTMLButtonElement> & { variant?: keyof typeof variants; size?: keyof typeof sizes; icon?: IconName; loading?: boolean }) {
   return (
-    <button
-      className={`inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 ${sizes[size]} ${variants[variant]} ${className}`}
-      {...props}
-    />
+    <button disabled={disabled || loading}
+      className={`inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-pill font-semibold whitespace-nowrap transition active:scale-[.98] disabled:pointer-events-none disabled:opacity-40 ${sizes[size]} ${variants[variant]} ${className}`}
+      {...props}>
+      {loading ? <Spinner /> : icon && <Icon name={icon} size={size === "sm" ? 15 : 17} />}
+      {children}
+    </button>
   );
 }
 
-const control = "w-full min-w-0 rounded-lg border border-line bg-background/60 text-sm outline-none transition placeholder:text-muted/60 hover:border-muted/40 focus:border-accent focus:ring-2 focus:ring-accent/20 focus-visible:outline-none";
+export function IconButton({ icon, label, className = "", badge, ...props }:
+  ButtonHTMLAttributes<HTMLButtonElement> & { icon: IconName; label: string; badge?: number }) {
+  return (
+    <button aria-label={label} title={label}
+      className={`glass relative grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-ink-2 transition hover:bg-fill-2 hover:text-ink active:scale-[.98] disabled:opacity-40 ${className}`}
+      {...props}>
+      <Icon name={icon} size={19} />
+      {!!badge && <Count value={badge} className="absolute -top-0.5 -right-0.5" />}
+    </button>
+  );
+}
+
+export function Count({ value, className = "" }: { value: number; className?: string }) {
+  return (
+    <span aria-hidden="true" className={`grid h-[18px] min-w-[18px] place-items-center rounded-pill bg-bad px-1 text-[10px] leading-none font-bold text-canvas tabular-nums ${className}`}>
+      {value > 99 ? "99+" : value}
+    </span>
+  );
+}
+
+const control = "well w-full min-w-0 rounded-ctl text-sm text-ink outline-none transition placeholder:text-ink-3 hover:border-white/20 focus:border-white/40 focus-visible:outline-none";
 
 export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={`h-9 px-3 ${control} ${className}`} {...props} />;
+  return <input className={`h-11 px-3.5 ${control} ${className}`} {...props} />;
 }
 
 export function Select({ className = "", children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <div className={`relative ${className}`}>
-      <select className={`h-9 cursor-pointer appearance-none pr-8 pl-3 ${control}`} {...props}>{children}</select>
-      <Icon name="chevronDown" size={16} className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-muted" />
+      <select className={`h-11 cursor-pointer appearance-none pr-9 pl-3.5 [&>option]:bg-canvas ${control}`} {...props}>{children}</select>
+      <Icon name="chevronDown" size={16} className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-ink-3" />
     </div>
   );
 }
 
 export function Field({ label, hint, children }: { label: string; hint?: ReactNode; children: ReactNode }) {
   return (
-    <label className="block space-y-1.5">
+    <label className="block space-y-2">
       <span className="text-sm font-medium">{label}</span>
       {children}
-      {hint && <span className="block text-xs leading-relaxed text-muted">{hint}</span>}
+      {hint && <span className="block text-[13px] leading-relaxed text-ink-3">{hint}</span>}
     </label>
   );
 }
 
+// The whole row is the switch, so the hit area is the label as well as the track.
 export function Switch({ checked, onChange, label, description, disabled }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
@@ -58,20 +84,30 @@ export function Switch({ checked, onChange, label, description, disabled }: {
   disabled?: boolean;
 }) {
   return (
-    <label className={`flex items-start gap-3 ${disabled ? "opacity-50" : "cursor-pointer"}`}>
-      <button type="button" role="switch" aria-checked={checked} disabled={disabled} onClick={() => onChange(!checked)}
-        className={`relative mt-0.5 h-5 w-9 shrink-0 cursor-pointer rounded-full transition ${checked ? "bg-accent-strong" : "bg-line"}`}>
-        <span className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : ""}`} />
-      </button>
-      <span className="min-w-0">
-        <span className="block text-sm">{label}</span>
-        {description && <span className="block text-xs text-muted">{description}</span>}
+    <button type="button" role="switch" aria-checked={checked} disabled={disabled} onClick={() => onChange(!checked)}
+      className="group flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-ctl text-left disabled:cursor-default disabled:opacity-40">
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium">{label}</span>
+        {description && <span className="block text-[13px] text-ink-3">{description}</span>}
       </span>
-    </label>
+      <span className={`relative h-6 w-10 shrink-0 rounded-pill transition ${checked ? "bg-ok" : "bg-fill-2"}`}>
+        <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : ""}`} />
+      </span>
+    </button>
   );
 }
 
-// An ordered pick of several values (first is most wanted): chips to remove, a select to append.
+export function Chip({ selected = false, onClick, children, className = "" }: { selected?: boolean; onClick?: () => void; children: ReactNode; className?: string }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={selected}
+      className={`well inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill px-4 text-[13px] font-medium text-ink-2 transition hover:text-ink aria-pressed:bg-fill-2 aria-pressed:text-ink sm:min-h-9 [@media(pointer:coarse)]:min-h-11 ${className}`}>
+      {selected && <Icon name="check" size={14} strokeWidth={2.4} />}
+      {children}
+    </button>
+  );
+}
+
+// An ordered pick of several values (first is most wanted): chips to remove, a select to add.
 export function PickList({ label, hint, values, choices, onChange, empty = "None" }: {
   label: string;
   hint?: ReactNode;
@@ -83,71 +119,126 @@ export function PickList({ label, hint, values, choices, onChange, empty = "None
   const id = useId();
   const left = choices.filter((c) => !values.includes(c));
   return (
-    <div role="group" aria-labelledby={id} className="space-y-1.5">
+    <div role="group" aria-labelledby={id} className="space-y-2">
       <span id={id} className="block text-sm font-medium">{label}</span>
-      <div className="flex flex-wrap items-center gap-1.5">
-        {values.length === 0 && <span className="text-sm text-muted">{empty}</span>}
-        {values.map((value, i) => (
-          <span key={value} className="inline-flex items-center gap-1 rounded-md bg-raised py-0.5 pr-0.5 pl-2 text-xs ring-1 ring-line">
-            <span className="text-muted tabular-nums">{i + 1}</span>{value}
+      <div className="flex flex-wrap items-center gap-2">
+        {values.length === 0 && <span className="text-[13px] text-ink-3">{empty}</span>}
+        {values.map((value) => (
+          <span key={value} className="well inline-flex h-9 items-center gap-1 rounded-pill pr-1 pl-3.5 text-[13px] font-medium">
+            {value}
             <button type="button" onClick={() => onChange(values.filter((v) => v !== value))} aria-label={`Remove ${value}`}
-              className="cursor-pointer rounded p-0.5 text-muted hover:bg-line hover:text-foreground">
-              <Icon name="x" size={12} />
+              className="grid size-7 cursor-pointer place-items-center rounded-full text-ink-3 hover:bg-fill-2 hover:text-ink">
+              <Icon name="x" size={13} />
             </button>
           </span>
         ))}
+        {left.length > 0 && (
+          <span className="relative inline-flex h-9 items-center gap-1 rounded-pill border border-dashed border-hair px-3.5 text-[13px] font-medium text-ink-2 focus-within:outline-2 focus-within:outline-white hover:text-ink">
+            <Icon name="plus" size={14} />Language
+            <select value="" aria-label={`Add to ${label}`} onChange={(e) => e.target.value && onChange([...values, e.target.value])}
+              className="absolute inset-0 cursor-pointer opacity-0 [&>option]:bg-canvas">
+              <option value="">Add a language</option>
+              {left.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </span>
+        )}
       </div>
-      {left.length > 0 && (
-        <Select value="" aria-label={`Add to ${label}`} onChange={(e) => e.target.value && onChange([...values, e.target.value])}>
-          <option value="">Add…</option>
-          {left.map((c) => <option key={c} value={c}>{c}</option>)}
-        </Select>
-      )}
-      {hint && <span className="block text-xs leading-relaxed text-muted">{hint}</span>}
+      {hint && <span className="block text-[13px] leading-relaxed text-ink-3">{hint}</span>}
     </div>
   );
 }
 
-export function Alert({ children, tone = "red" }: { children: ReactNode; tone?: "red" | "amber" }) {
-  const colors = tone === "red" ? "border-red-500/25 bg-red-500/10 text-red-200" : "border-amber-400/25 bg-amber-400/10 text-amber-100";
+export function Alert({ children, tone = "bad" }: { children: ReactNode; tone?: "bad" | "warn" }) {
+  const colors = tone === "bad" ? "bg-bad/10 text-bad ring-bad/30" : "bg-warn/10 text-warn ring-warn/30";
   return (
-    <div role="alert" className={`flex items-start gap-2.5 rounded-lg border px-3.5 py-2.5 text-sm ${colors}`}>
+    <div role="alert" className={`flex items-start gap-2.5 rounded-ctl px-4 py-3 text-sm ring-1 ${colors}`}>
       <Icon name="alert" size={16} className="mt-0.5 shrink-0" />
       <div className="min-w-0 break-words">{children}</div>
     </div>
   );
 }
 
-export const tones = {
-  neutral: "bg-white/5 text-muted ring-white/10",
-  accent: "bg-accent/15 text-accent ring-accent/25",
-  green: "bg-emerald-400/10 text-emerald-300 ring-emerald-400/20",
-  amber: "bg-amber-400/10 text-amber-200 ring-amber-400/20",
-  red: "bg-red-500/10 text-red-300 ring-red-500/20",
-} as const;
+export type Tone = "neutral" | "ok" | "live" | "seek" | "subs" | "warn" | "bad";
 
-export type Tone = keyof typeof tones;
+const badgeTones: Record<Tone, string> = {
+  neutral: "bg-fill text-ink-2 ring-hair",
+  ok: "bg-ok/12 text-ok ring-ok/25",
+  live: "bg-live/12 text-live ring-live/25",
+  seek: "bg-seek/12 text-seek ring-seek/25",
+  subs: "bg-subs/12 text-subs ring-subs/25",
+  warn: "bg-warn/12 text-warn ring-warn/25",
+  bad: "bg-bad/12 text-bad ring-bad/25",
+};
+
+export const toneText: Record<Tone, string> = {
+  neutral: "text-ink-3", ok: "text-ok", live: "text-live", seek: "text-seek", subs: "text-subs", warn: "text-warn", bad: "text-bad",
+};
+
+export const toneDot: Record<Tone, string> = {
+  neutral: "bg-ink-3", ok: "bg-ok", live: "bg-live", seek: "bg-seek", subs: "bg-subs", warn: "bg-warn", bad: "bg-bad",
+};
 
 export function Badge({ tone = "neutral", children, className = "" }: { tone?: Tone; children: ReactNode; className?: string }) {
-  return <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${tones[tone]} ${className}`}>{children}</span>;
+  return <span className={`inline-flex h-6 items-center gap-1 rounded-pill px-2.5 text-[11px] font-semibold whitespace-nowrap ring-1 ring-inset ${badgeTones[tone]} ${className}`}>{children}</span>;
+}
+
+export type Status =
+  | { state: "library" | "searching" | "missing" | "failed" | "unmonitored" }
+  | { state: "downloading"; progress: number }
+  | { state: "unreleased"; date: string | null };
+
+const statusLook: Record<Status["state"], { tone: Tone; label: string }> = {
+  library: { tone: "ok", label: "In library" },
+  downloading: { tone: "live", label: "Downloading" },
+  searching: { tone: "seek", label: "Searching" },
+  missing: { tone: "warn", label: "Missing" },
+  failed: { tone: "bad", label: "Failed" },
+  unmonitored: { tone: "neutral", label: "Unmonitored" },
+  unreleased: { tone: "neutral", label: "Not released" },
+};
+
+// Laid over artwork or on a tile; the text label always carries the state, the colour only repeats it.
+export function StatusBadge({ status, className = "" }: { status: Status; className?: string }) {
+  const { tone, label } = statusLook[status.state];
+  const text = status.state === "downloading" ? `${label} ${Math.round(status.progress * 100)}%`
+    : status.state === "unreleased" && status.date ? new Date(status.date).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
+    : label;
+  return (
+    <span className={`inline-flex h-6 items-center gap-1.5 rounded-pill bg-black/55 px-2.5 text-[11px] font-semibold whitespace-nowrap ring-1 ring-white/10 backdrop-blur ${toneText[tone]} ${className}`}>
+      {status.state === "library" ? <Icon name="check" size={12} strokeWidth={3} />
+        : tone !== "neutral" && <span className={`size-1.5 rounded-full ${toneDot[tone]} ${status.state === "searching" ? "animate-pulse-dot" : ""}`} />}
+      {text}
+    </span>
+  );
 }
 
 export function Rating({ value, className = "" }: { value: number | null; className?: string }) {
   if (value == null || value <= 0) return null;
   return (
-    <span className={`inline-flex items-center gap-1 text-xs font-semibold text-gold tabular-nums ${className}`}>
+    <span className={`inline-flex items-center gap-1 font-semibold text-gold tabular-nums ${className}`}>
       <Icon name="star" size={12} fill="currentColor" strokeWidth={0} />{value.toFixed(1)}
     </span>
   );
 }
 
+// Width moves smoothly, but assistive tech hears 10% steps only.
+export function Progress({ value, eta, label = "Progress", tone = "ink", className = "" }: { value: number; eta?: string | null; label?: string; tone?: "ink" | "live"; className?: string }) {
+  const step = Math.floor(Math.min(Math.max(value, 0), 1) * 10) * 10;
+  return (
+    <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={step}
+      aria-valuetext={`${step}%${eta ? `, ${eta} left` : ""}`} className={`h-1.5 overflow-hidden rounded-full bg-fill-2 ${className}`}>
+      <div className={`h-full rounded-full transition-[width] duration-700 ${tone === "live" ? "bg-live" : "bg-ink"}`} style={{ width: `${value * 100}%` }} />
+    </div>
+  );
+}
+
 export function Section({ title, description, actions, children }: { title: string; description?: ReactNode; actions?: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-line bg-surface">
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4">
+    <section className="glass rounded-panel">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-hair-2 px-5 py-4">
         <div className="min-w-0">
-          <h2 className="font-display text-base font-semibold">{title}</h2>
-          {description && <p className="mt-0.5 max-w-prose text-sm text-muted">{description}</p>}
+          <h2 className="text-[17px] font-semibold">{title}</h2>
+          {description && <p className="mt-0.5 max-w-prose text-[13px] text-ink-3">{description}</p>}
         </div>
         {actions}
       </header>
@@ -158,22 +249,22 @@ export function Section({ title, description, actions, children }: { title: stri
 
 export function PageHeader({ title, description, children }: { title: string; description?: ReactNode; children?: ReactNode }) {
   return (
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
-        {description && <p className="mt-1.5 text-sm text-muted">{description}</p>}
+        <h1 tabIndex={-1} className="font-serif text-[40px] leading-none outline-none">{title}</h1>
+        {description && <p className="mt-2 text-[13px] text-ink-3">{description}</p>}
       </div>
       {children}
     </div>
   );
 }
 
-export function Empty({ icon = "film", title, children }: { icon?: Parameters<typeof Icon>[0]["name"]; title: string; children?: ReactNode }) {
+export function Empty({ icon = "film", title, children }: { icon?: IconName; title: string; children?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center rounded-2xl border border-dashed border-line px-6 py-14 text-center">
-      <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-raised text-muted"><Icon name={icon} size={22} /></span>
-      <p className="font-medium">{title}</p>
-      {children && <div className="mt-1.5 max-w-sm text-sm text-muted">{children}</div>}
+    <div className="glass flex flex-col items-center rounded-tile px-6 py-12 text-center">
+      <span className="mb-4 grid size-12 place-items-center rounded-full bg-fill-2 text-ink-2"><Icon name={icon} size={22} /></span>
+      <p className="text-[17px] font-semibold">{title}</p>
+      {children && <div className="mt-1.5 max-w-sm text-[13px] text-ink-2">{children}</div>}
     </div>
   );
 }
@@ -183,44 +274,118 @@ export function Spinner({ className = "" }: { className?: string }) {
 }
 
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div aria-hidden="true" className={`animate-shimmer rounded-lg bg-[linear-gradient(90deg,var(--color-surface)_0%,var(--color-raised)_50%,var(--color-surface)_100%)] bg-[length:200%_100%] ${className}`} />;
+  return <div aria-hidden="true" className={`animate-shimmer rounded-chip bg-[linear-gradient(90deg,rgb(255_255_255/.05)_0%,rgb(255_255_255/.11)_50%,rgb(255_255_255/.05)_100%)] bg-[length:200%_100%] ${className}`} />;
 }
 
-export function Tabs<T extends string>({ value, options, onChange, label }: {
+export function Segmented<T extends string>({ value, options, onChange, label, className = "" }: {
   value: T;
   options: readonly { value: T; label: string; count?: number }[];
   onChange: (value: T) => void;
   label: string;
+  className?: string;
 }) {
   const move = (event: ReactKeyboardEvent, index: number) => {
-    const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    const step = event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 0;
     if (!step) return;
+    event.preventDefault();
     const target = (index + step + options.length) % options.length;
     const next = options[target];
     if (next) onChange(next.value);
     (event.currentTarget.parentElement?.children[target] as HTMLElement | undefined)?.focus();
   };
   return (
-    <div role="tablist" aria-label={label} className="rail inline-flex max-w-full gap-1 overflow-x-auto rounded-xl border border-line bg-surface p-1">
+    <div role="radiogroup" aria-label={label} className={`glass rail inline-flex max-w-full gap-1 overflow-x-auto rounded-pill p-1 ${className}`}>
       {options.map((o, i) => (
-        <button key={o.value} role="tab" aria-selected={o.value === value} tabIndex={o.value === value ? 0 : -1}
+        <button key={o.value} type="button" role="radio" aria-checked={o.value === value} tabIndex={o.value === value ? 0 : -1}
           onClick={() => onChange(o.value)} onKeyDown={(e) => move(e, i)}
-          className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted transition hover:text-foreground aria-selected:bg-raised aria-selected:text-foreground aria-selected:shadow-sm">
+          className="flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill px-4 text-[13px] font-semibold text-ink-2 transition hover:text-ink aria-checked:bg-fill-3 aria-checked:text-ink">
           {o.label}
-          {o.count !== undefined && <span className="rounded-full bg-white/5 px-1.5 text-[11px] text-muted tabular-nums">{o.count}</span>}
+          {o.count !== undefined && <span className="text-[11px] text-ink-3 tabular-nums">{o.count}</span>}
         </button>
       ))}
     </div>
   );
 }
 
-const dialog = "max-h-[92vh] animate-rise rounded-t-2xl border sm:rounded-2xl";
+// The card every bento cell is made of. Loading, empty and error keep its height so the grid never jumps.
+export function Tile({ title, link, className = "", style, children }: {
+  title: string;
+  link?: { href: string; label: string };
+  className?: string;
+  style?: CSSProperties;
+  children: ReactNode;
+}) {
+  return (
+    <section aria-label={title} style={style} className={`glass flex min-h-[180px] min-w-0 animate-rise flex-col gap-3 rounded-tile p-5 ${className}`}>
+      <header className="flex items-center justify-between gap-3">
+        <h2 className="caption truncate">{title}</h2>
+        {link && <Link href={link.href} className="-my-2 -mr-2 shrink-0 rounded-pill px-2 py-2 text-[13px] font-medium whitespace-nowrap text-ink-2 hover:text-ink">{link.label} <span aria-hidden="true">→</span></Link>}
+      </header>
+      {children}
+    </section>
+  );
+}
 
-// "side" is a full-height sheet from the right edge, for panels that list rather than ask.
+export function TileSkeleton() {
+  return (
+    <div className="flex flex-1 flex-col gap-2.5" aria-hidden="true">
+      <Skeleton className="h-10 w-1/2" />
+      <Skeleton className="h-4" />
+      <Skeleton className="h-4 w-2/3" />
+    </div>
+  );
+}
+
+export function TileError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex flex-1 flex-col items-start justify-center gap-3 text-[13px] text-ink-2">
+      <p className="flex items-start gap-2"><span className="mt-1.5 size-2 shrink-0 rounded-full bg-bad" /><span><span className="sr-only">Error: </span>{message}</span></p>
+      <Button size="sm" variant="ghost" icon="refresh" onClick={onRetry}>Retry</Button>
+    </div>
+  );
+}
+
+let openDialogs = 0;
+
+// Focus trap, Escape, focus restore and an inert background: shared by every dialog, sheet and popover.
+export function useDialog(panel: RefObject<HTMLElement | null>, onClose: () => void) {
+  // Parents pass inline closures; the latest one is read so the setup runs once per opening.
+  const close = useRef(onClose);
+  useEffect(() => { close.current = onClose; });
+
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    (panel.current?.querySelector<HTMLElement>("[autofocus], input, select") ?? panel.current)?.focus();
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.stopPropagation(); close.current(); }
+      if (e.key !== "Tab" || !panel.current) return;
+      const focusable = [...panel.current.querySelectorAll<HTMLElement>("button, input, select, a[href], [tabindex='0']")].filter((el) => !el.hasAttribute("disabled"));
+      const [first, last] = [focusable[0], focusable[focusable.length - 1]];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+    };
+    const app = document.getElementById("app");
+    openDialogs += 1;
+    app?.setAttribute("inert", "");
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", key);
+    return () => {
+      window.removeEventListener("keydown", key);
+      openDialogs -= 1;
+      if (openDialogs === 0) {
+        app?.removeAttribute("inert");
+        document.body.style.overflow = "";
+      }
+      previous?.focus();
+    };
+  }, [panel]);
+}
+
+// Below 640px every dialog is a bottom sheet; "popover" stays a sheet up to 1024px, then hangs under the header.
 const modalLayouts = {
-  md: { overlay: "items-end justify-center sm:items-center sm:p-6", panel: `max-w-xl ${dialog}` },
-  lg: { overlay: "items-end justify-center sm:items-center sm:p-6", panel: `max-w-4xl ${dialog}` },
-  side: { overlay: "justify-end", panel: "h-full max-w-md animate-slide border-l" },
+  md: { overlay: "sm:items-center sm:p-6", panel: "sm:max-w-xl sm:rounded-panel" },
+  lg: { overlay: "sm:items-center sm:p-6", panel: "sm:max-w-4xl sm:rounded-panel" },
+  popover: { overlay: "lg:items-start lg:justify-end lg:bg-transparent lg:pt-[84px] lg:pr-5", panel: "sm:max-w-xl lg:max-h-[min(680px,82dvh)] lg:w-[380px] lg:rounded-tile" },
 } as const;
 
 export function Modal({ title, description, actions, banner, onClose, size = "md", children, footer }: {
@@ -235,55 +400,34 @@ export function Modal({ title, description, actions, banner, onClose, size = "md
 }) {
   const id = useId();
   const panel = useRef<HTMLDivElement>(null);
-  // Parents pass inline closures; the latest one is read so focus setup runs once per opening.
-  const close = useRef(onClose);
-  useEffect(() => { close.current = onClose; });
+  useDialog(panel, onClose);
 
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    (panel.current?.querySelector<HTMLElement>("[autofocus], input, select") ?? panel.current)?.focus();
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close.current();
-      if (e.key !== "Tab" || !panel.current) return;
-      // Keeps keyboard focus inside the dialog.
-      const focusable = [...panel.current.querySelectorAll<HTMLElement>("button, input, select, a[href], [tabindex='0']")].filter((el) => !el.hasAttribute("disabled"));
-      const [first, last] = [focusable[0], focusable[focusable.length - 1]];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
-    };
-    window.addEventListener("keydown", key);
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", key);
-      document.body.style.overflow = "";
-      previous?.focus();
-    };
-  }, []);
-
-  return (
-    <div className={`fixed inset-0 z-50 flex animate-fade bg-black/70 backdrop-blur-sm ${modalLayouts[size].overlay}`} onMouseDown={onClose}>
+  return createPortal(
+    <div className={`fixed inset-0 z-50 flex items-end justify-center bg-black/60 ${modalLayouts[size].overlay}`} onMouseDown={onClose}>
       <div ref={panel} role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1} onMouseDown={(e) => e.stopPropagation()}
-        className={`relative flex w-full flex-col overflow-hidden border-line bg-surface shadow-2xl shadow-black/60 outline-none ${modalLayouts[size].panel}`}>
+        className={`glass-pop relative flex max-h-[92dvh] w-full animate-rise flex-col overflow-hidden rounded-t-[28px] outline-none ${modalLayouts[size].panel}`}>
+        <span aria-hidden="true" className={`mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-fill-3 sm:hidden ${size === "popover" ? "lg:hidden" : ""}`} />
         {banner && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={banner} alt="" className="pointer-events-none absolute inset-x-0 top-0 h-44 w-full object-cover opacity-25 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+          <img src={banner} alt="" className="pointer-events-none absolute inset-x-0 top-0 h-48 w-full object-cover opacity-35 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
         )}
-        <header className="relative flex items-start justify-between gap-4 px-5 pt-5 pb-3">
-          <div className="min-w-0">
-            <h2 id={id} className="font-display text-lg font-semibold">{title}</h2>
-            {description && <div className="mt-0.5 text-sm text-muted">{description}</div>}
+        <header className="relative flex items-start justify-between gap-4 px-5 pt-4 pb-3">
+          <div className="min-w-0 pt-2">
+            <h2 id={id} className="text-[17px] font-semibold">{title}</h2>
+            {description && <div className="mt-0.5 text-[13px] text-ink-2">{description}</div>}
           </div>
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="-mr-2 flex shrink-0 items-center gap-1">
             {actions}
-            <button onClick={onClose} aria-label="Close" className="-mr-1 cursor-pointer rounded-lg p-1.5 text-muted hover:bg-raised hover:text-foreground">
+            <button onClick={onClose} aria-label="Close" className="grid size-11 cursor-pointer place-items-center rounded-full text-ink-2 hover:bg-fill-2 hover:text-ink">
               <Icon name="x" />
             </button>
           </div>
         </header>
         <div className="relative min-h-0 flex-1 overflow-y-auto">{children}</div>
-        {footer && <footer className="relative flex flex-wrap justify-end gap-2 border-t border-line bg-background/40 px-5 py-3.5">{footer}</footer>}
+        {footer && <footer className="relative flex flex-wrap justify-end gap-2 border-t border-hair-2 px-5 pt-3.5 pb-[max(14px,env(safe-area-inset-bottom))]">{footer}</footer>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -313,8 +457,8 @@ export function SaveBar({ busy, error, done, label = "Save changes", disabled }:
     <div className="space-y-3 pt-2">
       {error && <Alert>{error}</Alert>}
       <div className="flex items-center gap-3">
-        <Button variant="primary" disabled={busy || disabled}>{busy ? <Spinner /> : label}</Button>
-        {done && !busy && <span className="flex animate-fade items-center gap-1 text-sm text-emerald-300"><Icon name="check" size={16} />Saved</span>}
+        <Button variant="primary" loading={busy} disabled={disabled}>{label}</Button>
+        {done && !busy && <span className="flex animate-fade items-center gap-1 text-[13px] text-ok"><Icon name="check" size={16} />Saved</span>}
       </div>
     </div>
   );
@@ -322,11 +466,9 @@ export function SaveBar({ busy, error, done, label = "Save changes", disabled }:
 
 export function Logo({ markOnly = false }: { markOnly?: boolean }) {
   return (
-    <span className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight">
-      <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-accent to-accent-strong text-white shadow-lg shadow-accent-strong/30">
-        <Icon name="play" size={12} fill="currentColor" strokeWidth={0} />
-      </span>
-      {markOnly ? <span className="sr-only">modularr</span> : "modularr"}
+    <span className="flex items-center gap-2.5">
+      <span className="grid size-8 shrink-0 place-items-center rounded-[11px] bg-white font-serif text-[22px] leading-none text-canvas italic">m</span>
+      {markOnly ? <span className="sr-only">modularr</span> : <span className="font-serif text-[24px] leading-none">modularr</span>}
     </span>
   );
 }

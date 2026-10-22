@@ -6,7 +6,7 @@ import { api, errorMessage } from "@/lib/api";
 import type { IndexerList, Paths, Role, User } from "@/lib/api";
 import { FolderPicker } from "@/components/FolderPicker";
 import { Icon } from "@/components/icons";
-import { Alert, Badge, Button, Empty, Field, Input, SaveBar, Section, Select, Skeleton, Tabs, useAction } from "@/components/ui";
+import { Alert, Badge, Button, Empty, Field, Input, SaveBar, Section, Select, Skeleton, Segmented, useAction } from "@/components/ui";
 
 const pathFields: readonly { key: keyof Paths; label: string; hint: string }[] = [
   { key: "downloads", label: "Downloads", hint: "Where torrents download before they are imported." },
@@ -72,33 +72,33 @@ export function Indexers() {
 
   return (
     <Section title="Indexers" description="Every public movie and TV indexer is enabled automatically. Definitions sync daily."
-      actions={list && <span className="text-sm text-muted"><span className="text-foreground tabular-nums">{list.enabled}</span> enabled{failing > 0 && <>, <span className="text-amber-200 tabular-nums">{failing}</span> failing</>}</span>}>
+      actions={list && <span className="text-sm text-ink-3"><span className="text-ink tabular-nums">{list.enabled}</span> enabled{failing > 0 && <>, <span className="text-warn tabular-nums">{failing}</span> failing</>}</span>}>
       <div className="mb-5 flex flex-wrap gap-2">
         <div className="relative min-w-48 flex-1 sm:max-w-72">
-          <Icon name="search" size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted" />
+          <Icon name="search" size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-3" />
           <Input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Filter indexers" aria-label="Filter indexers" className="pl-9" />
         </div>
-        <Tabs label="Indexers" value={filter} onChange={setFilter} options={[
+        <Segmented label="Indexers" value={filter} onChange={setFilter} options={[
           { value: "enabled", label: "Enabled", count: list?.enabled },
           { value: "all", label: "All", count: list?.total },
         ]} />
       </div>
       {error && <div className="mb-4"><Alert>{error}</Alert></div>}
-      {list?.lastSyncError && <div className="mb-4"><Alert tone="amber">The last definition sync failed: {list.lastSyncError}</Alert></div>}
+      {list?.lastSyncError && <div className="mb-4"><Alert tone="warn">The last definition sync failed: {list.lastSyncError}</Alert></div>}
       {!list ? <Skeleton className="h-64" /> : shown.length === 0 ? <Empty icon="globe" title="No indexer matches" /> : (
         <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {shown.map((i) => (
-            <li key={i.id} className="flex items-start gap-3 rounded-xl border border-line bg-background/40 p-3.5">
+            <li key={i.id} className="flex items-start gap-3 rounded-card border border-hair bg-black/20 p-3.5">
               <span title={!i.enabled ? "Disabled" : i.health.failures > 0 ? "Failing" : "Healthy"}
-                className={`mt-1.5 size-2 shrink-0 rounded-full ${!i.enabled ? "bg-muted/40" : i.health.failures > 0 ? "bg-amber-400" : "bg-emerald-400 shadow-[0_0_8px] shadow-emerald-400/60"}`} />
+                className={`mt-1.5 size-2 shrink-0 rounded-full ${!i.enabled ? "bg-ink-3" : i.health.failures > 0 ? "bg-warn" : "bg-ok shadow-[0_0_8px] shadow-ok/60"}`} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="truncate text-sm font-medium">{i.name}</p>
                   {i.privacy !== "Public" && <Badge>{i.privacy === "Private" ? "Private" : "Semi-private"}</Badge>}
                 </div>
-                <p className="truncate text-xs text-muted">{i.health.activeUrl}</p>
-                <p className="text-xs text-muted">{i.language}</p>
-                {i.health.lastError && <p className="mt-1 truncate text-xs text-amber-200/80" title={i.health.lastError}>{i.health.lastError}</p>}
+                <p className="truncate text-xs text-ink-3">{i.health.activeUrl}</p>
+                <p className="text-xs text-ink-3">{i.language}</p>
+                {i.health.lastError && <p className="mt-1 truncate text-xs text-warn" title={i.health.lastError}>{i.health.lastError}</p>}
               </div>
             </li>
           ))}
@@ -135,13 +135,13 @@ export function Users({ me }: { me: User }) {
     <Section title="Users" description="Administrators manage settings, accounts and removals. Members browse, add and download.">
       {error && <div className="mb-4"><Alert>{error}</Alert></div>}
       {!users ? <Skeleton className="h-32" /> : (
-        <ul className="mb-6 divide-y divide-line overflow-hidden rounded-xl border border-line">
+        <ul className="mb-6 divide-y divide-hair-2 overflow-hidden rounded-card border border-hair">
           {users.map((u) => (
-            <li key={u.id} className="flex items-center gap-3 bg-background/40 px-4 py-3">
-              <span className="grid size-8 place-items-center rounded-full bg-accent/15 text-sm font-semibold text-accent uppercase">{u.username[0]}</span>
+            <li key={u.id} className="flex items-center gap-3 bg-black/20 px-4 py-3">
+              <span className="grid size-8 place-items-center rounded-full bg-fill-2 text-sm font-semibold text-ink uppercase">{u.username[0]}</span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">{u.username}{u.id === me.id && <span className="font-normal text-muted"> (you)</span>}</span>
-                <span className="block text-xs text-muted">Joined {new Date(u.created).toLocaleDateString("en", { dateStyle: "medium" })}</span>
+                <span className="block truncate text-sm font-medium">{u.username}{u.id === me.id && <span className="font-normal text-ink-3"> (you)</span>}</span>
+                <span className="block text-xs text-ink-3">Joined {new Date(u.created).toLocaleDateString("en", { dateStyle: "medium" })}</span>
               </span>
               <Select value={u.role} disabled={u.id === me.id || busy} aria-label={`Role of ${u.username}`} className="w-36"
                 onChange={(e) => void run(async () => { await api.updateUser(u.id, { role: e.target.value as Role }); await reload(); })}>

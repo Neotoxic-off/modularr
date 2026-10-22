@@ -36,14 +36,14 @@ export function ReleasesDialog({ item, season, onClose }: { item: LibraryItem; s
   const shown = showRejected ? decisions : decisions.filter((d) => d.approved);
 
   return (
-    <Modal size="lg" onClose={onClose} title={`Releases for ${item.title}${season === undefined ? "" : `, season ${season}`}`}
+    <Modal onClose={onClose} title={`Releases for ${item.title}${season === undefined ? "" : `, season ${season}`}`}
       description={result
         ? `${result.approved} of ${result.releases} releases match your profile, from ${result.indexersSearched} indexers.`
         : "Searching every enabled indexer. This can take a few seconds."}>
       <div className="space-y-3 px-5 pb-5">
         {error && <Alert>{error}</Alert>}
         {result && result.errors.length > 0 && (
-          <Alert tone="amber">{result.errors.length} {result.errors.length === 1 ? "indexer" : "indexers"} failed: {result.errors.map((e) => e.name).join(", ")}</Alert>
+          <Alert tone="warn">{result.errors.length} {result.errors.length === 1 ? "indexer" : "indexers"} failed: {result.errors.map((e) => e.name).join(", ")}</Alert>
         )}
         {!result && !error && Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-16" />)}
         {result && (
@@ -56,18 +56,18 @@ export function ReleasesDialog({ item, season, onClose }: { item: LibraryItem; s
               </div>
             )}
             {shown.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-line px-5 py-10 text-center text-sm text-muted">
+              <p className="rounded-card border border-dashed border-hair px-5 py-10 text-center text-sm text-ink-3">
                 {decisions.length === 0 ? "No indexer returned a release for this title." : "No release matches your quality profile and version. Show the rejected ones to grab one anyway."}
               </p>
             ) : (
-              <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
+              <ul className="divide-y divide-hair-2 overflow-hidden rounded-card border border-hair">
                 {shown.map((d) => (
-                  <li key={d.release.id} className={`flex items-center gap-3 px-4 py-3 ${d.approved ? "" : "bg-background/40"}`}>
+                  <li key={d.release.id} className={`flex items-center gap-3 px-4 py-3 ${d.approved ? "" : "bg-black/20"}`}>
                     <div className="min-w-0 flex-1">
-                      <p className={`truncate text-sm ${d.approved ? "" : "text-muted"}`} title={d.release.title}>{d.release.title}</p>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-                        <Badge tone={d.approved ? "accent" : "neutral"}>{d.quality}</Badge>
-                        <span title={`Audio: ${d.languages.join(", ")}`}><Badge tone={d.approved ? "green" : "neutral"} className="font-semibold">{d.version ?? d.languages.join(", ")}</Badge></span>
+                      <p className={`truncate text-sm ${d.approved ? "" : "text-ink-3"}`} title={d.release.title}>{d.release.title}</p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-3">
+                        <Badge tone={d.approved ? "live" : "neutral"}>{d.quality}</Badge>
+                        <span title={`Audio: ${d.languages.join(", ")}`}><Badge tone={d.approved ? "ok" : "neutral"} className="font-semibold">{d.version ?? d.languages.join(", ")}</Badge></span>
                         {d.subtitles.length > 0 && <span className="inline-flex items-center gap-1"><Icon name="subtitles" size={12} />{d.subtitles.join(", ")}</span>}
                         <span className="tabular-nums">{formatSize(d.release.size)}</span>
                         <span className="tabular-nums" title="Seeders">{d.release.seeders ?? "?"} seeders</span>
@@ -75,10 +75,10 @@ export function ReleasesDialog({ item, season, onClose }: { item: LibraryItem; s
                         {d.release.publishDate && <span>{formatAgo(d.release.publishDate)}</span>}
                       </div>
                       {!d.approved && d.rejections.length > 0 && (
-                        <p className="mt-1 truncate text-xs text-amber-200/80" title={d.rejections.map((r) => r.message).join("\n")}>{d.rejections.map((r) => r.message).join(" ")}</p>
+                        <p className="mt-1 truncate text-xs text-warn" title={d.rejections.map((r) => r.message).join("\n")}>{d.rejections.map((r) => r.message).join(" ")}</p>
                       )}
                     </div>
-                    <Button variant={grabbed.has(d.release.id) ? "ghost" : d.approved ? "primary" : "secondary"} size="sm"
+                    <Button variant={grabbed.has(d.release.id) ? "ghost" : d.approved ? "primary" : "glass"} size="sm"
                       onClick={() => grab(d)} disabled={grabbing !== null || grabbed.has(d.release.id)} aria-label={`Download ${d.release.title}`}>
                       {grabbing === d.release.id ? <Spinner /> : grabbed.has(d.release.id) ? <><Icon name="check" size={14} />Sent</> : <><Icon name="download" size={14} />Grab</>}
                     </Button>

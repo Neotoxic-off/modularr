@@ -21,7 +21,7 @@ export function SubtitleSettings() {
     api.subtitleSettings().then(setSettings).catch((e: unknown) => setLoadError(errorMessage(e)));
   }, []);
 
-  if (!settings || !options || !media) return loadError ? <Alert>{loadError}</Alert> : <Skeleton className="h-96 rounded-2xl" />;
+  if (!settings || !options || !media) return loadError ? <Alert>{loadError}</Alert> : <Skeleton className="h-96 rounded-tile" />;
 
   const account = settings.openSubtitles;
   const setAccount = (change: Partial<Settings["openSubtitles"]>) => setSettings({ ...settings, openSubtitles: { ...account, ...change } });
@@ -41,7 +41,7 @@ export function SubtitleSettings() {
       <Section title="Wanted languages" description="Most wanted first. A title can pick its own on its page.">
         <div className="grid gap-4 md:grid-cols-3">
           {categories.map(({ key, label }) => (
-            <div key={key} className="rounded-xl border border-line bg-background/40 p-4">
+            <div key={key} className="rounded-card border border-hair bg-black/20 p-4">
               <PickList label={label} values={media[key].subtitles} choices={realLanguages(options).map((l) => l.name)} empty="No subtitles wanted"
                 onChange={(subtitles) => setMedia({ ...media, [key]: { ...media[key], subtitles } })} />
             </div>

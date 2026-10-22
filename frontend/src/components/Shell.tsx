@@ -1,43 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { Ambient } from "@/components/Ambient";
 import { useSession } from "@/components/AuthGate";
 import { ActivityProvider, useActivity } from "@/components/Activity";
 import { NotificationPanel } from "@/components/ActivityFeed";
 import { AddDialogProvider } from "@/components/AddDialog";
 import { Icon } from "@/components/icons";
-import type { IconName } from "@/components/icons";
+import { navGroups as groups, pages, settingsItem as settings, tabs } from "@/components/nav";
+import type { NavItem } from "@/components/nav";
 import { SearchPalette } from "@/components/SearchPalette";
 import { ToastProvider } from "@/components/Toasts";
-import { Logo } from "@/components/ui";
+import { Count, IconButton, Logo, Modal } from "@/components/ui";
 
-type Badge = "downloads" | "unread";
-type NavItem = { label: string; icon: IconName; badge?: Badge; admin?: boolean } & ({ href: string } | { action: "notifications" });
+const shortcuts = pages.filter((i): i is NavItem & { shortcut: string } => !!i.shortcut);
 
-const sections: readonly { label: string | null; items: readonly NavItem[] }[] = [
-  { label: null, items: [{ href: "/", label: "Discover", icon: "compass" }] },
-  { label: "Library", items: [
-    { href: "/movies/", label: "Movies", icon: "film" },
-    { href: "/series/", label: "Series", icon: "tv" },
-    { href: "/anime/", label: "Anime", icon: "sparkles" },
-  ] },
-  { label: "Activity", items: [
-    { href: "/downloads/", label: "Downloads", icon: "download", badge: "downloads" },
-    { action: "notifications", label: "Notifications", icon: "bell", badge: "unread" },
-  ] },
-  { label: "System", items: [
-    { href: "/import/", label: "Library import", icon: "folder", admin: true },
-    { href: "/settings/", label: "Settings", icon: "settings" },
-  ] },
-];
+const libraryPaths = ["/movies/", "/series/", "/anime/"];
 
-// System pages move to the account menu in the header on small screens.
-const mobileLinks = sections.filter((s) => s.label !== "System").flatMap((s) => s.items).filter((i): i is NavItem & { href: string } => "href" in i);
+const isCurrent = (pathname: string, href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
-const COLLAPSED_KEY = "modularr.sidebar.collapsed";
+const pageTitle = (pathname: string) =>
+  pages.find((i) => i.href !== "/" && pathname.startsWith(i.href))?.label ?? (pathname === "/" ? "Today" : "");
+
+interface Chrome {
+  backdrop?: string | null;
+  // The title page shows "Series / Frieren" in the header.
+  crumb?: { label: string; href: string; title: string };
+}
+
+const ChromeContext = createContext<(chrome: Chrome) => void>(() => undefined);
+
+// A page sets the ambient backdrop and header breadcrumb while it is shown.
+export function useChrome({ backdrop, crumb }: Chrome) {
+  const set = useContext(ChromeContext);
+  const label = crumb?.label;
+  const href = crumb?.href;
+  const title = crumb?.title;
+  useEffect(() => {
+    set({ backdrop, crumb: label && href && title ? { label, href, title } : undefined });
+    return () => set({});
+  }, [set, backdrop, label, href, title]);
+}
 
 export function Shell({ children }: { children: ReactNode }) {
   return (
@@ -53,156 +59,183 @@ export function Shell({ children }: { children: ReactNode }) {
 
 function Frame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { user } = useSession();
-  const { unread, activeDownloads } = useActivity();
+  const router = useRouter();
+  const [chrome, setChrome] = useState<Chrome>({});
   const [searching, setSearching] = useState(false);
   const [notifying, setNotifying] = useState(false);
-  // The shell only renders in the browser, after the auth gate, so storage can be read up front.
-  const [collapsed, setCollapsed] = useState(() => {
-    try { return localStorage.getItem(COLLAPSED_KEY) === "1"; } catch { return false; }
-  });
+  const [cheatSheet, setCheatSheet] = useState(false);
+  const first = useRef(true);
 
-  const toggleCollapsed = () => {
-    setCollapsed(!collapsed);
-    try { localStorage.setItem(COLLAPSED_KEY, collapsed ? "0" : "1"); } catch { /* not remembered */ }
-  };
+  // Moves focus to the new page's heading so screen readers start there; the first load keeps the browser's focus.
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    const frame = requestAnimationFrame(() => document.querySelector<HTMLElement>("main h1")?.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(frame);
+  }, [pathname]);
 
   useEffect(() => {
+    let chord = false;
+    let chordTimer: ReturnType<typeof setTimeout> | undefined;
     const key = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setSearching((s) => !s);
+        return;
       }
+      const target = e.target as HTMLElement;
+      if (e.ctrlKey || e.metaKey || e.altKey || target.closest("input, textarea, select, [contenteditable], [role=dialog]")) return;
+      if (chord) {
+        chord = false;
+        const item = shortcuts.find((s) => s.shortcut === e.key);
+        if (item) { e.preventDefault(); router.push(item.href); }
+        return;
+      }
+      if (e.key === "g") { chord = true; clearTimeout(chordTimer); chordTimer = setTimeout(() => { chord = false; }, 1200); }
+      else if (e.key === "/") { e.preventDefault(); setSearching(true); }
+      else if (e.key === "n") setNotifying(true);
+      else if (e.key === "?") setCheatSheet(true);
     };
     window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
-  }, []);
-
-  const counts: Record<Badge, number> = { downloads: activeDownloads, unread };
-  const current = (href: string) => ((href === "/" ? pathname === "/" : pathname.startsWith(href)) ? "page" : undefined);
+    return () => { window.removeEventListener("keydown", key); clearTimeout(chordTimer); };
+  }, [router]);
 
   return (
-    <div className="flex min-h-screen">
-      <aside data-collapsed={collapsed || undefined}
-        className="group/side sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-line/70 bg-surface/60 transition-[width] duration-200 data-collapsed:w-[72px] lg:flex">
-        <div className="flex h-16 shrink-0 items-center justify-between gap-2 px-4 group-data-collapsed/side:h-auto group-data-collapsed/side:flex-col group-data-collapsed/side:justify-center group-data-collapsed/side:px-0 group-data-collapsed/side:pt-4 group-data-collapsed/side:pb-3">
-          <Link href="/" aria-label="Modularr home" className="rounded-lg"><Logo markOnly={collapsed} /></Link>
-          <button onClick={toggleCollapsed} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="grid size-8 cursor-pointer place-items-center rounded-lg text-muted transition hover:bg-raised hover:text-foreground">
-            <Icon name="panel" size={17} />
-          </button>
+    <ChromeContext value={setChrome}>
+      <Ambient src={chrome.backdrop ?? null} />
+      <div id="app" className="flex min-h-dvh">
+        <a href="#content" className="sr-only z-50 rounded-pill bg-white px-4 py-2.5 font-semibold text-canvas focus:not-sr-only focus:fixed focus:top-3 focus:left-3">Skip to content</a>
+        <Rail pathname={pathname} />
+        <div className="flex min-w-0 flex-1 flex-col md:pr-3">
+          <Header pathname={pathname} crumb={chrome.crumb} onSearch={() => setSearching(true)} onNotifications={() => setNotifying(true)} />
+          <OfflineBanner />
+          <main id="content" className="mx-auto w-full max-w-[1600px] min-w-0 flex-1 p-4 pb-28 md:pb-8 lg:p-5">{children}</main>
         </div>
+        <BottomBar pathname={pathname} />
+      </div>
+      {searching && <SearchPalette onClose={() => setSearching(false)} />}
+      {notifying && <NotificationPanel onClose={() => setNotifying(false)} />}
+      {cheatSheet && <CheatSheet onClose={() => setCheatSheet(false)} />}
+    </ChromeContext>
+  );
+}
 
-        <div className="px-3 pb-2">
-          <SearchTrigger collapsed={collapsed} onOpen={() => setSearching(true)} />
-        </div>
-
-        <nav aria-label="Main" className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-3">
-          {sections.map((section) => (
-            <div key={section.label ?? "home"} className="flex flex-col gap-0.5">
-              {section.label && (
+function Rail({ pathname }: { pathname: string }) {
+  const { user } = useSession();
+  const { activeDownloads } = useActivity();
+  return (
+    <aside className="sticky top-0 hidden h-dvh shrink-0 p-3 md:block">
+      <div className="glass flex h-full w-[72px] flex-col rounded-panel px-3 py-4 xl:w-60">
+        <Link href="/" aria-label="modularr, Today" className="mb-5 flex h-11 items-center rounded-pill px-1.5 max-xl:justify-center max-xl:px-0">
+          <span className="xl:hidden"><Logo markOnly /></span>
+          <span className="max-xl:hidden"><Logo /></span>
+        </Link>
+        <nav aria-label="Main" className="flex flex-1 flex-col gap-4 overflow-y-auto">
+          {groups.map((group) => (
+            <div key={group.label ?? "home"} className="flex flex-col gap-1">
+              {group.label && (
                 <>
-                  <p className="px-3 pb-1.5 text-[10.5px] font-semibold tracking-[0.09em] text-muted/70 uppercase group-data-collapsed/side:hidden">{section.label}</p>
-                  <span aria-hidden="true" className="mx-3 mb-2 hidden h-px bg-line group-data-collapsed/side:block" />
+                  <p className="caption px-3.5 pb-1 max-xl:hidden">{group.label}</p>
+                  <span aria-hidden="true" className="mx-2 mb-1 h-px bg-hair-2 xl:hidden" />
                 </>
               )}
-              {section.items.filter((item) => !item.admin || user.role === "Admin").map((item) => (
-                <SideItem key={item.label} item={item} count={item.badge && counts[item.badge]}
-                  current={"href" in item ? current(item.href) : undefined} onAction={() => setNotifying(true)} />
+              {group.items.filter((i) => !i.admin || user.role === "Admin").map((item) => (
+                <RailItem key={item.href} item={item} current={isCurrent(pathname, item.href)} count={item.downloads ? activeDownloads : 0} />
               ))}
             </div>
           ))}
         </nav>
-
-        <div className="border-t border-line/70 p-3">
-          <UserMenu placement="up" compact={collapsed} />
+        <div className="mt-3 border-t border-hair-2 pt-3">
+          <RailItem item={settings} current={pathname.startsWith(settings.href)} count={0} />
         </div>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-1 border-b border-line/70 bg-background/80 px-4 backdrop-blur-xl lg:hidden">
-          <Link href="/" className="mr-auto rounded-lg"><Logo /></Link>
-          <button onClick={() => setSearching(true)} aria-label="Search" className={headerButton}>
-            <Icon name="search" size={20} />
-          </button>
-          <button onClick={() => setNotifying(true)} aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} className={`relative ${headerButton}`}>
-            <Icon name="bell" size={20} />
-            {unread > 0 && <Count value={unread} className="absolute top-1 right-1" />}
-          </button>
-          <UserMenu placement="down" compact />
-        </header>
-        <main key={pathname} className="w-full max-w-[1600px] min-w-0 flex-1 animate-fade px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-8 lg:pb-12">{children}</main>
       </div>
-
-      <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-line/70 bg-background/90 px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">
-        {mobileLinks.map(({ href, label, icon, badge }) => (
-          <Link key={href} href={href} aria-current={current(href)}
-            className="group relative flex flex-col items-center gap-1 rounded-lg py-1.5 text-[11px] font-medium text-muted transition aria-[current=page]:text-foreground">
-            <span className="relative grid h-7 w-12 place-items-center rounded-full transition group-aria-[current=page]:bg-accent/15 group-aria-[current=page]:text-accent">
-              <Icon name={icon} size={19} />
-              {badge && counts[badge] > 0 && <Count value={counts[badge]} className="absolute -top-1 right-0.5" />}
-            </span>
-            {label}
-          </Link>
-        ))}
-      </nav>
-
-      {searching && <SearchPalette onClose={() => setSearching(false)} />}
-      {notifying && <NotificationPanel onClose={() => setNotifying(false)} />}
-    </div>
+    </aside>
   );
 }
 
-const headerButton = "grid size-10 cursor-pointer place-items-center rounded-lg text-muted transition hover:bg-raised hover:text-foreground";
-
-function Count({ value, className = "" }: { value: number; className?: string }) {
+function RailItem({ item, current, count }: { item: NavItem; current: boolean; count: number }) {
   return (
-    <span className={`grid h-4 min-w-4 place-items-center rounded-full bg-accent-strong px-1 text-[10px] leading-none font-semibold text-white tabular-nums ring-2 ring-background ${className}`}>
-      {value > 99 ? "99+" : value}
-    </span>
-  );
-}
-
-function SearchTrigger({ collapsed, onOpen }: { collapsed: boolean; onOpen: () => void }) {
-  const shortcut = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘K" : "Ctrl K";
-  return (
-    <button onClick={onOpen} aria-label="Search" aria-keyshortcuts="Control+K Meta+K" title={collapsed ? `Search (${shortcut})` : undefined}
-      className={`flex h-9 w-full cursor-pointer items-center gap-2.5 rounded-lg border border-line bg-background/60 text-sm text-muted transition hover:border-muted/40 hover:text-foreground ${collapsed ? "justify-center" : "px-3"}`}>
-      <Icon name="search" size={16} className="shrink-0" />
-      {!collapsed && (
+    <Link href={item.href} aria-current={current ? "page" : undefined} title={item.label}
+      aria-keyshortcuts={item.shortcut ? `g ${item.shortcut}` : undefined}
+      className="relative flex h-11 items-center gap-3 rounded-pill px-3.5 text-sm font-medium text-ink-2 transition hover:bg-fill hover:text-ink aria-[current=page]:bg-fill-2 aria-[current=page]:text-ink max-xl:justify-center max-xl:px-0">
+      <Icon name={item.icon} size={19} className="shrink-0" />
+      <span className="flex-1 truncate max-xl:sr-only">{item.label}</span>
+      {count > 0 && (
         <>
-          <span className="flex-1 text-left">Search titles</span>
-          <kbd className="rounded border border-line px-1.5 py-px font-sans text-[10px] text-muted">{shortcut}</kbd>
+          <span className="text-[12px] font-semibold text-live tabular-nums max-xl:hidden">{count}<span className="sr-only"> active</span></span>
+          <span aria-hidden="true" className="absolute top-1.5 right-1.5 size-2 rounded-full bg-live xl:hidden" />
         </>
       )}
-    </button>
+    </Link>
   );
 }
 
-function SideItem({ item, count, current, onAction }: { item: NavItem; count?: number; current?: "page"; onAction: () => void }) {
-  const content = (
-    <>
-      <span aria-hidden="true" className="absolute top-1.5 bottom-1.5 -left-3 w-[3px] rounded-r-full bg-accent opacity-0 transition group-aria-[current=page]:opacity-100" />
-      <span className="relative shrink-0 text-muted transition group-hover:text-foreground group-aria-[current=page]:text-accent">
-        <Icon name={item.icon} size={18} />
-        {!!count && <Count value={count} className="absolute -top-1.5 -right-2 hidden group-data-collapsed/side:grid" />}
-      </span>
-      <span className="flex-1 truncate group-data-collapsed/side:sr-only">{item.label}</span>
-      {!!count && (
-        <span className="rounded-md bg-accent/15 px-1.5 py-0.5 text-[11px] leading-none font-semibold text-accent tabular-nums group-data-collapsed/side:hidden">
-          {count > 99 ? "99+" : count}
-        </span>
-      )}
-    </>
+function Header({ pathname, crumb, onSearch, onNotifications }: { pathname: string; crumb?: Chrome["crumb"]; onSearch: () => void; onNotifications: () => void }) {
+  const { unread } = useActivity();
+  const [scrolled, setScrolled] = useState(false);
+  const title = pageTitle(pathname);
+
+  // The page title joins the header once the page's own heading has scrolled away.
+  useEffect(() => {
+    const check = () => {
+      const heading = document.querySelector("main h1");
+      setScrolled(!!heading && heading.getBoundingClientRect().bottom < 72);
+    };
+    check();
+    window.addEventListener("scroll", check, { passive: true });
+    return () => window.removeEventListener("scroll", check);
+  }, [pathname]);
+
+  return (
+    <header data-scrolled={scrolled || !!crumb || undefined}
+      className="glass sticky top-0 z-30 flex h-[calc(56px+env(safe-area-inset-top))] items-center gap-2 rounded-none border-x-0 border-t-0 px-3 pt-[env(safe-area-inset-top)] transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 md:top-3 md:mt-3 md:h-16 md:rounded-panel md:border md:px-3 md:pl-5 md:not-data-scrolled:border-transparent md:not-data-scrolled:bg-transparent md:not-data-scrolled:shadow-none md:not-data-scrolled:backdrop-blur-none">
+      <Link href="/" aria-label="modularr, Today" className="rounded-pill md:hidden"><Logo /></Link>
+      <div className="min-w-0 flex-1 max-md:hidden">
+        {crumb ? (
+          <p className="flex min-w-0 items-baseline gap-2 font-serif text-[24px] leading-none">
+            <Link href={crumb.href} className="shrink-0 text-ink-2 hover:text-ink">{crumb.label}</Link>
+            <span aria-hidden="true" className="text-ink-3">/</span>
+            <span className="truncate">{crumb.title}</span>
+          </p>
+        ) : (
+          <p aria-hidden="true" className={`truncate font-serif text-[24px] leading-none transition duration-300 ${scrolled ? "opacity-100" : "translate-y-1 opacity-0"}`}>{title}</p>
+        )}
+      </div>
+      <div className="ml-auto flex items-center gap-2">
+        <button onClick={onSearch} aria-keyshortcuts="Control+K Meta+K /"
+          className="glass flex h-11 cursor-pointer items-center gap-2.5 rounded-pill px-4 text-sm font-medium text-ink-2 transition hover:bg-fill-2 hover:text-ink max-md:w-11 max-md:justify-center max-md:px-0 md:w-64 lg:w-80">
+          <Icon name="search" size={18} className="shrink-0" />
+          <span className="flex-1 text-left max-md:sr-only">Search or add…</span>
+          <kbd className="rounded-chip bg-fill px-1.5 py-0.5 font-sans text-[11px] text-ink-3 max-md:hidden">⌘K</kbd>
+        </button>
+        <IconButton icon="bell" label={unread ? `Notifications, ${unread} unread` : "Notifications"} badge={unread} onClick={onNotifications} aria-keyshortcuts="n" />
+        <UserMenu />
+      </div>
+    </header>
   );
-  const className = "group relative flex h-9 w-full cursor-pointer items-center gap-3 rounded-lg px-3 text-left text-sm text-foreground/75 transition hover:bg-raised/70 hover:text-foreground aria-[current=page]:bg-raised aria-[current=page]:font-medium aria-[current=page]:text-foreground group-data-collapsed/side:justify-center group-data-collapsed/side:px-0";
-  return "href" in item
-    ? <Link href={item.href} aria-current={current} title={item.label} className={className}>{content}</Link>
-    : <button onClick={onAction} title={item.label} className={className}>{content}</button>;
 }
 
-function UserMenu({ placement, compact }: { placement: "up" | "down"; compact: boolean }) {
+function BottomBar({ pathname }: { pathname: string }) {
+  const { activeDownloads } = useActivity();
+  return (
+    <nav aria-label="Main" className="glass fixed inset-x-0 bottom-0 z-30 mx-3 mb-[max(12px,env(safe-area-inset-bottom))] grid h-16 grid-cols-5 rounded-[26px] px-1 md:hidden">
+      {tabs.map((tab) => {
+        const current = tab.label === "Library" ? libraryPaths.some((p) => pathname.startsWith(p)) : isCurrent(pathname, tab.href);
+        return (
+          <Link key={tab.href} href={tab.href} aria-current={current ? "page" : undefined}
+            className="group flex flex-col items-center justify-center gap-0.5 rounded-[22px] text-[11px] font-semibold text-ink-3 transition aria-[current=page]:text-ink">
+            <span className="relative grid h-8 w-12 place-items-center rounded-pill transition group-aria-[current=page]:bg-fill-2">
+              <Icon name={tab.icon} size={20} />
+              {tab.downloads && activeDownloads > 0 && <Count value={activeDownloads} className="absolute -top-1 right-0 bg-live" />}
+            </span>
+            {tab.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function UserMenu() {
   const { user, logout } = useSession();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -211,57 +244,82 @@ function UserMenu({ placement, compact }: { placement: "up" | "down"; compact: b
   useEffect(() => {
     if (!open) return;
     const outside = (e: MouseEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false); };
-    const escape = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const escape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      root.current?.querySelector("button")?.focus();
+    };
     document.addEventListener("mousedown", outside);
     document.addEventListener("keydown", escape);
+    root.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
     return () => {
       document.removeEventListener("mousedown", outside);
       document.removeEventListener("keydown", escape);
     };
   }, [open]);
 
-  const item = "flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-foreground/85 hover:bg-line/60 hover:text-foreground";
+  const item = "flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-ctl px-3 text-sm font-medium text-ink-2 hover:bg-fill-2 hover:text-ink";
+  const close = () => setOpen(false);
 
   return (
     <div ref={root} className="relative">
       <button onClick={() => setOpen(!open)} aria-haspopup="menu" aria-expanded={open} aria-label={`Account menu for ${user.username}`}
-        className={`flex w-full cursor-pointer items-center gap-3 rounded-lg text-left transition hover:bg-raised/70 ${compact ? "justify-center p-1" : "p-2"}`}>
-        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-accent/15 text-sm font-semibold text-accent uppercase ring-1 ring-accent/25">{user.username[0]}</span>
-        {!compact && (
-          <>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{user.username}</span>
-              <span className="block text-xs text-muted">{role}</span>
-            </span>
-            <Icon name="upDown" size={14} className="text-muted" />
-          </>
-        )}
+        className="grid size-11 cursor-pointer place-items-center rounded-full bg-white font-serif text-[22px] leading-none text-canvas uppercase transition hover:bg-white/85">
+        {user.username[0]}
       </button>
       {open && (
-        <div role="menu" aria-label="Account"
-          className={`absolute z-50 w-56 animate-rise rounded-xl border border-line bg-raised p-1.5 shadow-2xl shadow-black/60 ${placement === "up" ? "bottom-full left-0 mb-2" : "top-full right-0 mt-2"}`}>
-          <div className="mb-1 border-b border-line px-2.5 pt-1.5 pb-2.5">
-            <p className="truncate text-sm font-medium">{user.username}</p>
-            <p className="text-xs text-muted">{role}</p>
+        <div role="menu" aria-label="Account" className="glass-pop absolute top-full right-0 z-50 mt-2 w-64 animate-rise rounded-tile p-2">
+          <div className="mb-1 border-b border-hair-2 px-3 pt-2 pb-3">
+            <p className="truncate text-[15px] font-semibold">{user.username}</p>
+            <p className="text-[13px] text-ink-3">{role}</p>
           </div>
-          {placement === "down" && (
-            <Link role="menuitem" href="/settings/" onClick={() => setOpen(false)} className={item}>
-              <Icon name="settings" size={16} className="text-muted" />Settings
-            </Link>
-          )}
-          {placement === "down" && user.role === "Admin" && (
-            <Link role="menuitem" href="/import/" onClick={() => setOpen(false)} className={item}>
-              <Icon name="folder" size={16} className="text-muted" />Library import
-            </Link>
-          )}
-          <Link role="menuitem" href="/settings/#account" onClick={() => setOpen(false)} className={item}>
-            <Icon name="user" size={16} className="text-muted" />Account
-          </Link>
-          <button role="menuitem" onClick={logout} className={item}>
-            <Icon name="logout" size={16} className="text-muted" />Sign out
-          </button>
+          <Link role="menuitem" href="/settings/#account" onClick={close} className={item}><Icon name="user" size={17} />Account</Link>
+          <Link role="menuitem" href="/settings/" onClick={close} className={`${item} md:hidden`}><Icon name="settings" size={17} />Settings</Link>
+          {user.role === "Admin" && <Link role="menuitem" href="/import/" onClick={close} className={`${item} md:hidden`}><Icon name="folder" size={17} />Import</Link>}
+          <button role="menuitem" onClick={logout} className={item}><Icon name="logout" size={17} />Sign out</button>
         </div>
       )}
     </div>
+  );
+}
+
+const OFFLINE_GRACE_MS = 4000;
+
+// The live stream reconnects with backoff on its own; this only says so when it stays down.
+function OfflineBanner() {
+  const { connected } = useActivity();
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    if (connected) return;
+    const timer = setTimeout(() => setOffline(!document.hidden), OFFLINE_GRACE_MS);
+    return () => { clearTimeout(timer); setOffline(false); };
+  }, [connected]);
+  if (!offline) return null;
+  return (
+    <p role="status" className="glass mx-4 mt-3 flex animate-rise items-center gap-3 rounded-pill px-4 py-2.5 text-[13px] font-medium lg:mx-5">
+      <span className="size-2 animate-pulse-dot rounded-full bg-warn" />Can’t reach modularr server. Retrying…
+    </p>
+  );
+}
+
+function CheatSheet({ onClose }: { onClose: () => void }) {
+  const rows: [string, string][] = [
+    ["⌘K or /", "Search or add"],
+    ...shortcuts.map((s): [string, string] => [`g ${s.shortcut}`, s.label === "Movies" ? "Library" : s.label]),
+    ["n", "Notifications"],
+    ["?", "This list"],
+    ["Esc", "Close"],
+  ];
+  return (
+    <Modal onClose={onClose} title="Keyboard shortcuts">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-2 px-5 pb-6 text-sm">
+        {rows.map(([keys, label]) => (
+          <div key={keys} className="contents">
+            <dt><kbd className="well rounded-chip px-2 py-1 font-sans text-[12px] font-semibold">{keys}</kbd></dt>
+            <dd className="self-center text-ink-2">{label}</dd>
+          </div>
+        ))}
+      </dl>
+    </Modal>
   );
 }

@@ -42,9 +42,13 @@ const paths = {
   ban: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM4.9 4.9l14.2 14.2",
   refresh: "M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5",
   searchX: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3M8.5 8.5l5 5M13.5 8.5l-5 5",
-  panel: "M3 3h18v18H3zM9 3v18",
   user: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
   upDown: "M7 15l5 5 5-5M7 9l5-5 5 5",
+  home: "M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z",
+  calendar: "M3 5h18v16H3zM3 10h18M8 3v4M16 3v4",
+  more: "M5 12h.01M12 12h.01M19 12h.01",
+  undo: "M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3",
+  keyboard: "M2 6h20v12H2zM6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10",
 } as const;
 
 export type IconName = keyof typeof paths;

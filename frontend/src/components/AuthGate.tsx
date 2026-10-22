@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import type { FormEvent, ReactNode } from "react";
 import { api, errorMessage, UNAUTHORIZED } from "@/lib/api";
 import type { AuthState, User } from "@/lib/api";
+import { Ambient } from "@/components/Ambient";
 import { Alert, Button, Field, Input, Logo, Spinner } from "@/components/ui";
 
 interface Session {
@@ -39,8 +40,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
     setState((s) => s && { ...s, user: null });
   }, []);
 
-  if (error) return <Centered><Alert>Can’t reach the Modularr server: {error}</Alert></Centered>;
-  if (!state) return <Centered><Spinner className="text-accent" /></Centered>;
+  if (error) return <Centered><Alert>Can’t reach modularr server: {error}</Alert></Centered>;
+  if (!state) return <Centered><Spinner className="text-ink-2" /></Centered>;
   if (!state.user) return <Login setup={state.setupRequired} onSignedIn={(user) => setState({ setupRequired: false, user })} />;
 
   return <SessionContext value={{ user: state.user, logout }}>{children}</SessionContext>;
@@ -66,14 +67,14 @@ function Login({ setup, onSignedIn }: { setup: boolean; onSignedIn: (user: User)
   }
 
   return (
-    <div className="relative grid min-h-screen place-items-center overflow-hidden p-4">
-      <div aria-hidden="true" className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-accent-strong/20 blur-[120px]" />
-      <form onSubmit={submit} className="relative w-full max-w-sm animate-rise space-y-5 rounded-2xl border border-line bg-surface/90 p-7 shadow-2xl shadow-black/60 backdrop-blur">
-        <div className="space-y-4">
+    <main className="grid min-h-dvh place-items-center sm:p-4">
+      <Ambient src={null} />
+      <form onSubmit={submit} className="glass flex min-h-dvh w-full animate-rise flex-col justify-center gap-5 rounded-none border-0 p-6 pt-[max(24px,env(safe-area-inset-top))] sm:min-h-0 sm:max-w-sm sm:rounded-panel sm:border sm:p-8">
+        <div className="space-y-6">
           <Logo />
           <div>
-            <h1 className="font-display text-2xl font-semibold tracking-tight">{setup ? "Create your admin account" : "Welcome back"}</h1>
-            <p className="mt-1 text-sm text-muted">{setup ? "This account manages settings, users and the library." : "Sign in to continue to your library."}</p>
+            <h1 className="font-serif text-[40px] leading-none">{setup ? "Make it yours." : "Welcome back."}</h1>
+            <p className="mt-2 text-[13px] text-ink-2">{setup ? "Create the admin account. It manages settings, users and the library." : "Sign in to continue to your library."}</p>
           </div>
         </div>
         {error && <Alert>{error}</Alert>}
@@ -84,14 +85,12 @@ function Login({ setup, onSignedIn }: { setup: boolean; onSignedIn: (user: User)
           <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
             autoComplete={setup ? "new-password" : "current-password"} minLength={setup ? 8 : undefined} required />
         </Field>
-        <Button variant="primary" size="lg" className="w-full" disabled={busy}>
-          {busy ? <Spinner /> : setup ? "Create account" : "Sign in"}
-        </Button>
+        <Button variant="primary" className="w-full" loading={busy}>{setup ? "Create account" : "Sign in"}</Button>
       </form>
-    </div>
+    </main>
   );
 }
 
 function Centered({ children }: { children: ReactNode }) {
-  return <div className="flex min-h-screen items-center justify-center p-4">{children}</div>;
+  return <div className="flex min-h-dvh items-center justify-center p-4"><Ambient src={null} />{children}</div>;
 }
