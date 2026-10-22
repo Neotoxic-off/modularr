@@ -18,6 +18,10 @@ public static class CompletedDownloadProcessor
         List<string> files;
         string root;
 
+        // A single-file download sits in the shared downloads folder: its archive gets a folder of its own,
+        // so an entry like OtherRelease/x.mkv cannot land in another download's folder.
+        string? destination = null;
+
         if (Directory.Exists(fullPath))
         {
             if (new DirectoryInfo(fullPath).LinkTarget is not null)
@@ -32,6 +36,7 @@ public static class CompletedDownloadProcessor
         {
             files = [fullPath];
             root = Path.GetDirectoryName(fullPath)!;
+            destination = Path.Combine(root, Path.GetFileNameWithoutExtension(fullPath));
         }
         else
         {
@@ -48,7 +53,7 @@ public static class CompletedDownloadProcessor
             }
         }
 
-        ArchiveExtraction extraction = ArchiveExtractor.ExtractAll(files, options);
+        ArchiveExtraction extraction = ArchiveExtractor.ExtractAll(files, options, destination);
 
         if (extraction.Error is not null)
         {
@@ -92,9 +97,18 @@ public static class CompletedDownloadProcessor
             }
         }
 
-        return RejectionReason(dangerous, executables, fakeVideos, disallowed, hasVideo: videos.Count > 0) is string reason
-            ? Reject(reason)
-            : new PostProcessingVerdict.Accepted(videos, subtitles);
+        if (RejectionReason(dangerous, executables, fakeVideos, disallowed, hasVideo: videos.Count > 0) is not string reason)
+        {
+            return new PostProcessingVerdict.Accepted(videos, subtitles);
+        }
+
+        // Removing the torrent with its data only deletes the torrent's own files, not what was extracted from them.
+        foreach (string file in extraction.ExtractedFiles)
+        {
+            Delete(file);
+        }
+
+        return Reject(reason);
     }
 
     // Shared with the pre-download content check, so a release is rejected with the same reason before and after download.

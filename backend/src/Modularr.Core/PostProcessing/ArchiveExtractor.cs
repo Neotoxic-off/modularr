@@ -59,7 +59,8 @@ public static partial class ArchiveExtractor
 
     // Extracts every archive among files next to itself, then the archives found inside, up to MaxArchiveDepth levels.
     // All or nothing: the size and entry caps hold over the whole tree, and on failure everything written is removed.
-    public static ArchiveExtraction ExtractAll(IReadOnlyList<string> files, PostProcessingOptions options)
+    // destination: a new folder for the top-level archives instead of their own folder.
+    public static ArchiveExtraction ExtractAll(IReadOnlyList<string> files, PostProcessingOptions options, string? destination = null)
     {
         bool IsArchive(string file) => FileClassifier.Classify(file, options) == FileKind.Archive;
 
@@ -93,7 +94,7 @@ public static partial class ArchiveExtractor
 
             foreach (string archive in archives)
             {
-                if (Extract(archive, budget, written, volumes, next) is string error)
+                if (Extract(archive, depth == 0 ? destination : null, budget, written, volumes, next) is string error)
                 {
                     return Fail(error);
                 }
@@ -105,15 +106,26 @@ public static partial class ArchiveExtractor
     }
 
     // Returns the error, or null once the archive's files are added to extracted. Every path created goes to written first.
-    private static string? Extract(string firstVolume, Budget budget, List<string> written, List<string> volumes, List<string> extracted)
+    private static string? Extract(string firstVolume, string? destination, Budget budget, List<string> written, List<string> volumes, List<string> extracted)
     {
         string name = Path.GetFileName(firstVolume);
 
         try
         {
+            if (destination is not null)
+            {
+                if (Path.Exists(destination))
+                {
+                    return $"{name}: would overwrite an existing file";
+                }
+
+                written.Add(Directory.CreateDirectory(destination).FullName);
+            }
+
+            string folder = destination ?? Path.GetDirectoryName(Path.GetFullPath(firstVolume))!;
             string? error = SingleStreams.TryGetValue(Path.GetExtension(firstVolume), out (Func<Stream, Stream> Open, string InnerExtension) single)
-                ? Decompress(firstVolume, single.Open, single.InnerExtension, budget, written, volumes, extracted)
-                : Unpack(firstVolume, budget, written, volumes, extracted);
+                ? Decompress(firstVolume, folder, single.Open, single.InnerExtension, budget, written, volumes, extracted)
+                : Unpack(firstVolume, folder, budget, written, volumes, extracted);
 
             return error is null ? null : $"{name}: {error}";
         }
@@ -121,20 +133,21 @@ public static partial class ArchiveExtractor
         {
             return $"{name}: password protected archive";
         }
-        catch (Exception ex) when (ex is SharpCompressException or InvalidDataException or EndOfStreamException)
+        // An unknown compression method throws NotSupportedException, malformed headers ArgumentException or OverflowException.
+        catch (Exception ex) when (ex is SharpCompressException or InvalidDataException or EndOfStreamException or NotSupportedException or ArgumentException or OverflowException)
         {
             return $"{name}: corrupt archive ({ex.Message})";
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // Disk full or a header that lied about sizes: still a verdict, never an unhandled throw.
             return $"{name}: extraction failed ({ex.Message})";
         }
     }
 
-    private static string? Decompress(string archive, Func<Stream, Stream> open, string innerExtension, Budget budget, List<string> written, List<string> volumes, List<string> extracted)
+    private static string? Decompress(string archive, string destination, Func<Stream, Stream> open, string innerExtension, Budget budget, List<string> written, List<string> volumes, List<string> extracted)
     {
-        string target = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(archive))!, Path.GetFileNameWithoutExtension(archive) + innerExtension);
+        string target = Path.Combine(destination, Path.GetFileNameWithoutExtension(archive) + innerExtension);
 
         if (File.Exists(target) || Directory.Exists(target))
         {
@@ -160,14 +173,13 @@ public static partial class ArchiveExtractor
         }
 
         // A compressed tar is one archive, not one nested in another: it does not use a depth level.
-        return Unpack(target, budget, written, volumes, extracted);
+        return Unpack(target, destination, budget, written, volumes, extracted);
     }
 
     // Every entry is checked before anything is written, nothing is overwritten.
-    private static string? Unpack(string firstVolume, Budget budget, List<string> written, List<string> volumes, List<string> extracted)
+    private static string? Unpack(string firstVolume, string destination, Budget budget, List<string> written, List<string> volumes, List<string> extracted)
     {
         List<FileInfo> parts = [.. ArchiveFactory.GetFileParts(new FileInfo(firstVolume))];
-        string destination = Path.GetDirectoryName(Path.GetFullPath(firstVolume))!;
         string root = Path.TrimEndingDirectorySeparator(destination) + Path.DirectorySeparatorChar;
 
         using IArchive archive = ArchiveFactory.OpenArchive(parts, new ReaderOptions());
@@ -217,7 +229,7 @@ public static partial class ArchiveExtractor
                 return $"link entry '{entry.Key}' refused";
             }
 
-            // A single-file download sits in the shared downloads root: never replace another download's file.
+            // Never replace a file of the download, or of another download through a nested archive.
             if (File.Exists(target) || Directory.Exists(target) || !targets.Add(target))
             {
                 return $"entry '{entry.Key}' would overwrite an existing file";

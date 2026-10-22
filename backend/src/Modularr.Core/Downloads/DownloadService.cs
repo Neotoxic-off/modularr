@@ -70,6 +70,12 @@ public sealed class DownloadService(
 
         if (await db.TrackedDownloads.FirstOrDefaultAsync(d => d.InfoHash == id, cancellationToken).ConfigureAwait(false) is TrackedDownload existing)
         {
+            // A failed download is blocklisted and never polled again: the torrent just added back would run untracked.
+            if (existing.State == TrackedDownloadState.Failed)
+            {
+                await torrents.Engine.RemoveAsync(id, deleteData: true).ConfigureAwait(false);
+            }
+
             return existing;
         }
 

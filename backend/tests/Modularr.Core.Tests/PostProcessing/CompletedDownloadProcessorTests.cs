@@ -88,9 +88,9 @@ public sealed class CompletedDownloadProcessorTests : IDisposable
     }
 
     [Fact]
-    public void ExtractsASingleArchiveFileNextToIt()
+    public void ExtractsASingleArchiveFileIntoItsOwnFolder()
     {
-        string archive = _download.Zip("Movie (2000).zip", ("Movie (2000)/Movie (2000).mkv", Payload), ("Movie (2000)/Movie (2000).en.srt", Payload));
+        string archive = _download.Zip("Movie (2000).zip", ("Movie (2000).mkv", Payload), ("Movie (2000).en.srt", Payload));
 
         PostProcessingVerdict.Accepted accepted = Assert.IsType<PostProcessingVerdict.Accepted>(Process(archive));
 
@@ -139,7 +139,7 @@ public sealed class CompletedDownloadProcessorTests : IDisposable
         _download.Zip("Show.S01E01.zip", ("Show.S01E01.mkv", Payload), ("Codec.Installer.exe", Payload));
 
         AssertRejected(".exe");
-        Assert.Equal(["Show.S01E01.mkv"], _download.Files());
+        Assert.Empty(_download.Files());
     }
 
     [Theory]
@@ -196,7 +196,7 @@ public sealed class CompletedDownloadProcessorTests : IDisposable
     [Fact]
     public void RefusesToOverwriteAnotherDownloadsFile()
     {
-        string other = _download.CreateFile("Movie (2000).mkv", size: 3);
+        string other = _download.CreateFile("Movie.Again/Movie (2000).mkv", size: 3);
         string archive = _download.Zip("Movie.Again.zip", ("Movie (2000).mkv", Payload));
 
         PostProcessingVerdict.Rejected rejected = Assert.IsType<PostProcessingVerdict.Rejected>(Process(archive));
@@ -241,7 +241,7 @@ public sealed class CompletedDownloadProcessorTests : IDisposable
         _download.Fixture("episode.7z");
 
         AssertRejected("content is not a video: Show.S01E01.mkv");
-        Assert.Equal(["Show.S01E01.srt"], _download.Files());
+        Assert.Empty(_download.Files());
     }
 
     [Theory]

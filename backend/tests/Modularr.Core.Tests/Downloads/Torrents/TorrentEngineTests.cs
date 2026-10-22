@@ -178,6 +178,27 @@ public sealed class TorrentEngineTests : IDisposable
             done.Files.Select(f => (Path: f.Path.Replace('\\', '/'), Done: f.Progress == 1.0)).OrderBy(f => f.Path, StringComparer.Ordinal));
     }
 
+    // Pausing cancels the first metadata wait, the resume starts a new one that still checks the content.
+    [Fact]
+    public async Task MagnetPausedBeforeItsMetadataIsCheckedAfterResume()
+    {
+        (string seedDirectory, byte[] torrentFile) = await CreateTorrentAsync(
+            "Movie.2020.1080p.WEB-DL", ("Movie.2020.1080p.WEB-DL.mkv", 3 * 1024 * 1024), ("RARBG.txt", 2 * 1024 * 1024));
+        await using SeederEngine seeder = await SeederEngine.StartAsync(torrentFile, seedDirectory, Path.Combine(_root, "seeder"));
+
+        await using TorrentEngine engine = await TorrentEngine.StartAsync(Options("magnet-resume"));
+        string id = await engine.AddMagnetAsync($"magnet:?xt=urn:btih:{seeder.Id}&tr=udp://abc", Path.Combine(_root, "downloads"), "movies");
+        Assert.True(await engine.PauseAsync(id));
+        Assert.True(await engine.ResumeAsync(id));
+        Assert.True(await engine.AddPeerAsync(id, seeder.EndPoint));
+
+        TorrentStatus done = await WaitForAsync(engine, id, s => s.Status == DownloadItemStatus.Completed);
+
+        Assert.Equal(
+            [("Movie.2020.1080p.WEB-DL.mkv", true), ("RARBG.txt", false)],
+            done.Files.Select(f => (Path: f.Path.Replace('\\', '/'), Done: f.Progress == 1.0)).OrderBy(f => f.Path, StringComparer.Ordinal));
+    }
+
     [Fact]
     public async Task MagnetWithMalwareDownloadsNoPayload()
     {

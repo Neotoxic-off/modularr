@@ -21,8 +21,12 @@ public sealed class FailedDownloadService(
 {
     public async Task FailAsync(TrackedDownload download, string reason, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(download);
+
+        // Removed before it is saved Failed: a failed download is never polled again, so a torrent left behind would keep running.
+        await torrents.Engine.RemoveAsync(download.InfoHash, deleteData: true).ConfigureAwait(false);
         await importer.FailAsync(download, reason, cancellationToken).ConfigureAwait(false);
-        await RemoveAndRegrabAsync(download, cancellationToken).ConfigureAwait(false);
+        await RegrabAsync(download, cancellationToken).ConfigureAwait(false);
     }
 
     // For a download already failed and blocklisted.
@@ -30,19 +34,30 @@ public sealed class FailedDownloadService(
     {
         ArgumentNullException.ThrowIfNull(download);
         await torrents.Engine.RemoveAsync(download.InfoHash, deleteData: true).ConfigureAwait(false);
+        await RegrabAsync(download, cancellationToken).ConfigureAwait(false);
+    }
 
+    // shortcut: a search that throws is not retried and the download stays failed, add a pending re-grab flag if indexers fail often.
+    private async Task RegrabAsync(TrackedDownload download, CancellationToken cancellationToken)
+    {
         if (await RegrabRequestAsync(db, download, options.Value.Torrents.MaxAutomaticRegrabs, cancellationToken).ConfigureAwait(false) is not ReleaseSearchRequest request)
         {
             return;
         }
 
         ReleaseSearchResult result = await search.SearchAsync(request, cancellationToken).ConfigureAwait(false);
-        if (result.Decisions.FirstOrDefault(d => d.Approved) is DownloadDecision best)
+        foreach (DownloadDecision decision in result.Decisions.Where(d => d.Approved))
         {
             TrackedDownload next = await downloads.GrabAsync(
-                new GrabRequest { Release = best.Candidate.Release, SeriesId = download.SeriesId, MovieId = download.MovieId }, cancellationToken).ConfigureAwait(false);
-            next.Regrabs = download.Regrabs + 1;
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                new GrabRequest { Release = decision.Candidate.Release, SeriesId = download.SeriesId, MovieId = download.MovieId }, cancellationToken).ConfigureAwait(false);
+
+            // A failed release again under another title (no infohash from the indexer, so the blocklist missed it): try the next one.
+            if (next.State != TrackedDownloadState.Failed)
+            {
+                next.Regrabs = download.Regrabs + 1;
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                return;
+            }
         }
     }
 

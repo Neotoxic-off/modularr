@@ -21,6 +21,9 @@ public sealed class TorrentEngine : IAsyncDisposable
     private readonly Dictionary<string, TorrentTag> _tags;
     private readonly SemaphoreSlim _saveLock = new(1, 1);
     private readonly CancellationTokenSource _stopping = new();
+
+    // One metadata wait per magnet: pause, remove and every new start cancel the previous one.
+    private readonly Dictionary<TorrentManager, CancellationTokenSource> _metadataWaits = [];
     private readonly Task _seedLimitLoop;
 
     private TorrentEngine(ClientEngine engine, TorrentEngineOptions options, PostProcessingOptions content, Dictionary<string, TorrentTag> tags)
@@ -101,6 +104,7 @@ public sealed class TorrentEngine : IAsyncDisposable
             return false;
         }
 
+        CancelMetadataWait(manager);
         await manager.StopAsync();
         UpdateTag(id, tag => tag with { Stopped = true });
         await SaveAsync();
@@ -127,6 +131,7 @@ public sealed class TorrentEngine : IAsyncDisposable
             return false;
         }
 
+        CancelMetadataWait(manager);
         if (manager.State != TorrentState.Stopped)
         {
             await manager.StopAsync();
@@ -329,6 +334,7 @@ public sealed class TorrentEngine : IAsyncDisposable
     // Every start checks again, as MonoTorrent does not keep the file priorities that skip the unwanted files.
     private async Task StartCheckedAsync(TorrentManager manager)
     {
+        CancelMetadataWait(manager);
         if (manager.HasMetadata)
         {
             if (await CheckContentAsync(manager))
@@ -341,15 +347,32 @@ public sealed class TorrentEngine : IAsyncDisposable
             ContentCheckGate gate = new(new StandardPieceRequester(PieceRequesterSettings.Default));
             await manager.ChangePickerAsync(gate);
             await manager.StartAsync();
-            _ = CheckOnMetadataAsync(manager, gate);
+            CancellationTokenSource wait = CancellationTokenSource.CreateLinkedTokenSource(_stopping.Token);
+            lock (_metadataWaits)
+            {
+                _metadataWaits[manager] = wait;
+            }
+
+            _ = CheckOnMetadataAsync(manager, gate, wait);
         }
     }
 
-    private async Task CheckOnMetadataAsync(TorrentManager manager, ContentCheckGate gate)
+    private void CancelMetadataWait(TorrentManager manager)
+    {
+        lock (_metadataWaits)
+        {
+            if (_metadataWaits.Remove(manager, out CancellationTokenSource? wait))
+            {
+                wait.Cancel();
+            }
+        }
+    }
+
+    private async Task CheckOnMetadataAsync(TorrentManager manager, ContentCheckGate gate, CancellationTokenSource wait)
     {
         try
         {
-            await manager.WaitForMetadataAsync(_stopping.Token);
+            await manager.WaitForMetadataAsync(wait.Token);
             if (await CheckContentAsync(manager))
             {
                 gate.Open();
@@ -361,6 +384,18 @@ public sealed class TorrentEngine : IAsyncDisposable
         {
             // Shutdown or a failed priority change: the gate stays closed, the check runs again on the next start
             // and the stall check fails a torrent that never gets going.
+        }
+        finally
+        {
+            lock (_metadataWaits)
+            {
+                if (_metadataWaits.TryGetValue(manager, out CancellationTokenSource? current) && current == wait)
+                {
+                    _metadataWaits.Remove(manager);
+                }
+            }
+
+            wait.Dispose();
         }
     }
 

@@ -94,6 +94,19 @@ public sealed class ArchiveExtractionTests : IDisposable
         Assert.DoesNotContain(_download.Files(), f => f.StartsWith("Rar5.multi.", StringComparison.Ordinal));
     }
 
+    // Root plays the shared downloads folder: the archive cannot add a file to another download's folder.
+    [Fact]
+    public void ExtractsASingleFileDownloadIntoItsOwnFolder()
+    {
+        _download.CreateFile("OtherRelease/Other.mkv");
+        string tar = _download.Write("Show.S01E01.tar", TempDownload.TarBytes(("OtherRelease/Show.S01E01.mkv", TempDownload.Video)));
+
+        PostProcessingVerdict.Accepted accepted = Assert.IsType<PostProcessingVerdict.Accepted>(CompletedDownloadProcessor.Process(tar, new PostProcessingOptions()));
+
+        Assert.Equal([_download.PathOf(Path.Combine("Show.S01E01", "OtherRelease", "Show.S01E01.mkv"))], accepted.VideoFiles);
+        Assert.Equal(["OtherRelease/Other.mkv", "Show.S01E01/OtherRelease/Show.S01E01.mkv"], _download.Files());
+    }
+
     [Theory]
     [InlineData("Rar.encrypted_filesOnly.rar")]
     [InlineData("Rar5.comment.filesOnly.rar")]
@@ -124,6 +137,32 @@ public sealed class ArchiveExtractionTests : IDisposable
 
         AssertRejected("Show.S01E01.tar.gz: corrupt archive");
         Assert.Equal(["Show.S01E01.tar.gz"], _download.Files());
+    }
+
+    // SharpCompress throws NotSupportedException for an unknown method, after the first entry is written.
+    [Fact]
+    public void RejectsAnUnsupportedCompressionMethodAndRemovesWhatWasWritten()
+    {
+        byte[] zip = TempDownload.ZipBytes(("a.mkv", TempDownload.Video), ("b.mkv", TempDownload.Video));
+        int local = 0;
+        int central = 0;
+        for (int i = 0; i + 4 <= zip.Length; i++)
+        {
+            switch (BitConverter.ToInt32(zip, i))
+            {
+                case 0x04034b50 when ++local == 2:
+                    zip[i + 8] = 77;
+                    break;
+                case 0x02014b50 when ++central == 2:
+                    zip[i + 10] = 77;
+                    break;
+            }
+        }
+
+        _download.Write("Show.S01E01.zip", zip);
+
+        AssertRejected("Show.S01E01.zip: corrupt archive");
+        Assert.Equal(["Show.S01E01.zip"], _download.Files());
     }
 
     [Fact]
