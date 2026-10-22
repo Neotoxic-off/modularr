@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { api, errorMessage, formatAgo, formatRuntime, isSeries, kindOf } from "@/lib/api";
-import type { Episode, ItemPatch, Kind, LibraryItem, MovieDetail, SeriesDetail } from "@/lib/api";
+import type { Episode, ItemPatch, Kind, LibraryItem, MovieDetail, SeriesDetail, SubtitleTarget } from "@/lib/api";
 import { realLanguages, useOptions, versionLabel } from "@/lib/options";
 import { useTitleEvents } from "@/components/Activity";
 import { ActivityTimeline } from "@/components/ActivityFeed";
@@ -13,6 +13,7 @@ import { useSession } from "@/components/AuthGate";
 import { Icon } from "@/components/icons";
 import { PosterArt } from "@/components/Poster";
 import { ReleasesDialog } from "@/components/ReleasesDialog";
+import { SubtitlesDialog } from "@/components/SubtitlesDialog";
 import { Alert, Badge, Button, Empty, Field, Modal, PickList, Rating, Select, Skeleton, Spinner, Switch } from "@/components/ui";
 
 type Detail = { item: LibraryItem; hasFile?: boolean; seasons?: SeriesDetail["seasons"]; episodes?: Episode[] };
@@ -44,6 +45,7 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
   const { user } = useSession();
   const options = useOptions();
   const [releases, setReleases] = useState<{ season?: number } | null>(null);
+  const [subtitles, setSubtitles] = useState<{ target: SubtitleTarget; title: string } | null>(null);
   const [removing, setRemoving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -132,7 +134,8 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
           {item.overview && <p className="max-w-[68ch] text-[15px] leading-7 text-foreground/85">{item.overview}</p>}
           {isSeries(item) && detail.seasons && detail.episodes && (
             <Seasons seasons={detail.seasons} episodes={detail.episodes} searching={searching}
-              onSearch={search} onReleases={(season) => setReleases({ season })} />
+              onSearch={search} onReleases={(season) => setReleases({ season })}
+              onSubtitles={(e) => setSubtitles({ target: { episodeId: e.id }, title: `${item.title} S${String(e.seasonNumber).padStart(2, "0")}E${String(e.episodeNumber).padStart(2, "0")}` })} />
           )}
           <ActivityTimeline scope={scope} itemTitle={item.title} />
         </div>
@@ -145,6 +148,9 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
             </div>
             <Switch checked={item.monitored} onChange={(monitored) => patch({ monitored })} label="Monitored"
               description={item.monitored ? "New and missing releases are grabbed automatically." : "Nothing is grabbed automatically."} />
+            {!isSeries(item) && detail.hasFile && (
+              <Button className="w-full" onClick={() => setSubtitles({ target: { movieId: item.id }, title: item.title })}><Icon name="languages" size={16} />Subtitles</Button>
+            )}
           </div>
 
           <div className="space-y-4 rounded-2xl border border-line bg-surface p-5">
@@ -180,6 +186,7 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
       </div>
 
       {releases && <ReleasesDialog item={item} season={releases.season} onClose={() => setReleases(null)} />}
+      {subtitles && <SubtitlesDialog target={subtitles.target} title={subtitles.title} onClose={() => setSubtitles(null)} />}
       {removing && <RemoveDialog item={item} kind={kind} onClose={() => setRemoving(false)} />}
     </>
   );
@@ -194,12 +201,13 @@ function Info({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Seasons({ seasons, episodes, searching, onSearch, onReleases }: {
+function Seasons({ seasons, episodes, searching, onSearch, onReleases, onSubtitles }: {
   seasons: SeriesDetail["seasons"];
   episodes: Episode[];
   searching: number | "all" | null;
   onSearch: (season: number) => void;
   onReleases: (season: number) => void;
+  onSubtitles: (episode: Episode) => void;
 }) {
   const ordered = [...seasons].sort((a, b) => (a.number === 0 ? 1 : b.number === 0 ? -1 : b.number - a.number));
   const [open, setOpen] = useState<ReadonlySet<number>>(new Set(ordered.slice(0, 1).map((s) => s.number)));
@@ -247,6 +255,11 @@ function Seasons({ seasons, episodes, searching, onSearch, onReleases }: {
                         <span className="w-8 shrink-0 text-xs text-muted tabular-nums">{e.episodeNumber}</span>
                         <span className={`min-w-0 flex-1 truncate ${e.monitored ? "" : "text-muted"}`}>{e.title ?? `Episode ${e.episodeNumber}`}</span>
                         <span className="hidden w-24 shrink-0 text-right text-xs text-muted tabular-nums sm:block">{e.airDate ?? "TBA"}</span>
+                        {e.hasFile && (
+                          <Button variant="ghost" size="sm" onClick={() => onSubtitles(e)} aria-label={`Subtitles of episode ${e.episodeNumber}`} title="Subtitles">
+                            <Icon name="languages" size={14} />
+                          </Button>
+                        )}
                         <span className="w-20 shrink-0 text-right">
                           {e.hasFile ? <Badge tone="green">On disk</Badge> : !aired ? <Badge>Upcoming</Badge> : <Badge tone={e.monitored ? "amber" : "neutral"}>Missing</Badge>}
                         </span>

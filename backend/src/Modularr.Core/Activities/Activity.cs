@@ -18,6 +18,8 @@ public enum ActivityKind
     Imported,
     ImportFailed,
     Removed,
+    SubtitleDownloaded,
+    SubtitlesMissing,
 }
 
 public enum ActivityLevel

@@ -18,6 +18,7 @@ using Modularr.Core.Metadata;
 using Modularr.Core.Persistence;
 using Modularr.Core.PostProcessing;
 using Modularr.Core.Search;
+using Modularr.Core.Subtitles;
 
 namespace Modularr.Core.Configuration;
 
@@ -25,6 +26,9 @@ public static class ModularrServiceCollectionExtensions
 {
     // Indexer pages and .torrent files come from crowd-sourced public sites: a hostile or broken one must not exhaust memory.
     private const long MaxResponseBytes = 10 * 1024 * 1024;
+
+    // Subtitle provider answers: a search page or one subtitle (archive), far below this.
+    private const long MaxSubtitleResponseBytes = 4 * 1024 * 1024;
 
     // Binds <configDirectory>/modularr.json to ModularrOptions (validated at startup) and registers the module services.
     public static IServiceCollection AddModularrCore(this IServiceCollection services, string configDirectory)
@@ -65,6 +69,15 @@ public static class ModularrServiceCollectionExtensions
             })
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false, AutomaticDecompression = DecompressionMethods.All });
 
+        // Redirects are followed by hand, and only to the provider's own HTTPS hosts (OpenSubtitlesProvider.SendAsync).
+        services.AddHttpClient<OpenSubtitlesProvider>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(30);
+                client.MaxResponseContentBufferSize = MaxSubtitleResponseBytes;
+            })
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false, AutomaticDecompression = DecompressionMethods.All });
+        services.AddTransient<ISubtitleProvider>(provider => provider.GetRequiredService<OpenSubtitlesProvider>());
+
         services.AddHttpClient<SeriesMetadataClient>();
         services.AddHttpClient<MovieMetadataClient>();
         services.AddHttpClient<ShowDiscoveryClient>();
@@ -88,6 +101,9 @@ public static class ModularrServiceCollectionExtensions
         services.AddSingleton<SearchRunner>();
         services.AddHostedService(provider => provider.GetRequiredService<SearchRunner>());
         services.AddHostedService<DownloadMonitor>();
+        services.AddScoped<SubtitleService>();
+        services.AddSingleton<SubtitleRunner>();
+        services.AddHostedService(provider => provider.GetRequiredService<SubtitleRunner>());
         services.AddHostedService<MetadataBackfill>();
 
         return services;

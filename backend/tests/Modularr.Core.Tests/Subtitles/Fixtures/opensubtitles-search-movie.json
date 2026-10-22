@@ -1,0 +1,90 @@
+{
+  "total_pages": 1,
+  "total_count": 4,
+  "per_page": 60,
+  "page": 1,
+  "data": [
+    {
+      "id": "6340428",
+      "type": "subtitle",
+      "attributes": {
+        "subtitle_id": "6340428",
+        "language": "fr",
+        "download_count": 21854,
+        "new_download_count": 312,
+        "hearing_impaired": false,
+        "hd": true,
+        "fps": 23.976,
+        "votes": 3,
+        "ratings": 9.0,
+        "from_trusted": true,
+        "foreign_parts_only": false,
+        "upload_date": "2011-01-12T00:00:00Z",
+        "ai_translated": false,
+        "machine_translated": false,
+        "release": "Inception.2010.1080p.BluRay.x264-SPARKS",
+        "comments": "",
+        "legacy_subtitle_id": 3974215,
+        "uploader": { "uploader_id": 47, "name": "someone", "rank": "trusted" },
+        "feature_details": { "feature_id": 9325, "feature_type": "Movie", "year": 2010, "title": "Inception", "movie_name": "2010 - Inception", "imdb_id": 1375666, "tmdb_id": 27205 },
+        "url": "https://www.opensubtitles.com/fr/subtitles/legacy/3974215",
+        "related_links": [],
+        "files": [ { "file_id": 4113460, "cd_number": 1, "file_name": "Inception.2010.1080p.BluRay.x264-SPARKS.srt" } ],
+        "moviehash_match": true
+      }
+    },
+    {
+      "id": "6340500",
+      "type": "subtitle",
+      "attributes": {
+        "language": "en",
+        "download_count": 98000,
+        "hearing_impaired": true,
+        "foreign_parts_only": false,
+        "release": "Inception.2010.720p.BluRay.x264-REWARD",
+        "feature_details": { "feature_id": 9325, "feature_type": "Movie", "year": 2010, "title": "Inception", "imdb_id": 1375666, "tmdb_id": 27205 },
+        "files": [ { "file_id": 4113555, "cd_number": 1, "file_name": "Inception.2010.720p.BluRay.x264-REWARD.HI.srt" } ],
+        "moviehash_match": false
+      }
+    },
+    {
+      "id": "6340600",
+      "type": "subtitle",
+      "attributes": {
+        "language": "fr",
+        "download_count": 500,
+        "hearing_impaired": false,
+        "foreign_parts_only": true,
+        "release": "Inception.2010.FORCED",
+        "files": [ { "file_id": 4113600, "cd_number": 1, "file_name": "Inception.2010.forced.srt" } ],
+        "moviehash_match": false
+      }
+    },
+    {
+      "id": "6340700",
+      "type": "subtitle",
+      "attributes": {
+        "language": "de",
+        "download_count": 700,
+        "hearing_impaired": false,
+        "foreign_parts_only": false,
+        "release": "Inception.2010.German",
+        "files": [ { "file_id": 4113700, "cd_number": 1, "file_name": "Inception.2010.German.srt" } ],
+        "moviehash_match": false
+      }
+    },
+    {
+      "id": "6340800",
+      "type": "subtitle",
+      "attributes": {
+        "language": "fr",
+        "download_count": 10,
+        "hearing_impaired": false,
+        "foreign_parts_only": false,
+        "release": "no files",
+        "files": [],
+        "moviehash_match": false
+      }
+    }
+  ]
+}

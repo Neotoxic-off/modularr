@@ -236,6 +236,39 @@ export interface MediaSettings {
   exceptions: VersionRule[];
 }
 
+export interface SubtitleSettings {
+  onlyWhenAudioDiffers: boolean;
+  preferHearingImpaired: boolean;
+  // Secrets come back null for non-admins.
+  openSubtitles: { apiKey: string | null; username: string | null; password: string | null };
+}
+
+// A movie's file or an episode's file.
+export type SubtitleTarget = { movieId: number } | { episodeId: number };
+
+export interface SubtitleFile {
+  language: string;
+  hearingImpaired: boolean;
+  forced: boolean;
+  file: string;
+}
+
+export interface SubtitleStatus {
+  present: SubtitleFile[];
+  missing: string[];
+}
+
+export interface SubtitleCandidate {
+  provider: string;
+  id: string;
+  language: string;
+  release: string;
+  hearingImpaired: boolean;
+  forced: boolean;
+  hashMatch: boolean;
+  downloads: number;
+}
+
 export interface Paths {
   series: string;
   movies: string;
@@ -251,7 +284,8 @@ export interface Folder {
 
 export type ActivityKind =
   | "Added" | "SearchStarted" | "SearchCompleted" | "NothingFound" | "SearchFailed" | "Grabbed" | "DownloadStarted"
-  | "DownloadStalled" | "DownloadFailed" | "Blocklisted" | "Regrabbed" | "Imported" | "ImportFailed" | "Removed";
+  | "DownloadStalled" | "DownloadFailed" | "Blocklisted" | "Regrabbed" | "Imported" | "ImportFailed" | "Removed"
+  | "SubtitleDownloaded" | "SubtitlesMissing";
 
 export interface Activity {
   id: number;
@@ -372,6 +406,11 @@ export const api = {
 
   media: () => request<MediaSettings>("/settings/media"),
   saveMedia: (media: MediaSettings) => send<MediaSettings>("PUT", "/settings/media", media),
+  subtitleSettings: () => request<SubtitleSettings>("/settings/subtitles"),
+  saveSubtitleSettings: (settings: SubtitleSettings) => send<SubtitleSettings>("PUT", "/settings/subtitles", settings),
+  subtitles: (target: SubtitleTarget) => request<SubtitleStatus>(`/subtitles?${new URLSearchParams(Object.entries(target).map(([k, v]) => [k, String(v)]))}`),
+  searchSubtitles: (target: SubtitleTarget, language?: string) => send<SubtitleCandidate[]>("POST", "/subtitles/search", { ...target, language }),
+  downloadSubtitle: (target: SubtitleTarget, candidate: SubtitleCandidate) => send<SubtitleFile>("POST", "/subtitles/download", { ...target, ...candidate }),
   paths: () => request<Paths>("/settings/paths"),
   savePaths: (paths: Paths) => send<Paths>("PUT", "/settings/paths", paths),
   folders: (path: string | null) => request<Folder>(`/filesystem${path ? `?path=${encodeURIComponent(path)}` : ""}`),

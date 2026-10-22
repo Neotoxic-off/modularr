@@ -11,12 +11,16 @@ using Modularr.Core.Persistence;
 using Modularr.Core.PostProcessing;
 using Modularr.Core.Qualities;
 using Modularr.Core.Search;
+using Modularr.Core.Subtitles;
 
 namespace Modularr.Core.Downloads;
 
 // Upstream CompletedDownloadService + ImportApprovedEpisodes/Movies + FailedDownloadService for one finished torrent.
-public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activities, IOptions<ModularrOptions> options)
+public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activities, IOptions<ModularrOptions> options, SubtitleRunner subtitles)
 {
+    // Files of this import, handed to the subtitle runner once their episodes are saved.
+    private readonly List<MediaFile> _imported = [];
+
     // Returns true when the release was rejected and blocklisted: the caller then removes the torrent and its data.
     public async Task<bool> ImportAsync(TrackedDownload download, string outputPath, CancellationToken cancellationToken)
     {
@@ -51,6 +55,8 @@ public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activitie
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        _imported.ForEach(file => subtitles.Enqueue(file.Id));
+        _imported.Clear();
         return false;
     }
 
@@ -125,6 +131,7 @@ public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activitie
             };
             db.MediaFiles.Add(file);
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            _imported.Add(file);
 
             foreach (Episode episode in episodes)
             {

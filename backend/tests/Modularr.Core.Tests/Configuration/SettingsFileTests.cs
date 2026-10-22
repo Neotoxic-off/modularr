@@ -101,6 +101,7 @@ public sealed class SettingsFileTests : IDisposable
 
         SubtitleOptions saved = provider.GetRequiredService<IOptionsMonitor<ModularrOptions>>().CurrentValue.Subtitles;
         Assert.Equal(subtitles, saved);
+        Assert.DoesNotContain("Enabled", File.ReadAllText(ConfigFile), StringComparison.Ordinal); // derived: the binder would refuse it at the next start
         Assert.Equal((null, "me", null), (saved.Redacted().OpenSubtitles.ApiKey, saved.Redacted().OpenSubtitles.Username, saved.Redacted().OpenSubtitles.Password));
         Assert.Null(provider.GetRequiredService<IOptionsMonitor<ModularrOptions>>().CurrentValue.Redacted().Subtitles.OpenSubtitles.ApiKey);
     }

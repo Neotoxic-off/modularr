@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Modularr.Core.Subtitles;
 
 // The modularr.json "Subtitles" section, edited through PUT /api/settings/subtitles. The wanted languages are per category and
@@ -23,5 +25,7 @@ public sealed record OpenSubtitlesOptions
     public string? Username { get; init; }
     public string? Password { get; init; }
 
+    // Derived, so never written to modularr.json (the binder refuses unknown keys) nor sent to the UI.
+    [JsonIgnore]
     public bool Enabled => !string.IsNullOrWhiteSpace(ApiKey);
 }

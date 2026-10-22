@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
 using Modularr.Core.Downloads;
 using Modularr.Core.Persistence;
 using Modularr.Core.Qualities;
+using Modularr.Core.Subtitles;
 using Modularr.Core.Tests.Persistence;
 using Modularr.Core.Tests.PostProcessing;
 
@@ -12,6 +14,9 @@ namespace Modularr.Core.Tests.Downloads;
 
 public sealed class DownloadImporterTests : IDisposable
 {
+    // Never started: what the importer queues is not fetched.
+    private static readonly SubtitleRunner Subtitles = new(new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>());
+
     private readonly TestDatabase _database = new();
     private readonly TempDownload _download = new();
     private readonly TempDownload _library = new();
@@ -116,6 +121,6 @@ public sealed class DownloadImporterTests : IDisposable
     {
         using ModularrDbContext db = _database.NewContext();
         TrackedDownload download = await db.TrackedDownloads.SingleAsync(d => d.Id == tracked.Id, TestContext.Current.CancellationToken);
-        return await new DownloadImporter(db, new ActivityLog(db, new ActivityFeed()), Options.Create(new ModularrOptions())).ImportAsync(download, outputPath, TestContext.Current.CancellationToken);
+        return await new DownloadImporter(db, new ActivityLog(db, new ActivityFeed()), Options.Create(new ModularrOptions()), Subtitles).ImportAsync(download, outputPath, TestContext.Current.CancellationToken);
     }
 }
