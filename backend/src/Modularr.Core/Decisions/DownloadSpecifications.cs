@@ -50,10 +50,10 @@ public static partial class DownloadSpecifications
         return qualityOrGroup.Allowed ? null : Reject(DownloadRejectionReason.QualityNotWanted, $"{candidate.Quality.Quality} is not wanted in profile");
     }
 
-    // Radarr profile language (Sonarr v4 moved it to custom formats).
+    // Radarr profile language (Sonarr v4 moved it to custom formats), the wanted language coming from the language policy.
     public static Rejection? WantedLanguage(ReleaseCandidate candidate, DecisionContext context)
     {
-        Language wanted = candidate.Profile.Language;
+        Language wanted = context.WantedLanguage;
 
         if (wanted == Language.Any)
         {
@@ -63,7 +63,9 @@ public static partial class DownloadSpecifications
         Language required = wanted == Language.Original ? candidate.OriginalLanguage : wanted;
         string found = string.Join(", ", candidate.Languages);
 
-        if (candidate.Languages.Contains(required))
+        // Like upstream's language aggregation, an untagged release is in the original language; so is the Original track of a
+        // multi-audio release (MULTi, German DL).
+        if (candidate.Languages.Any(l => (l == Language.Unknown || l == Language.Original ? candidate.OriginalLanguage : l) == required))
         {
             return null;
         }

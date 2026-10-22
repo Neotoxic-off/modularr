@@ -1,7 +1,11 @@
 using System.Collections.Frozen;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Modularr.Core.Qualities;
 
+// Stored and exchanged by id; GET /api/qualities lists the names.
+[JsonConverter(typeof(QualityIdJsonConverter))]
 public sealed record Quality(int Id, string Name, QualitySource Source, int Resolution, Modifier Modifier = Modifier.None)
 {
     public static readonly Quality Unknown = new(0, "Unknown", QualitySource.Unknown, 0);
@@ -64,4 +68,11 @@ public sealed record Quality(int Id, string Name, QualitySource Source, int Reso
     public override int GetHashCode() => Id;
 
     public override string ToString() => Name;
+}
+
+public sealed class QualityIdJsonConverter : JsonConverter<Quality>
+{
+    public override Quality Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => Quality.FindById(reader.GetInt32());
+
+    public override void Write(Utf8JsonWriter writer, Quality value, JsonSerializerOptions options) => writer.WriteNumberValue(value.Id);
 }

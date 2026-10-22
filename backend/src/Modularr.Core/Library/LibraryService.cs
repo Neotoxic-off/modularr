@@ -1,11 +1,43 @@
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Configuration;
+using Modularr.Core.Decisions;
+using Modularr.Core.Languages;
 using Modularr.Core.Metadata;
 using Modularr.Core.Parsing.Movies;
 using Modularr.Core.Persistence;
 
 namespace Modularr.Core.Library;
+
+// Sonarr's add-series monitor choices that matter here. Specials are never monitored.
+public enum SeriesMonitor
+{
+    All,
+    Future,
+    None,
+}
+
+// PATCH body: an absent field is left unchanged; Language present as null clears the item's override.
+public sealed record ItemUpdate
+{
+    public int? QualityProfileId { get; init; }
+    public bool? Monitored { get; init; }
+
+    public Language? Language
+    {
+        get;
+        init
+        {
+            field = value;
+            LanguageSet = true;
+        }
+    }
+
+    // The JSON reader calls the setter only for a field present in the body.
+    [JsonIgnore]
+    public bool LanguageSet { get; private init; }
+}
 
 // Adds series and movies from the metadata sources; the one place metadata records become library entities.
 public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient seriesMetadata, MovieMetadataClient movieMetadata, IOptionsMonitor<ModularrOptions> options)
@@ -19,33 +51,63 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
     public async Task<IReadOnlyList<Movie>> ListMoviesAsync(CancellationToken cancellationToken) =>
         await db.Movies.AsNoTracking().OrderBy(m => m.Title).ToListAsync(cancellationToken).ConfigureAwait(false);
 
-    // Adding an existing series returns it unchanged.
-    public async Task<Series> AddSeriesAsync(int tvdbId, int qualityProfileId, CancellationToken cancellationToken)
+    // Adding an existing series returns it unchanged. No profile: the category default (series or anime) from MediaOptions.
+    public async Task<Series> AddSeriesAsync(int tvdbId, int? qualityProfileId, Language? language, SeriesMonitor monitor, CancellationToken cancellationToken)
     {
         if (await db.Series.Include(s => s.Episodes).FirstOrDefaultAsync(s => s.TvdbId == tvdbId, cancellationToken).ConfigureAwait(false) is Series existing)
         {
             return existing;
         }
 
-        await EnsureProfileAsync(qualityProfileId, cancellationToken).ConfigureAwait(false);
         SeriesInfo info = await seriesMetadata.GetSeriesAsync(tvdbId, cancellationToken: cancellationToken).ConfigureAwait(false);
-        Series series = ToSeries(info, qualityProfileId, options.CurrentValue.Paths, DateTime.UtcNow);
+        MediaType category = TypeOf(info) == SeriesType.Anime ? MediaType.Anime : MediaType.Series;
+        int profileId = qualityProfileId ?? options.CurrentValue.Media.For(category).ProfileId;
+        await EnsureProfileAsync(profileId, cancellationToken).ConfigureAwait(false);
+        Series series = ToSeries(info, profileId, options.CurrentValue.Paths, DateTime.UtcNow, monitor);
+        series.Language = language;
         db.Series.Add(series);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return series;
     }
 
-    public async Task<Movie> AddMovieAsync(int tmdbId, int qualityProfileId, CancellationToken cancellationToken)
+    public async Task<Movie> AddMovieAsync(int tmdbId, int? qualityProfileId, Language? language, CancellationToken cancellationToken)
     {
         if (await db.Movies.FirstOrDefaultAsync(m => m.TmdbId == tmdbId, cancellationToken).ConfigureAwait(false) is Movie existing)
         {
             return existing;
         }
 
-        await EnsureProfileAsync(qualityProfileId, cancellationToken).ConfigureAwait(false);
+        int profileId = qualityProfileId ?? options.CurrentValue.Media.Movies.ProfileId;
+        await EnsureProfileAsync(profileId, cancellationToken).ConfigureAwait(false);
         MovieInfo info = await movieMetadata.GetMovieAsync(tmdbId, cancellationToken).ConfigureAwait(false);
-        Movie movie = ToMovie(info, qualityProfileId, options.CurrentValue.Paths);
+        Movie movie = ToMovie(info, profileId, options.CurrentValue.Paths);
+        movie.Language = language;
         db.Movies.Add(movie);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return movie;
+    }
+
+    // Monitored applies to the series only, its seasons and episodes keep their own flags.
+    public async Task<Series> UpdateSeriesAsync(int id, ItemUpdate update, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        Series series = await db.Series.Include(s => s.Episodes).FirstOrDefaultAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false)
+            ?? throw new KeyNotFoundException($"Series {id} is not in the library.");
+        series.QualityProfileId = await ProfileIdAsync(update, series.QualityProfileId, cancellationToken).ConfigureAwait(false);
+        series.Monitored = update.Monitored ?? series.Monitored;
+        series.Language = update.LanguageSet ? update.Language : series.Language;
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        return series;
+    }
+
+    public async Task<Movie> UpdateMovieAsync(int id, ItemUpdate update, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        Movie movie = await db.Movies.FirstOrDefaultAsync(m => m.Id == id, cancellationToken).ConfigureAwait(false)
+            ?? throw new KeyNotFoundException($"Movie {id} is not in the library.");
+        movie.QualityProfileId = await ProfileIdAsync(update, movie.QualityProfileId, cancellationToken).ConfigureAwait(false);
+        movie.Monitored = update.Monitored ?? movie.Monitored;
+        movie.Language = update.LanguageSet ? update.Language : movie.Language;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return movie;
     }
@@ -80,11 +142,19 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
     }
 
     // Upstream has no anime flag in the metadata (the Sonarr user picks the type); the Anime genre is the closest signal.
-    public static Series ToSeries(SeriesInfo info, int qualityProfileId, PathOptions paths, DateTime added)
+    public static SeriesType TypeOf(SeriesInfo info)
     {
-        SeriesType type = info.IsDaily ? SeriesType.Daily
+        ArgumentNullException.ThrowIfNull(info);
+        return info.IsDaily ? SeriesType.Daily
             : info.Genres.Contains("Anime", StringComparer.OrdinalIgnoreCase) ? SeriesType.Anime
             : SeriesType.Standard;
+    }
+
+    // Future monitors the episodes airing on or after the add day (or not dated yet); None leaves everything unmonitored.
+    public static Series ToSeries(SeriesInfo info, int qualityProfileId, PathOptions paths, DateTime added, SeriesMonitor monitor = SeriesMonitor.All)
+    {
+        SeriesType type = TypeOf(info);
+        DateOnly today = DateOnly.FromDateTime(added);
         int year = info.Year ?? 0;
 
         Series series = new()
@@ -95,10 +165,11 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
             Year = year,
             Runtime = info.Runtime,
             SeriesType = type,
-            Monitored = true,
+            Monitored = monitor != SeriesMonitor.None,
             Path = Path.Combine(type == SeriesType.Anime ? paths.Anime : paths.Series, FolderName(info.Title, year)),
             QualityProfileId = qualityProfileId,
             Added = added,
+            OriginalLanguage = info.OriginalLanguage,
             Overview = info.Overview,
             Poster = PosterOf(info.Images),
         };
@@ -106,7 +177,7 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
         // Specials (season 0) are not monitored, like Sonarr's default.
         foreach (SeasonInfo season in info.Seasons)
         {
-            series.Seasons.Add(new Season { Number = season.SeasonNumber, Monitored = season.SeasonNumber > 0 });
+            series.Seasons.Add(new Season { Number = season.SeasonNumber, Monitored = season.SeasonNumber > 0 && monitor != SeriesMonitor.None });
         }
 
         foreach (EpisodeInfo episode in info.Episodes.DistinctBy(e => (e.SeasonNumber, e.EpisodeNumber)))
@@ -118,7 +189,12 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
                 AbsoluteEpisodeNumber = episode.AbsoluteEpisodeNumber,
                 AirDate = episode.AirDate,
                 Title = episode.Title,
-                Monitored = episode.SeasonNumber > 0,
+                Monitored = episode.SeasonNumber > 0 && monitor switch
+                {
+                    SeriesMonitor.All => true,
+                    SeriesMonitor.Future => episode.AirDate is not DateOnly aired || aired >= today,
+                    _ => false,
+                },
             });
         }
 
@@ -135,6 +211,7 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
         Monitored = true,
         Path = Path.Combine(paths.Movies, FolderName(info.Title, info.Year)),
         QualityProfileId = qualityProfileId,
+        OriginalLanguage = info.OriginalLanguage,
         Overview = info.Overview,
         Poster = PosterOf(info.Images),
     };
@@ -162,6 +239,17 @@ public sealed class LibraryService(ModularrDbContext db, SeriesMetadataClient se
         }
 
         Directory.Delete(path, recursive: true);
+    }
+
+    private async Task<int> ProfileIdAsync(ItemUpdate update, int current, CancellationToken cancellationToken)
+    {
+        if (update.QualityProfileId is not int profileId)
+        {
+            return current;
+        }
+
+        await EnsureProfileAsync(profileId, cancellationToken).ConfigureAwait(false);
+        return profileId;
     }
 
     private async Task EnsureProfileAsync(int qualityProfileId, CancellationToken cancellationToken)

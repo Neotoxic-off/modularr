@@ -22,9 +22,6 @@ public static class DefaultQualityProfiles
         [Quality.BrDisk], [Quality.RawHd],
     ];
 
-    // Upstream numbers quality groups from 1000 so a cutoff can point at a group without clashing with quality ids.
-    private const int FirstGroupId = 1000;
-
     // Fresh instances on each call: entities are tracked.
     public static QualityProfile[] Create() =>
     [
@@ -61,7 +58,7 @@ public static class DefaultQualityProfiles
         ? new QualityProfileQualityItem { Quality = group[0], Allowed = allowed }
         : new QualityProfileQualityItem
         {
-            Id = FirstGroupId + index,
+            Id = QualityProfileQualityItem.FirstGroupId + index,
             Name = $"WEB {group[0].Resolution}p",
             Items = [.. group.Select(q => new QualityProfileQualityItem { Quality = q, Allowed = allowed })],
             Allowed = allowed,

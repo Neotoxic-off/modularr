@@ -36,6 +36,10 @@ public static partial class LanguageParser
     [GeneratedRegex(@"\bML\b", Options)]
     private static partial Regex GermanMultiLanguageRegex { get; }
 
+    // "Multi Subs" names subtitles.
+    [GeneratedRegex(@"\bMULTI\b(?![-_. ]?SUBS?\b)", Options)]
+    private static partial Regex MultiAudioRegex { get; }
+
     [GeneratedRegex(".+?([-_. ](?<tags>forced|foreign|default|cc|psdh|sdh))*[-_. ](?<iso_code>[a-z]{2,3})([-_. ](?<tags>forced|foreign|default|cc|psdh|sdh))*$", Options)]
     private static partial Regex SubtitleLanguageRegex { get; }
 
@@ -97,6 +101,14 @@ public static partial class LanguageParser
         if (title.Contains("english", StringComparison.OrdinalIgnoreCase))
         {
             languages.Add(Language.English);
+        }
+
+        // MULTi: several audio tracks, the original among them.
+        // shortcut: a bare MULTi is read as French + original (the French scene convention), add a per-indexer language when
+        // non-French trackers tag MULTi without naming the dub.
+        if (MultiAudioRegex.IsMatch(title))
+        {
+            languages.AddRange(languages.Count == 0 ? [Language.French, Language.Original] : [Language.Original]);
         }
 
         if (languages.Count == 0)

@@ -1,3 +1,4 @@
+using Modularr.Core.Languages;
 using Modularr.Core.Qualities;
 
 namespace Modularr.Core.Decisions;
@@ -12,6 +13,9 @@ public sealed record DecisionContext
 
     // Null uses the Sonarr or Radarr defaults for the candidate's media type.
     public IReadOnlyDictionary<Quality, QualityDefinition>? QualityDefinitions { get; init; }
+
+    // The series' or movie's wanted audio language (MediaOptions.WantedLanguage); Any disables the check.
+    public Language WantedLanguage { get; init; } = Language.Any;
 
     public DateTimeOffset Now { get; init; } = DateTimeOffset.UtcNow;
 

@@ -6,6 +6,7 @@ using Modularr.Core.Decisions;
 using Modularr.Core.Indexers;
 using Modularr.Core.Indexers.Cardigann;
 using Modularr.Core.Indexers.Catalog;
+using Modularr.Core.Languages;
 using Modularr.Core.Persistence;
 
 namespace Modularr.Core.Search;
@@ -22,13 +23,22 @@ public sealed record ReleaseSearchRequest
     public int? TvdbId { get; init; }
     public string? ImdbId { get; init; }
     public int? TmdbId { get; init; }
+
+    public static ReleaseSearchRequest ForSeason(int tvdbId, int season) => new() { TvdbId = tvdbId, Season = season };
+
+    public static ReleaseSearchRequest ForEpisode(int tvdbId, Episode episode)
+    {
+        ArgumentNullException.ThrowIfNull(episode);
+        return new() { TvdbId = tvdbId, Season = episode.SeasonNumber, Episode = episode.EpisodeNumber.ToString(CultureInfo.InvariantCulture) };
+    }
 }
 
 public sealed record ReleaseSearchResult(IReadOnlyList<DownloadDecision> Decisions, IReadOnlyList<IndexerError> Errors, int IndexersSearched, int? SeriesId, int? MovieId);
 
 // Interactive search: every enabled indexer, every release parsed and judged against the series' or movie's profile (or the
-// first profile when it is not in the library), approved releases first, each group best first.
-public sealed class ReleaseSearch(ModularrDbContext db, IndexerCatalogHost catalog, IndexerSearch indexers, IOptions<ModularrOptions> options)
+// first profile when it is not in the library) and its wanted language (any when not in the library), approved releases first, each
+// group best first.
+public sealed class ReleaseSearch(ModularrDbContext db, IndexerCatalogHost catalog, IndexerSearch indexers, IOptionsMonitor<ModularrOptions> options)
 {
     private const int TvCategory = 5000;
     private const int MoviesCategory = 2000;
@@ -84,7 +94,11 @@ public sealed class ReleaseSearch(ModularrDbContext db, IndexerCatalogHost catal
         IndexerSearchResult found = await searching.ConfigureAwait(false);
         // A daily episode ("2024-01-31") is only shaped into the query, not matched.
         int? episodeNumber = int.TryParse(request.Episode, NumberStyles.None, CultureInfo.InvariantCulture, out int number) ? number : null;
-        DecisionContext context = new() { Options = options.Value.Decisions, Blocklist = blocklist };
+        ModularrOptions settings = options.CurrentValue;
+        Language wanted = series is not null ? settings.Media.WantedLanguage(series)
+            : movie is not null ? settings.Media.WantedLanguage(movie)
+            : Language.Any;
+        DecisionContext context = new() { Options = settings.Decisions, Blocklist = blocklist, WantedLanguage = wanted };
         Dictionary<int, MediaFile> filesById = files.ToDictionary(f => f.Id);
         DownloadDecision[] decisions =
         [

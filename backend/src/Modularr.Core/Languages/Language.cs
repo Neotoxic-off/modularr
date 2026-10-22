@@ -1,8 +1,15 @@
 using System.Collections.Frozen;
+using System.ComponentModel;
+using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Modularr.Core.Languages;
 
 // Ids follow Radarr (the larger set); Sonarr-only languages are appended after it.
+// The API and modularr.json name a language ("French"); the database stores its id (PersistenceJson, LanguageIdConverter).
+[JsonConverter(typeof(LanguageNameJsonConverter))]
+[TypeConverter(typeof(LanguageNameTypeConverter))]
 public sealed record Language(int Id, string Name)
 {
     public static readonly Language Original = new(-2, "Original");
@@ -93,7 +100,23 @@ public sealed record Language(int Id, string Name)
     public static Language FindByName(string name) =>
         ByName.TryGetValue(name, out Language? language)
             ? language
-            : throw new ArgumentOutOfRangeException(nameof(name), name, "Unknown language name.");
+            : throw new ArgumentException($"Unknown language '{name}'.", nameof(name));
 
     public override string ToString() => Name;
+}
+
+public sealed class LanguageNameJsonConverter : JsonConverter<Language>
+{
+    public override Language Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        Language.FindByName(reader.GetString() ?? "");
+
+    public override void Write(Utf8JsonWriter writer, Language value, JsonSerializerOptions options) => writer.WriteStringValue(value.Name);
+}
+
+// Lets the configuration binder read a language name from modularr.json.
+public sealed class LanguageNameTypeConverter : TypeConverter
+{
+    public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType) => sourceType == typeof(string);
+
+    public override object ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value) => Language.FindByName((string)value);
 }

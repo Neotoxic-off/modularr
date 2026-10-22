@@ -8,6 +8,7 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 string configDirectory = builder.Configuration["MODULARR_CONFIG_DIR"] ?? Path.Combine(builder.Environment.ContentRootPath, "config");
 builder.Services.AddModularrCore(configDirectory);
 builder.Services.AddModularrAuth(configDirectory);
+builder.Services.AddScoped<ApiEndpoints.ItemDtos>();
 builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 WebApplication app = builder.Build();

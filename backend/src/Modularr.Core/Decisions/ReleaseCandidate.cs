@@ -18,7 +18,7 @@ public sealed record ReleaseCandidate
     // Series runtime (fallback for episodes without one) or movie runtime, in minutes; 0 when unknown.
     public int Runtime { get; init; }
 
-    // Movie original language, or series original language, for profiles wanting Language.Original.
+    // Movie or series original language: what Language.Original, untagged releases and Original tracks stand for.
     public Language OriginalLanguage { get; init; } = Language.Unknown;
 
     // Movies only.
