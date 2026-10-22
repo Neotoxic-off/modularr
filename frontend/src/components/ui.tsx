@@ -71,6 +71,43 @@ export function Switch({ checked, onChange, label, description, disabled }: {
   );
 }
 
+// An ordered pick of several values (first is most wanted): chips to remove, a select to append.
+export function PickList({ label, hint, values, choices, onChange, empty = "None" }: {
+  label: string;
+  hint?: ReactNode;
+  values: readonly string[];
+  choices: readonly string[];
+  onChange: (values: string[]) => void;
+  empty?: string;
+}) {
+  const id = useId();
+  const left = choices.filter((c) => !values.includes(c));
+  return (
+    <div role="group" aria-labelledby={id} className="space-y-1.5">
+      <span id={id} className="block text-sm font-medium">{label}</span>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {values.length === 0 && <span className="text-sm text-muted">{empty}</span>}
+        {values.map((value, i) => (
+          <span key={value} className="inline-flex items-center gap-1 rounded-md bg-raised py-0.5 pr-0.5 pl-2 text-xs ring-1 ring-line">
+            <span className="text-muted tabular-nums">{i + 1}</span>{value}
+            <button type="button" onClick={() => onChange(values.filter((v) => v !== value))} aria-label={`Remove ${value}`}
+              className="cursor-pointer rounded p-0.5 text-muted hover:bg-line hover:text-foreground">
+              <Icon name="x" size={12} />
+            </button>
+          </span>
+        ))}
+      </div>
+      {left.length > 0 && (
+        <Select value="" aria-label={`Add to ${label}`} onChange={(e) => e.target.value && onChange([...values, e.target.value])}>
+          <option value="">Add…</option>
+          {left.map((c) => <option key={c} value={c}>{c}</option>)}
+        </Select>
+      )}
+      {hint && <span className="block text-xs leading-relaxed text-muted">{hint}</span>}
+    </div>
+  );
+}
+
 export function Alert({ children, tone = "red" }: { children: ReactNode; tone?: "red" | "amber" }) {
   const colors = tone === "red" ? "border-red-500/25 bg-red-500/10 text-red-200" : "border-amber-400/25 bg-amber-400/10 text-amber-100";
   return (

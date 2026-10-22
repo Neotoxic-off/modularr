@@ -7,10 +7,12 @@ using Modularr.Core.Qualities;
 
 namespace Modularr.Core.Persistence;
 
-// Quality and Language are stored by id everywhere, in plain columns and inside JSON columns.
+// Quality and Language are stored by id everywhere, in plain columns and inside JSON columns; ReleaseVersion by name.
 public sealed class QualityIdConverter() : ValueConverter<Quality, int>(q => q.Id, id => Quality.FindById(id));
 
 public sealed class LanguageIdConverter() : ValueConverter<Language, int>(l => l.Id, id => Language.FindById(id));
+
+public sealed class ReleaseVersionNameConverter() : ValueConverter<ReleaseVersion, string>(v => v.Name, name => ReleaseVersion.FindByName(name));
 
 // SQLite keeps no DateTimeKind: everything is written as UTC and read back as UTC.
 public sealed class UtcDateTimeConverter() : ValueConverter<DateTime, DateTime>(

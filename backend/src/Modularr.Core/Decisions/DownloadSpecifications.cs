@@ -17,7 +17,7 @@ public static partial class DownloadSpecifications
     public static IReadOnlyList<Func<ReleaseCandidate, DecisionContext, Rejection?>> All { get; } =
     [
         QualityAllowedByProfile,
-        WantedLanguage,
+        WantedVersion,
         AcceptableSize,
         MaximumSize,
         MinimumAge,
@@ -50,30 +50,11 @@ public static partial class DownloadSpecifications
         return qualityOrGroup.Allowed ? null : Reject(DownloadRejectionReason.QualityNotWanted, $"{candidate.Quality.Quality} is not wanted in profile");
     }
 
-    // Radarr profile language (Sonarr v4 moved it to custom formats), the wanted language coming from the language policy.
-    public static Rejection? WantedLanguage(ReleaseCandidate candidate, DecisionContext context)
-    {
-        Language wanted = context.WantedLanguage;
-
-        if (wanted == Language.Any)
-        {
-            return null;
-        }
-
-        Language required = wanted == Language.Original ? candidate.OriginalLanguage : wanted;
-        string found = string.Join(", ", candidate.Languages);
-
-        // Like upstream's language aggregation, an untagged release is in the original language; so is the Original track of a
-        // multi-audio release (MULTi, German DL).
-        if (candidate.Languages.Any(l => (l == Language.Unknown || l == Language.Original ? candidate.OriginalLanguage : l) == required))
-        {
-            return null;
-        }
-
-        return wanted == Language.Original
-            ? Reject(DownloadRejectionReason.WantedLanguage, $"Original Language ({required}) is wanted, but found {found}")
-            : Reject(DownloadRejectionReason.WantedLanguage, $"{required} is wanted, but found {found}");
-    }
+    // Radarr profile language (Sonarr v4 moved it to custom formats), generalised to the version from the version policy.
+    public static Rejection? WantedVersion(ReleaseCandidate candidate, DecisionContext context) =>
+        context.WantedVersion.Accepts(candidate.Languages, candidate.OriginalLanguage)
+            ? null
+            : Reject(DownloadRejectionReason.WantedVersion, $"{context.WantedVersion} is wanted (original language {candidate.OriginalLanguage}), but found {candidate.Languages}");
 
     public static Rejection? AcceptableSize(ReleaseCandidate candidate, DecisionContext context)
     {

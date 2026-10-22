@@ -6,6 +6,7 @@ using Modularr.Core.Library;
 using Modularr.Core.Metadata;
 using Modularr.Core.Persistence;
 using Modularr.Core.PostProcessing;
+using Modularr.Core.Subtitles;
 
 namespace Modularr.Core.Configuration;
 
@@ -38,4 +39,20 @@ public sealed class ModularrOptions
 
     [ValidateObjectMembers]
     public MediaOptions Media { get; set; } = new();
+
+    public SubtitleOptions Subtitles { get; set; } = new();
+
+    // Every section, with the secrets a non-admin must not see removed.
+    public ModularrOptions Redacted() => new()
+    {
+        Paths = Paths,
+        Torrents = Torrents,
+        PostProcessing = PostProcessing,
+        Indexers = Indexers,
+        Database = Database,
+        Metadata = Metadata,
+        Decisions = Decisions,
+        Media = Media,
+        Subtitles = Subtitles.Redacted(),
+    };
 }

@@ -6,14 +6,14 @@ import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { api, errorMessage, formatAgo, formatRuntime, isSeries, kindOf } from "@/lib/api";
 import type { Episode, ItemPatch, Kind, LibraryItem, MovieDetail, SeriesDetail } from "@/lib/api";
-import { languageLabel, useOptions } from "@/lib/options";
+import { realLanguages, useOptions, versionLabel } from "@/lib/options";
 import { useTitleEvents } from "@/components/Activity";
 import { ActivityTimeline } from "@/components/ActivityFeed";
 import { useSession } from "@/components/AuthGate";
 import { Icon } from "@/components/icons";
 import { PosterArt } from "@/components/Poster";
 import { ReleasesDialog } from "@/components/ReleasesDialog";
-import { Alert, Badge, Button, Empty, Field, Modal, Rating, Select, Skeleton, Spinner, Switch } from "@/components/ui";
+import { Alert, Badge, Button, Empty, Field, Modal, PickList, Rating, Select, Skeleton, Spinner, Switch } from "@/components/ui";
 
 type Detail = { item: LibraryItem; hasFile?: boolean; seasons?: SeriesDetail["seasons"]; episodes?: Episode[] };
 
@@ -155,19 +155,22 @@ function Loaded({ detail, onChange, reload }: { detail: Detail; onChange: (item:
                     {options.profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </Select>
                 </Field>
-                <Field label="Language" hint={item.language ? `Overrides the language rules, which would pick ${languageLabel(item.policyLanguage)}.` : "Follows your language rules."}>
-                  <Select value={item.language ?? ""} onChange={(e) => patch({ language: e.target.value || null })}>
-                    <option value="">Use default ({languageLabel(item.policyLanguage)})</option>
-                    {options.languages.map((l) => <option key={l.id} value={l.name}>{languageLabel(l.name)}</option>)}
+                <Field label="Version" hint={item.version ? `Overrides the version rules, which would pick ${versionLabel(item.policyVersion)}.` : "Follows your version rules."}>
+                  <Select value={item.version ?? ""} onChange={(e) => patch({ version: e.target.value || null })}>
+                    <option value="">Use default ({versionLabel(item.policyVersion)})</option>
+                    {options.versions.map((v) => <option key={v} value={v}>{versionLabel(v)}</option>)}
                   </Select>
                 </Field>
+                <PickList label="Subtitles" values={item.wantedSubtitles} choices={realLanguages(options).map((l) => l.name)} empty="No subtitles wanted"
+                  onChange={(subtitles) => patch({ subtitles })}
+                  hint={item.subtitles ? <>Overrides the category default. <button type="button" className="cursor-pointer underline" onClick={() => patch({ subtitles: null })}>Use the default</button></> : "Follows the category default."} />
               </>
             )}
           </div>
 
           <dl className="space-y-3 rounded-2xl border border-line bg-surface p-5 text-sm">
             <Info label="Original language">{item.originalLanguage}</Info>
-            <Info label="Looking for">{languageLabel(item.wantedLanguage)}</Info>
+            <Info label="Looking for">{versionLabel(item.wantedVersion)}{item.wantedSubtitles.length > 0 && `, subtitles ${item.wantedSubtitles.join(", ")}`}</Info>
             <Info label="Last search">
               {item.lastSearch ? <span title={new Date(item.lastSearch.time).toLocaleString()}>{item.lastSearch.result}, {formatAgo(item.lastSearch.time)}</span> : "Not yet"}
             </Info>

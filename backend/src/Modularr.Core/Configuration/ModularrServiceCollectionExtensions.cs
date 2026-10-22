@@ -31,6 +31,7 @@ public static class ModularrServiceCollectionExtensions
     {
         configDirectory = Path.GetFullPath(configDirectory);
         Directory.CreateDirectory(configDirectory);
+        SettingsFile.MigrateLanguagePolicy(configDirectory);
 
         IConfigurationRoot file = new ConfigurationBuilder()
             .AddJsonFile(Path.Combine(configDirectory, ModularrOptions.FileName), optional: true, reloadOnChange: false)

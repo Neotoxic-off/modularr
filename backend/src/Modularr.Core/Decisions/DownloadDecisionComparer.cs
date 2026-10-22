@@ -1,7 +1,12 @@
+using Modularr.Core.Languages;
+
 namespace Modularr.Core.Decisions;
 
 // Upstream DownloadDecisionComparer: greater is better. Releases must belong to the same series or movie.
 // Torrent-only: the preferred protocol and Usenet age steps never apply; custom format score and Radarr indexer flags are not ported.
+// Steps, first difference wins: quality (then revision), season pack and episode count, first episode number, wanted subtitles
+// already in the release, indexer priority, seeders then peers, size. Subtitles only break ties between releases of the same
+// quality and episode coverage: they never lift a lower quality over a better one.
 public sealed class DownloadDecisionComparer(DecisionContext context) : IComparer<DownloadDecision>
 {
     private static readonly long SizeRounding = DownloadSpecifications.Megabytes(200);
@@ -18,6 +23,7 @@ public sealed class DownloadDecisionComparer(DecisionContext context) : ICompare
             CompareQuality(left, right),
             CompareEpisodeCount(left, right),
             CompareEpisodeNumber(left, right),
+            SubtitleScore(left).CompareTo(SubtitleScore(right)),
             right.Release.IndexerPriority.CompareTo(left.Release.IndexerPriority),
             ComparePeers(left, right),
             SizeScore(left).CompareTo(SizeScore(right)),
@@ -55,6 +61,23 @@ public sealed class DownloadDecisionComparer(DecisionContext context) : ICompare
 
     private static int FirstEpisodeNumber(ReleaseCandidate candidate) =>
         candidate.Episodes.Count == 0 ? 0 : candidate.Episodes.Min(e => e.EpisodeNumber);
+
+    // The most wanted subtitle language found scores highest, unnamed multi-subs lowest. With SubtitlesOnlyWhenAudioDiffers a
+    // language the audio is already in does not count.
+    private int SubtitleScore(ReleaseCandidate candidate)
+    {
+        IReadOnlyList<Language> wanted = context.WantedSubtitles;
+        for (int i = 0; i < wanted.Count; i++)
+        {
+            bool needed = !context.SubtitlesOnlyWhenAudioDiffers || !candidate.Languages.HasAudio(wanted[i], candidate.OriginalLanguage);
+            if (needed && candidate.Languages.Subtitles.Contains(wanted[i]))
+            {
+                return 2 * (wanted.Count - i);
+            }
+        }
+
+        return wanted.Count > 0 && candidate.Languages.MultiSubs ? 1 : 0;
+    }
 
     // Orders of magnitude only, so 1000 and 1100 seeders tie and the next step decides.
     private static int ComparePeers(ReleaseCandidate left, ReleaseCandidate right)

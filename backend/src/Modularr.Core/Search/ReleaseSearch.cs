@@ -36,7 +36,7 @@ public sealed record ReleaseSearchRequest
 public sealed record ReleaseSearchResult(IReadOnlyList<DownloadDecision> Decisions, IReadOnlyList<IndexerError> Errors, int IndexersSearched, int? SeriesId, int? MovieId);
 
 // Interactive search: every enabled indexer, every release parsed and judged against the series' or movie's profile (or the
-// first profile when it is not in the library) and its wanted language (any when not in the library), approved releases first, each
+// first profile when it is not in the library) and its wanted version and subtitles (any when not in the library), approved releases first, each
 // group best first.
 public sealed class ReleaseSearch(ModularrDbContext db, IndexerCatalogHost catalog, IndexerSearch indexers, IOptionsMonitor<ModularrOptions> options)
 {
@@ -95,10 +95,14 @@ public sealed class ReleaseSearch(ModularrDbContext db, IndexerCatalogHost catal
         // A daily episode ("2024-01-31") is only shaped into the query, not matched.
         int? episodeNumber = int.TryParse(request.Episode, NumberStyles.None, CultureInfo.InvariantCulture, out int number) ? number : null;
         ModularrOptions settings = options.CurrentValue;
-        Language wanted = series is not null ? settings.Media.WantedLanguage(series)
-            : movie is not null ? settings.Media.WantedLanguage(movie)
-            : Language.Any;
-        DecisionContext context = new() { Options = settings.Decisions, Blocklist = blocklist, WantedLanguage = wanted };
+        DecisionContext context = new()
+        {
+            Options = settings.Decisions,
+            Blocklist = blocklist,
+            WantedVersion = series is not null ? settings.Media.WantedVersion(series) : movie is not null ? settings.Media.WantedVersion(movie) : ReleaseVersion.Any,
+            WantedSubtitles = series is not null ? settings.Media.WantedSubtitles(series) : movie is not null ? settings.Media.WantedSubtitles(movie) : [],
+            SubtitlesOnlyWhenAudioDiffers = settings.Subtitles.OnlyWhenAudioDiffers,
+        };
         Dictionary<int, MediaFile> filesById = files.ToDictionary(f => f.Id);
         DownloadDecision[] decisions =
         [

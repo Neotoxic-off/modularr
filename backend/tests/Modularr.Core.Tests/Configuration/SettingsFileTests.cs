@@ -5,6 +5,7 @@ using Modularr.Core.Configuration;
 using Modularr.Core.Decisions;
 using Modularr.Core.Languages;
 using Modularr.Core.Library;
+using Modularr.Core.Subtitles;
 
 namespace Modularr.Core.Tests.Configuration;
 
@@ -43,25 +44,65 @@ public sealed class SettingsFileTests : IDisposable
     }
 
     [Fact]
-    public async Task MediaSettingsRoundTripByLanguageName()
+    public async Task MediaSettingsRoundTripByName()
     {
         using ServiceProvider provider = new ServiceCollection().AddModularrCore(_configDirectory).BuildServiceProvider();
         IOptionsMonitor<ModularrOptions> options = provider.GetRequiredService<IOptionsMonitor<ModularrOptions>>();
         MediaOptions media = new()
         {
-            Anime = new MediaDefaults { ProfileId = 2, Language = Language.Original },
-            DefaultLanguage = Language.French,
-            Exceptions = [new LanguageRule { Category = MediaType.Movie, OriginalLanguage = Language.Japanese, Language = Language.English }],
+            Anime = new MediaDefaults { ProfileId = 2, Version = ReleaseVersion.VOSTFR, Subtitles = [Language.French, Language.English] },
+            DefaultVersion = ReleaseVersion.VF,
+            Exceptions = [new VersionRule { Category = MediaType.Movie, OriginalLanguage = Language.Japanese, Version = ReleaseVersion.FindByName("German") }],
         };
 
         await provider.GetRequiredService<SettingsFile>().SaveMediaAsync(media, TestContext.Current.CancellationToken);
 
         MediaOptions saved = options.CurrentValue.Media;
-        Assert.Equal((2, Language.Original, Language.French), (saved.Anime.ProfileId, saved.Anime.Language, saved.DefaultLanguage));
+        Assert.Equal((2, ReleaseVersion.VOSTFR, ReleaseVersion.VF), (saved.Anime.ProfileId, saved.Anime.Version, saved.DefaultVersion));
+        Assert.Equal([Language.French, Language.English], saved.Anime.Subtitles);
         Assert.Equal(media.Exceptions, saved.Exceptions);
-        Assert.Null(saved.Movies.Language);
+        Assert.Null(saved.Movies.Version);
         JsonNode file = JsonNode.Parse(File.ReadAllText(ConfigFile))!;
-        Assert.Equal(("French", "Movie"), ((string?)file["Media"]!["DefaultLanguage"], (string?)file["Media"]!["Exceptions"]![0]!["Category"]));
+        Assert.Equal(("VF", "Movie"), ((string?)file["Media"]!["DefaultVersion"], (string?)file["Media"]!["Exceptions"]![0]!["Category"]));
+    }
+
+    [Fact]
+    public void TheLanguagePolicyIsMigratedToVersionsBeforeBinding()
+    {
+        File.WriteAllText(ConfigFile, """
+            {
+              "Torrents": { "ListenPort": 51413 },
+              "Media": {
+                "DefaultLanguage": "French",
+                "Movies": { "ProfileId": 4, "Language": "Original" },
+                "anime": { "language": "German" },
+                "Exceptions": [ { "Category": "Anime", "Language": "Any" }, { "OriginalLanguage": "Japanese", "Language": "French" } ]
+              }
+            }
+            """);
+
+        using ServiceProvider provider = new ServiceCollection().AddModularrCore(_configDirectory).BuildServiceProvider();
+
+        MediaOptions media = provider.GetRequiredService<IOptions<ModularrOptions>>().Value.Media;
+        Assert.Equal((ReleaseVersion.VF, ReleaseVersion.VO, 4), (media.DefaultVersion, media.Movies.Version, media.Movies.ProfileId));
+        Assert.Equal(ReleaseVersion.FindByName("German"), media.Anime.Version);
+        Assert.Equal([ReleaseVersion.Any, ReleaseVersion.VF], media.Exceptions.Select(rule => rule.Version));
+        Assert.False(SettingsFile.MigrateLanguagePolicy(_configDirectory)); // once only
+        Assert.Equal(51413, (int)JsonNode.Parse(File.ReadAllText(ConfigFile))!["Torrents"]!["ListenPort"]!);
+    }
+
+    [Fact]
+    public async Task SubtitleSettingsRoundTrip()
+    {
+        using ServiceProvider provider = new ServiceCollection().AddModularrCore(_configDirectory).BuildServiceProvider();
+        SubtitleOptions subtitles = new() { OnlyWhenAudioDiffers = false, OpenSubtitles = new OpenSubtitlesOptions { ApiKey = "key", Username = "me", Password = "secret" } };
+
+        await provider.GetRequiredService<SettingsFile>().SaveSubtitlesAsync(subtitles, TestContext.Current.CancellationToken);
+
+        SubtitleOptions saved = provider.GetRequiredService<IOptionsMonitor<ModularrOptions>>().CurrentValue.Subtitles;
+        Assert.Equal(subtitles, saved);
+        Assert.Equal((null, "me", null), (saved.Redacted().OpenSubtitles.ApiKey, saved.Redacted().OpenSubtitles.Username, saved.Redacted().OpenSubtitles.Password));
+        Assert.Null(provider.GetRequiredService<IOptionsMonitor<ModularrOptions>>().CurrentValue.Redacted().Subtitles.OpenSubtitles.ApiKey);
     }
 
     [Fact]

@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { api, errorMessage, kindOfDiscovery, titleHref } from "@/lib/api";
 import type { AddOptions, DiscoveryItem, LibraryItem } from "@/lib/api";
-import { defaultsFor, languageLabel, useOptions } from "@/lib/options";
+import { defaultsFor, useOptions, versionLabel } from "@/lib/options";
 import { titleKey } from "@/components/Activity";
 import { kindLabel, PosterArt } from "@/components/Poster";
 import { useToast } from "@/components/Toasts";
@@ -58,7 +58,7 @@ function AddDialog({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: 
   const options = useOptions();
   const kind = kindOfDiscovery(item);
   const [profile, setProfile] = useState("");
-  const [language, setLanguage] = useState("");
+  const [version, setVersion] = useState("");
   const [monitor, setMonitor] = useState<NonNullable<AddOptions["monitor"]>>("All");
   const [searchNow, setSearchNow] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -74,7 +74,7 @@ function AddDialog({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: 
     try {
       const added = await addTitle(item, {
         qualityProfileId: profile ? Number(profile) : null,
-        language: language || null,
+        version: version || null,
         searchNow,
         ...(kind !== "movie" && { monitor }),
       });
@@ -107,10 +107,10 @@ function AddDialog({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: 
                     {options.profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </Select>
                 </Field>
-                <Field label="Language">
-                  <Select value={language} onChange={(e) => setLanguage(e.target.value)}>
+                <Field label="Version">
+                  <Select value={version} onChange={(e) => setVersion(e.target.value)}>
                     <option value="">Default</option>
-                    {options.languages.map((l) => <option key={l.id} value={l.name}>{languageLabel(l.name)}</option>)}
+                    {options.versions.map((v) => <option key={v} value={v}>{versionLabel(v)}</option>)}
                   </Select>
                 </Field>
                 {kind !== "movie" && (

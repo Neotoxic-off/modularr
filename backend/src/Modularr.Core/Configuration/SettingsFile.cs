@@ -2,7 +2,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
+using Modularr.Core.Languages;
 using Modularr.Core.Library;
+using Modularr.Core.Subtitles;
 
 namespace Modularr.Core.Configuration;
 
@@ -38,6 +40,54 @@ public sealed class SettingsFile(string configDirectory, IConfigurationRoot conf
         await SaveSectionAsync(nameof(ModularrOptions.Media), media, cancellationToken).ConfigureAwait(false);
     }
 
+    public Task SaveSubtitlesAsync(SubtitleOptions subtitles, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(subtitles);
+        return SaveSectionAsync(nameof(ModularrOptions.Subtitles), subtitles, cancellationToken);
+    }
+
+    // The language policy became the version policy: its keys are renamed and its values mapped once, before the file is bound
+    // (French -> VF, Original -> VO, Any and the other language names stay). Returns whether the file changed.
+    public static bool MigrateLanguagePolicy(string configDirectory)
+    {
+        string file = Path.Combine(configDirectory, ModularrOptions.FileName);
+        if (!File.Exists(file) || JsonNode.Parse(File.ReadAllText(file), documentOptions: ReadOptions) is not JsonObject root
+            || Find(root, nameof(ModularrOptions.Media)) is not JsonObject media)
+        {
+            return false;
+        }
+
+        bool changed = RenameToVersion(media, "DefaultLanguage", nameof(MediaOptions.DefaultVersion));
+        JsonNode?[] rules = Find(media, nameof(MediaOptions.Exceptions)) is JsonArray exceptions ? [.. exceptions] : [];
+        foreach (JsonObject owner in new[] { Find(media, "Movies"), Find(media, "Series"), Find(media, "Anime") }.Concat(rules).OfType<JsonObject>())
+        {
+            changed |= RenameToVersion(owner, "Language", nameof(MediaDefaults.Version));
+        }
+
+        if (changed)
+        {
+            WriteAtomically(file, root.ToJsonString(WriteOptions));
+        }
+
+        return changed;
+    }
+
+    private static bool RenameToVersion(JsonObject owner, string from, string to)
+    {
+        if (owner.Select(p => p.Key).FirstOrDefault(k => k.Equals(from, StringComparison.OrdinalIgnoreCase)) is not string key)
+        {
+            return false;
+        }
+
+        JsonNode? value = owner[key];
+        owner.Remove(key);
+        owner[to] = value is JsonValue name && name.TryGetValue(out string? language) ? ReleaseVersion.FindByName(language).Name : null;
+        return true;
+    }
+
+    private static JsonNode? Find(JsonObject owner, string key) =>
+        owner.FirstOrDefault(p => p.Key.Equals(key, StringComparison.OrdinalIgnoreCase)).Value;
+
     // Only that section is replaced; comments in the file are lost, the other sections are kept as they are.
     private async Task SaveSectionAsync<T>(string section, T value, CancellationToken cancellationToken)
     {
@@ -48,10 +98,15 @@ public sealed class SettingsFile(string configDirectory, IConfigurationRoot conf
         string key = root.Select(p => p.Key).FirstOrDefault(k => k.Equals(section, StringComparison.OrdinalIgnoreCase)) ?? section;
         root[key] = JsonSerializer.SerializeToNode(value, WriteOptions);
 
-        string tempFile = file + ".tmp";
-        await File.WriteAllTextAsync(tempFile, root.ToJsonString(WriteOptions), cancellationToken).ConfigureAwait(false);
-        File.Move(tempFile, file, overwrite: true);
+        WriteAtomically(file, root.ToJsonString(WriteOptions));
         configuration.Reload();
+    }
+
+    private static void WriteAtomically(string file, string json)
+    {
+        string tempFile = file + ".tmp";
+        File.WriteAllText(tempFile, json);
+        File.Move(tempFile, file, overwrite: true);
     }
 
     private static void EnsureWritableDirectory(string field, string path)

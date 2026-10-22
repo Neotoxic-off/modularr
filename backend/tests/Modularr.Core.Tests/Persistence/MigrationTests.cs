@@ -1,8 +1,11 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Modularr.Core.Configuration;
+using Modularr.Core.Languages;
 using Modularr.Core.Persistence;
 
 namespace Modularr.Core.Tests.Persistence;
@@ -42,6 +45,32 @@ public sealed class MigrationTests : IDisposable
         string? dataSource = scope.ServiceProvider.GetRequiredService<ModularrDbContext>().Database.GetDbConnection().DataSource;
 
         Assert.Equal(Path.Combine(_configDirectory, "data", "library.db"), dataSource);
+    }
+
+    // French -> VF, Original -> VO, Any and the other languages keep their name; no override stays none.
+    [Fact]
+    public void TheLanguageOverrideBecomesTheVersionOverride()
+    {
+        using SqliteConnection connection = new("Data Source=:memory:");
+        connection.Open();
+        using ModularrDbContext db = new(new DbContextOptionsBuilder<ModularrDbContext>().UseSqlite(connection).Options);
+        IMigrator migrator = db.GetService<IMigrator>();
+        migrator.Migrate("20261022201204_Activities");
+        using (SqliteCommand insert = connection.CreateCommand())
+        {
+            insert.CommandText = """
+                INSERT INTO Movies (TmdbId, Title, Year, Runtime, Monitored, Path, QualityProfileId, Language) VALUES
+                (1, 'a', 0, 0, 1, '/a', 1, 2), (2, 'b', 0, 0, 1, '/b', 1, -2), (3, 'c', 0, 0, 1, '/c', 1, -1), (4, 'd', 0, 0, 1, '/d', 1, 4),
+                (5, 'e', 0, 0, 1, '/e', 1, NULL);
+                """;
+            insert.ExecuteNonQuery();
+        }
+
+        migrator.Migrate();
+
+        Assert.Equal(
+            [ReleaseVersion.VF, ReleaseVersion.VO, ReleaseVersion.Any, ReleaseVersion.FindByName("German"), null],
+            db.Movies.OrderBy(m => m.TmdbId).Select(m => m.Version).ToList());
     }
 
     [Fact]

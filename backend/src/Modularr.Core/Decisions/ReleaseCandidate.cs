@@ -5,14 +5,15 @@ using Modularr.Core.Qualities;
 namespace Modularr.Core.Decisions;
 
 // Upstream RemoteEpisode/RemoteMovie: a search result already parsed and mapped to a series or movie of the library.
-// Quality, languages, release group and the season flags come from ParsedEpisodeInfo or ParsedMovieInfo.
+// Quality, release group and the season flags come from ParsedEpisodeInfo or ParsedMovieInfo, the languages from
+// LanguageParser.ParseReleaseLanguages.
 public sealed record ReleaseCandidate
 {
     public required ReleaseInfo Release { get; init; }
     public required MediaType MediaType { get; init; }
     public required QualityProfile Profile { get; init; }
     public required QualityModel Quality { get; init; }
-    public IReadOnlyList<Language> Languages { get; init; } = [];
+    public ReleaseLanguages Languages { get; init; } = ReleaseLanguages.Untagged;
     public string? ReleaseGroup { get; init; }
 
     // Series runtime (fallback for episodes without one) or movie runtime, in minutes; 0 when unknown.

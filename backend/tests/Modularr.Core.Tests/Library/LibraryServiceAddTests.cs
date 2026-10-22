@@ -34,7 +34,7 @@ public sealed class LibraryServiceAddTests : IDisposable
         {
             Movies = new MediaDefaults { ProfileId = 4 },
             Series = new MediaDefaults { ProfileId = 3 },
-            Anime = new MediaDefaults { ProfileId = 2, Language = Language.Original },
+            Anime = new MediaDefaults { ProfileId = 2, Version = ReleaseVersion.VOSTFR, Subtitles = [Language.French] },
         },
     };
 
@@ -45,10 +45,10 @@ public sealed class LibraryServiceAddTests : IDisposable
     {
         using ModularrDbContext db = _database.NewContext();
 
-        Movie movie = await Library(db).AddMovieAsync(70981, qualityProfileId: null, Language.French, search: false, TestContext.Current.CancellationToken);
+        Movie movie = await Library(db).AddMovieAsync(70981, qualityProfileId: null, ReleaseVersion.VF, search: false, TestContext.Current.CancellationToken);
 
-        Assert.Equal((4, Language.English, Language.French), (movie.QualityProfileId, movie.OriginalLanguage, movie.Language));
-        Assert.Equal(Language.French, Settings.Media.WantedLanguage(movie));
+        Assert.Equal((4, Language.English, ReleaseVersion.VF), (movie.QualityProfileId, movie.OriginalLanguage, movie.Version));
+        Assert.Equal(ReleaseVersion.VF, Settings.Media.WantedVersion(movie));
     }
 
     [Fact]
@@ -56,10 +56,11 @@ public sealed class LibraryServiceAddTests : IDisposable
     {
         using ModularrDbContext db = _database.NewContext();
 
-        Series series = await Library(db).AddSeriesAsync(76885, qualityProfileId: null, language: null, SeriesMonitor.All, search: false, TestContext.Current.CancellationToken);
+        Series series = await Library(db).AddSeriesAsync(76885, qualityProfileId: null, version: null, SeriesMonitor.All, search: false, TestContext.Current.CancellationToken);
 
         Assert.Equal((MediaType.Anime, 2, Language.Japanese), (series.MediaType, series.QualityProfileId, series.OriginalLanguage));
-        Assert.Equal(Language.Original, Settings.Media.WantedLanguage(series));
+        Assert.Equal(ReleaseVersion.VOSTFR, Settings.Media.WantedVersion(series));
+        Assert.Equal([Language.French], Settings.Media.WantedSubtitles(series));
     }
 
     [Fact]
@@ -71,21 +72,24 @@ public sealed class LibraryServiceAddTests : IDisposable
     }
 
     [Fact]
-    public async Task PatchLeavesAbsentFieldsAndClearsANullLanguage()
+    public async Task PatchLeavesAbsentFieldsAndClearsANullOverride()
     {
-        Movie movie = _database.Insert(new Movie { TmdbId = 1, Title = "M", Path = "/movies/m", QualityProfileId = 1, Monitored = true, Language = Language.French })[0];
+        Movie movie = _database.Insert(new Movie { TmdbId = 1, Title = "M", Path = "/movies/m", QualityProfileId = 1, Monitored = true, Version = ReleaseVersion.VF })[0];
         using ModularrDbContext db = _database.NewContext();
         LibraryService library = Library(db);
         CancellationToken ct = TestContext.Current.CancellationToken;
 
         Movie kept = await library.UpdateMovieAsync(movie.Id, Patch("""{ "qualityProfileId": 5 }"""), ct);
-        Assert.Equal((5, Language.French, true), (kept.QualityProfileId, kept.Language, kept.Monitored));
+        Assert.Equal((5, ReleaseVersion.VF, true), (kept.QualityProfileId, kept.Version, kept.Monitored));
 
-        Movie cleared = await library.UpdateMovieAsync(movie.Id, Patch("""{ "language": null, "monitored": false }"""), ct);
-        Assert.Equal((5, null, false), (cleared.QualityProfileId, cleared.Language, cleared.Monitored));
+        Movie cleared = await library.UpdateMovieAsync(movie.Id, Patch("""{ "version": null, "monitored": false }"""), ct);
+        Assert.Equal((5, null, false), (cleared.QualityProfileId, cleared.Version, cleared.Monitored));
 
-        Movie set = await library.UpdateMovieAsync(movie.Id, Patch("""{ "language": "Original" }"""), ct);
-        Assert.Equal(Language.Original, set.Language);
+        Movie set = await library.UpdateMovieAsync(movie.Id, Patch("""{ "version": "MULTi", "subtitles": ["French", "English"] }"""), ct);
+        Assert.Equal(ReleaseVersion.Multi, set.Version);
+        Assert.Equal([Language.French, Language.English], set.Subtitles);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => library.UpdateMovieAsync(movie.Id, Patch("""{ "subtitles": ["Original"] }"""), ct));
     }
 
     [Fact]
@@ -108,12 +112,12 @@ public sealed class LibraryServiceAddTests : IDisposable
     }
 
     [Fact]
-    public async Task UnknownIsRejectedAsAnItemLanguage()
+    public async Task UnknownIsNotAVersion()
     {
         Movie movie = _database.AddMovie(1);
         using ModularrDbContext db = _database.NewContext();
 
-        await Assert.ThrowsAsync<ArgumentException>(() => Library(db).UpdateMovieAsync(movie.Id, Patch("""{ "language": "Unknown" }"""), TestContext.Current.CancellationToken));
+        await Assert.ThrowsAsync<ArgumentException>(() => Library(db).UpdateMovieAsync(movie.Id, Patch("""{ "version": "Unknown" }"""), TestContext.Current.CancellationToken));
     }
 
     [Theory]
@@ -158,8 +162,8 @@ public sealed class LibraryServiceAddTests : IDisposable
         ValueTask<bool> subscribed = events.MoveNextAsync();
 
         // Jobs run in order: had the movie been queued, it would be searched before the series.
-        Movie movie = await Library(db, searches).AddMovieAsync(70981, qualityProfileId: null, language: null, search: false, ct);
-        Series series = await Library(db, searches).AddSeriesAsync(76885, qualityProfileId: null, language: null, SeriesMonitor.All, search: true, ct);
+        Movie movie = await Library(db, searches).AddMovieAsync(70981, qualityProfileId: null, version: null, search: false, ct);
+        Series series = await Library(db, searches).AddSeriesAsync(76885, qualityProfileId: null, version: null, SeriesMonitor.All, search: true, ct);
 
         Assert.True(await subscribed);
         while (events.Current?.Data is not Activity { Kind: ActivityKind.NothingFound })
