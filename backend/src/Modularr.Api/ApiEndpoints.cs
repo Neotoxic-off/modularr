@@ -21,7 +21,7 @@ public static class ApiEndpoints
 
     public static RouteGroupBuilder MapModularrApi(this RouteGroupBuilder api)
     {
-        api.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+        api.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
         api.MapGet("/config", (IOptions<ModularrOptions> options) => Results.Ok(options.Value));
         api.MapGet("/indexers", Indexers);
         api.MapGet("/search", Search);
@@ -35,6 +35,38 @@ public static class ApiEndpoints
         api.MapPost("/releases/grab", async (GrabRequest request, DownloadService downloads, CancellationToken ct) =>
             ToDto(await downloads.GrabAsync(request, ct)));
         api.MapGet("/downloads", async (DownloadService downloads, CancellationToken ct) => (await downloads.ListAsync(ct)).Select(ToDto));
+        api.MapPost("/downloads/{id:int}/pause", async (int id, DownloadService downloads, CancellationToken ct) =>
+        {
+            await downloads.SetPausedAsync(id, paused: true, ct);
+            return Results.NoContent();
+        });
+        api.MapPost("/downloads/{id:int}/resume", async (int id, DownloadService downloads, CancellationToken ct) =>
+        {
+            await downloads.SetPausedAsync(id, paused: false, ct);
+            return Results.NoContent();
+        });
+        api.MapDelete("/downloads/{id:int}", async (int id, bool? deleteData, bool? blocklist, DownloadService downloads, CancellationToken ct) =>
+        {
+            await downloads.RemoveAsync(id, deleteData ?? false, blocklist ?? false, ct);
+            return Results.NoContent();
+        });
+        api.MapDelete("/series/{id:int}", async (int id, bool? deleteFiles, LibraryService library, CancellationToken ct) =>
+        {
+            await library.DeleteSeriesAsync(id, deleteFiles ?? false, ct);
+            return Results.NoContent();
+        }).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapDelete("/movies/{id:int}", async (int id, bool? deleteFiles, LibraryService library, CancellationToken ct) =>
+        {
+            await library.DeleteMovieAsync(id, deleteFiles ?? false, ct);
+            return Results.NoContent();
+        }).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapGet("/settings/paths", (IOptionsMonitor<ModularrOptions> options) => options.CurrentValue.Paths);
+        api.MapPut("/settings/paths", async (PathOptions paths, PathSettings settings, IOptionsMonitor<ModularrOptions> options, CancellationToken ct) =>
+        {
+            await settings.SaveAsync(paths, ct);
+            return options.CurrentValue.Paths;
+        }).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapGet("/filesystem", (string? path) => DirectoryBrowser.Browse(path)).RequireAuthorization(AuthEndpoints.AdminPolicy);
         return api;
     }
 
@@ -44,8 +76,10 @@ public static class ApiEndpoints
         Exception? error = context.Features.Get<IExceptionHandlerFeature>()?.Error;
         (int status, string message) = error switch
         {
-            ArgumentException or FormatException or InvalidSearchTermException => (StatusCodes.Status400BadRequest, error.Message),
-            MetadataNotFoundException => (StatusCodes.Status404NotFound, error.Message),
+            // ArgumentException.Message ends with " (Parameter 'name')", which is noise for the UI.
+            ArgumentException argument => (StatusCodes.Status400BadRequest, argument.ParamName is null ? argument.Message : argument.Message.Replace($" (Parameter '{argument.ParamName}')", "", StringComparison.Ordinal)),
+            FormatException or InvalidSearchTermException => (StatusCodes.Status400BadRequest, error.Message),
+            MetadataNotFoundException or KeyNotFoundException => (StatusCodes.Status404NotFound, error.Message),
             MetadataSourceException or InvalidOperationException or HttpRequestException => (StatusCodes.Status502BadGateway, error.Message),
             _ => (StatusCodes.Status500InternalServerError, "Internal error"),
         };
@@ -111,27 +145,29 @@ public static class ApiEndpoints
     private static async Task<object> Lookup(SeriesMetadataClient series, MovieMetadataClient movies, string term, string? type, CancellationToken ct) =>
         type?.ToUpperInvariant() switch
         {
-            null or "SERIES" => (await series.SearchSeriesAsync(term, cancellationToken: ct)).Select(s => new { s.TvdbId, s.ImdbId, s.Title, s.Year, s.Overview, s.Status, s.Images }),
-            "MOVIE" => (await movies.SearchMoviesAsync(term, ct)).Select(m => new { m.TmdbId, m.ImdbId, m.Title, m.Year, m.Overview, m.Status, m.Images }),
+            null or "SERIES" => (await series.SearchSeriesAsync(term, cancellationToken: ct)).Select(s => new { s.TvdbId, s.ImdbId, s.Title, s.Year, s.Overview, s.Status, s.Genres, s.Images }),
+            "MOVIE" => (await movies.SearchMoviesAsync(term, ct)).Select(m => new { m.TmdbId, m.ImdbId, m.Title, m.Year, m.Overview, m.Status, m.Genres, m.Images }),
             _ => throw new ArgumentException($"Unknown type '{type}', expected series or movie."),
         };
 
     private static object ToDto(Series s) => new
     {
-        s.Id, s.TvdbId, s.Title, s.Year, s.SeriesType, s.Runtime, s.Monitored, s.Path, s.QualityProfileId, s.Added,
+        s.Id, s.TvdbId, s.Title, s.Year, s.SeriesType, s.Runtime, s.Monitored, s.Path, s.QualityProfileId, s.Added, s.Poster, s.Overview,
         seasons = s.Seasons,
         episodes = s.Episodes.Count,
         episodesWithFile = s.Episodes.Count(e => e.MediaFileId is not null),
     };
 
-    private static object ToDto(Movie m) => new { m.Id, m.TmdbId, m.ImdbId, m.Title, m.Year, m.Runtime, m.Monitored, m.Path, m.QualityProfileId };
+    private static object ToDto(Movie m) => new { m.Id, m.TmdbId, m.ImdbId, m.Title, m.Year, m.Runtime, m.Monitored, m.Path, m.QualityProfileId, m.Poster, m.Overview };
 
     private static object ToDto(TrackedDownload d) => new { d.Id, d.InfoHash, d.ReleaseTitle, d.Indexer, d.State, d.SeriesId, d.MovieId, d.EpisodeIds };
 
     private static object ToDto(DownloadItem item) => new
     {
         item.Download.Id, item.Download.InfoHash, item.Download.ReleaseTitle, item.Download.Indexer, item.Download.State,
-        item.Download.SeriesId, item.Download.MovieId, item.Download.EpisodeIds,
+        item.Download.SeriesId, item.Download.MovieId, item.Download.EpisodeIds, item.Download.Added,
+        category = item.Download.MovieId is null ? DownloadService.SeriesCategory : DownloadService.MoviesCategory,
+        eta = item.Torrent?.RemainingTime is TimeSpan eta ? (long?)eta.TotalSeconds : null,
         status = item.Torrent?.Status,
         message = item.Torrent?.Message,
         progress = item.Torrent?.Progress,

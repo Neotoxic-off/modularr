@@ -20,6 +20,7 @@ public sealed class ModularrDbContext(DbContextOptions<ModularrDbContext> option
     public DbSet<BlocklistItem> Blocklist => Set<BlocklistItem>();
     public DbSet<HistoryItem> History => Set<HistoryItem>();
     public DbSet<TrackedDownload> TrackedDownloads => Set<TrackedDownload>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -91,6 +92,12 @@ public sealed class ModularrDbContext(DbContextOptions<ModularrDbContext> option
             download.Property(d => d.InfoHash).UseCollation(NoCase);
             download.HasIndex(d => d.InfoHash).IsUnique();
             BelongsToSeriesOrMovie(download, d => d.SeriesId, d => d.MovieId);
+        });
+
+        modelBuilder.Entity<User>(user =>
+        {
+            user.Property(u => u.Username).UseCollation(NoCase);
+            user.HasIndex(u => u.Username).IsUnique();
         });
     }
 

@@ -26,6 +26,10 @@ public sealed class Series
     public int QualityProfileId { get; set; }
     public QualityProfile QualityProfile { get; set; } = null!;
     public DateTime Added { get; set; }
+    public string? Overview { get; set; }
+
+    // URL of the metadata poster at add time.
+    public string? Poster { get; set; }
     public ICollection<Season> Seasons { get; } = [];
     public ICollection<Episode> Episodes { get; } = [];
 }

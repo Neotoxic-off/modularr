@@ -33,7 +33,8 @@ public sealed class DownloadService(
     IndexerDomainHealth health,
     CardigannSearcher searcher,
     IHttpClientFactory httpClientFactory,
-    IOptions<ModularrOptions> options)
+    DownloadImporter importer,
+    IOptionsMonitor<ModularrOptions> options)
 {
     public const string SeriesCategory = "series";
     public const string MoviesCategory = "movies";
@@ -66,7 +67,7 @@ public sealed class DownloadService(
         }
 
         string category = request.SeriesId is null ? MoviesCategory : SeriesCategory;
-        string id = await AddTorrentAsync(release, Path.Combine(options.Value.Paths.Downloads, category), category, cancellationToken).ConfigureAwait(false);
+        string id = await AddTorrentAsync(release, Path.Combine(options.CurrentValue.Paths.Downloads, category), category, cancellationToken).ConfigureAwait(false);
 
         if (await db.TrackedDownloads.FirstOrDefaultAsync(d => d.InfoHash == id, cancellationToken).ConfigureAwait(false) is TrackedDownload existing)
         {
@@ -82,6 +83,7 @@ public sealed class DownloadService(
             ReleaseTitle = release.Title,
             Indexer = release.Indexer,
             State = TrackedDownloadState.Downloading,
+            Added = DateTime.UtcNow,
         };
         db.TrackedDownloads.Add(download);
 
@@ -126,6 +128,41 @@ public sealed class DownloadService(
 
         return download;
     }
+
+    public async Task SetPausedAsync(int id, bool paused, CancellationToken cancellationToken)
+    {
+        TrackedDownload download = await FindAsync(id, cancellationToken).ConfigureAwait(false);
+        bool inClient = paused
+            ? await torrents.Engine.PauseAsync(download.InfoHash).ConfigureAwait(false)
+            : await torrents.Engine.ResumeAsync(download.InfoHash).ConfigureAwait(false);
+        if (!inClient)
+        {
+            throw new KeyNotFoundException($"The torrent of download {id} is no longer in the client.");
+        }
+    }
+
+    // Upstream queue removal: blocklisting goes through the failed-download path, otherwise the download is just ignored.
+    public async Task RemoveAsync(int id, bool deleteData, bool blocklist, CancellationToken cancellationToken)
+    {
+        TrackedDownload download = await FindAsync(id, cancellationToken).ConfigureAwait(false);
+        await torrents.Engine.RemoveAsync(download.InfoHash, deleteData).ConfigureAwait(false);
+
+        if (blocklist)
+        {
+            await importer.BlocklistAsync(download, "Removed by user", cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            importer.AddHistory(download, HistoryEventType.Ignored, episodeId: null, QualityParser.ParseQuality(download.ReleaseTitle), LanguageParser.ParseLanguages(download.ReleaseTitle));
+        }
+
+        download.State = TrackedDownloadState.Ignored;
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<TrackedDownload> FindAsync(int id, CancellationToken cancellationToken) =>
+        await db.TrackedDownloads.FirstOrDefaultAsync(d => d.Id == id, cancellationToken).ConfigureAwait(false)
+            ?? throw new KeyNotFoundException($"Download {id} does not exist.");
 
     // Magnet first; otherwise the definition's download block resolves the details page to a .torrent URL or a magnet.
     private async Task<string> AddTorrentAsync(ReleaseInfo release, string saveDirectory, string category, CancellationToken cancellationToken)
