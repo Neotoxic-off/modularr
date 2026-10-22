@@ -1,0 +1,52 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+import type { Kind, Language, MediaSettings, Profile } from "@/lib/api";
+
+export interface Options {
+  profiles: Profile[];
+  languages: Language[];
+  versions: string[];
+  media: MediaSettings;
+}
+
+// Loaded once and shared by every dialog and page; settings saves call reloadOptions().
+let cache: Promise<Options> | null = null;
+const listeners = new Set<(options: Options) => void>();
+
+const load = () =>
+  Promise.all([api.profiles(), api.languages(), api.versions(), api.media()]).then(([profiles, languages, versions, media]) => ({ profiles, languages, versions, media }));
+
+export function reloadOptions() {
+  cache = load();
+  void cache.then((options) => listeners.forEach((listener) => listener(options)), () => undefined);
+}
+
+export function useOptions(): Options | null {
+  const [options, setOptions] = useState<Options | null>(null);
+  useEffect(() => {
+    cache ??= load();
+    cache.then(setOptions, () => { cache = null; });
+    listeners.add(setOptions);
+    return () => { listeners.delete(setOptions); };
+  }, []);
+  return options;
+}
+
+export const defaultsFor = (media: MediaSettings, kind: Kind) => (kind === "movie" ? media.movies : kind === "series" ? media.series : media.anime);
+
+const versionLabels: Record<string, string> = {
+  Any: "Any version",
+  VO: "VO, original audio",
+  VF: "VF, French audio",
+  VFQ: "VFQ, Quebec French audio",
+  VOSTFR: "VOSTFR, original audio with French subtitles",
+  MULTi: "MULTi, original and French audio",
+};
+
+// Every other version is a plain audio language.
+export const versionLabel = (name: string) => versionLabels[name] ?? `${name} audio`;
+
+// Real languages only: Any and Original are no subtitle or original language.
+export const realLanguages = (options: Options) => options.languages.filter((l) => l.id > 0);
