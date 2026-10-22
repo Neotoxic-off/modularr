@@ -551,9 +551,11 @@ export function MenuItem({ icon, href, onClick, danger = false, disabled, classN
 
 export function Logo({ markOnly = false }: { markOnly?: boolean }) {
   return (
-    <span className="flex items-center gap-2.5">
-      <span className="grid size-8 shrink-0 place-items-center rounded-[11px] bg-white font-display text-[22px] leading-none text-canvas">m</span>
-      {markOnly ? <span className="sr-only">modularr</span> : <span className="font-display text-[24px] leading-none">modularr</span>}
+    // The mark is the word's first letter: [m]odularr.
+    <span className="flex items-center gap-1">
+      <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-[11px] bg-white font-display text-[22px] leading-none text-canvas">m</span>
+      <span className="sr-only">modularr</span>
+      {!markOnly && <span aria-hidden="true" className="font-display text-[24px] leading-none">odularr</span>}
     </span>
   );
 }
