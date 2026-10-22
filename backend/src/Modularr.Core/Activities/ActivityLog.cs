@@ -64,7 +64,7 @@ public sealed class ActivityLog
     {
         foreach (Activity activity in _pending.Where(a => _db.Entry(a).State == EntityState.Unchanged))
         {
-            _feed.Publish(new ServerEvent("activity", activity));
+            _feed.Publish(new ServerEvent(ServerEvent.Activity, activity));
         }
 
         // Still Added: the save failed and a later one may keep it; detached: the caller dropped it.

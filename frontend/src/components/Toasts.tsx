@@ -30,6 +30,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<(Toast & { id: number })[]>([]);
   const nextId = useRef(0);
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  // Hovered or focused toasts stay until the pointer and focus leave (WCAG 2.2.1).
+  const paused = useRef(false);
 
   const dismiss = useCallback((key: string) => {
     clearTimeout(timers.current.get(key));
@@ -37,13 +39,34 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((t) => t.filter((x) => x.key !== key));
   }, []);
 
+  const schedule = useCallback((toast: Toast) => {
+    clearTimeout(timers.current.get(toast.key));
+    if (!paused.current) timers.current.set(toast.key, setTimeout(() => dismiss(toast.key), toast.tone === "red" ? ERROR_LIFETIME_MS : LIFETIME_MS));
+  }, [dismiss]);
+
   const show = useCallback((toast: Toast) => {
     nextId.current += 1;
     const entry = { ...toast, id: nextId.current };
     setToasts((t) => [...t.filter((x) => x.key !== toast.key), entry].slice(-MAX_TOASTS));
-    clearTimeout(timers.current.get(toast.key));
-    timers.current.set(toast.key, setTimeout(() => dismiss(toast.key), toast.tone === "red" ? ERROR_LIFETIME_MS : LIFETIME_MS));
-  }, [dismiss]);
+    schedule(toast);
+  }, [schedule]);
+
+  const pause = () => {
+    paused.current = true;
+    timers.current.forEach(clearTimeout);
+    timers.current.clear();
+  };
+
+  const resume = (list: HTMLElement) => {
+    if (list.matches(":hover") || list.contains(document.activeElement)) return;
+    paused.current = false;
+    toasts.forEach(schedule);
+  };
+
+  // A toast removed under the pointer never fires mouseleave.
+  useEffect(() => {
+    if (toasts.length === 0) paused.current = false;
+  }, [toasts.length]);
 
   useEffect(() => {
     const pending = timers.current;
@@ -54,6 +77,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext value={show}>
       {children}
       <ol role="status" aria-live="polite" aria-label="Notifications"
+        onMouseEnter={pause} onFocus={pause}
+        onMouseLeave={(e) => resume(e.currentTarget)}
+        onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) resume(e.currentTarget); }}
         className="pointer-events-none fixed inset-x-4 bottom-20 z-[60] flex flex-col items-end gap-2 sm:inset-x-auto sm:right-5 sm:bottom-5 sm:w-[360px] lg:bottom-6">
         {toasts.map((t) => (
           <li key={t.id} className="pointer-events-auto flex w-full animate-toast items-start gap-3 rounded-xl border border-line bg-raised/95 p-3 pr-2 shadow-2xl shadow-black/60 backdrop-blur-xl">

@@ -86,7 +86,15 @@ public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, Downl
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            await activities.RecordAsync(Outcome(ActivityKind.SearchFailed, ActivityLevel.Error, ex.Message), cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await activities.RecordAsync(Outcome(ActivityKind.SearchFailed, ActivityLevel.Error, ex.Message), cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                // A busy database fails this save too; the search's own error is the one to report.
+            }
+
             throw;
         }
 

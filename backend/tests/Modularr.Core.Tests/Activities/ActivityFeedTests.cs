@@ -18,7 +18,7 @@ public sealed class ActivityFeedTests
 
         for (int i = 1; i <= 150; i++)
         {
-            feed.Publish(new ServerEvent("progress", i));
+            feed.Publish(new ServerEvent(ServerEvent.Activity, i));
         }
 
         List<int> received = [];
@@ -36,11 +36,41 @@ public sealed class ActivityFeedTests
     }
 
     [Fact]
+    public async Task ProgressKeepsOnlyItsLatestFrameAndNeverPushesOutActivities()
+    {
+        ActivityFeed feed = new();
+        using CancellationTokenSource cancel = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        IAsyncEnumerator<ServerEvent?> events = feed.SubscribeAsync(TimeSpan.FromMilliseconds(10), cancel.Token).GetAsyncEnumerator(cancel.Token);
+        Assert.True(await events.MoveNextAsync());
+
+        feed.Publish(new ServerEvent(ServerEvent.Activity, 1));
+        for (int i = 1; i <= 300; i++)
+        {
+            feed.Publish(new ServerEvent(ServerEvent.Progress, i));
+        }
+
+        feed.Publish(new ServerEvent(ServerEvent.Activity, 2));
+
+        List<(string, int)> received = [];
+        while (received.Count < 3 && await events.MoveNextAsync())
+        {
+            if (events.Current is ServerEvent serverEvent)
+            {
+                received.Add((serverEvent.Type, (int)serverEvent.Data));
+            }
+        }
+
+        Assert.Equal([(ServerEvent.Activity, 1), (ServerEvent.Progress, 300), (ServerEvent.Activity, 2)], received);
+        await cancel.CancelAsync();
+        await events.DisposeAsync();
+    }
+
+    [Fact]
     public void PublishingWithoutSubscribersDoesNothing()
     {
         ActivityFeed feed = new();
 
-        feed.Publish(new ServerEvent("activity", 1));
+        feed.Publish(new ServerEvent(ServerEvent.Activity, 1));
 
         Assert.False(feed.HasSubscribers);
     }

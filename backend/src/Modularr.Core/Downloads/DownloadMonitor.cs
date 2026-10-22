@@ -19,6 +19,9 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
 
     private readonly Dictionary<int, StallState> _stalls = [];
 
+    // Downloads whose DownloadStarted is recorded; the feed is asked once per download per run, as retention may prune the entry.
+    private readonly HashSet<int> _started = [];
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using PeriodicTimer timer = new(PollInterval);
@@ -48,6 +51,8 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
         {
             _stalls.Remove(gone);
         }
+
+        _started.IntersectWith(ids);
 
         foreach (int id in ids)
         {
@@ -112,9 +117,14 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
                 break;
 
             default:
-                if (torrent.HasMetadata && !await db.Activities.AnyAsync(a => a.DownloadId == id && a.Kind == ActivityKind.DownloadStarted, cancellationToken).ConfigureAwait(false))
+                if (torrent.HasMetadata && !_started.Contains(id))
                 {
-                    await activities.RecordAsync(Activity.For(download, ActivityKind.DownloadStarted, ActivityLevel.Info, "Metadata received, downloading"), cancellationToken).ConfigureAwait(false);
+                    if (!await db.Activities.AnyAsync(a => a.DownloadId == id && a.Kind == ActivityKind.DownloadStarted, cancellationToken).ConfigureAwait(false))
+                    {
+                        await activities.RecordAsync(Activity.For(download, ActivityKind.DownloadStarted, ActivityLevel.Info, "Metadata received, downloading"), cancellationToken).ConfigureAwait(false);
+                    }
+
+                    _started.Add(id);
                 }
 
                 StallCheck check = StallDetector.Evaluate(_stalls.GetValueOrDefault(id), torrent, DateTimeOffset.UtcNow, options.Value.Torrents);

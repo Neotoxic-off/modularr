@@ -65,7 +65,7 @@ public sealed class DownloadProgressTicker(IServiceScopeFactory scopes, TorrentE
         ];
         if (progress.Length > 0)
         {
-            feed.Publish(new ServerEvent("progress", progress));
+            feed.Publish(new ServerEvent(ServerEvent.Progress, progress));
         }
     }
 }

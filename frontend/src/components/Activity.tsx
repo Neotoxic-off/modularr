@@ -37,8 +37,9 @@ export const kindIcon: Record<ActivityKind, IconName> = {
 
 export const levelTone: Record<Activity["level"], Tone> = { Info: "accent", Success: "green", Warning: "amber", Error: "red" };
 
-export const activityHref = (a: Pick<Activity, "movieId" | "seriesId">) =>
-  a.movieId !== null ? titleHref("movie", a.movieId) : a.seriesId !== null ? titleHref("series", a.seriesId) : null;
+// A removed title's page no longer loads.
+export const activityHref = (a: Pick<Activity, "kind" | "movieId" | "seriesId">) =>
+  a.kind === "Removed" ? null : a.movieId !== null ? titleHref("movie", a.movieId) : a.seriesId !== null ? titleHref("series", a.seriesId) : null;
 
 // Toasts about the same title replace each other.
 export const titleKey = (a: Pick<Activity, "movieId" | "seriesId">) =>
@@ -54,8 +55,18 @@ const toastKinds: ReadonlySet<ActivityKind> = new Set(["Grabbed", "Imported", "N
 const isActive = (d: Download) => d.state === "Downloading" || d.state === "ImportPending" || d.state === "Importing";
 
 const RETRY_MAX_MS = 30000;
+const SETTLE_MS = 300;
 // Progress frames stop when the last download finishes; older numbers would then look frozen.
 const PROGRESS_STALE_MS = 5000;
+
+// Runs fn once a burst of calls (a search's started, grabbed and completed events) has settled.
+function settled(fn: () => void) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return {
+    run: () => { clearTimeout(timer); timer = setTimeout(fn, SETTLE_MS); },
+    cancel: () => clearTimeout(timer),
+  };
+}
 
 export function ActivityProvider({ children }: { children: ReactNode }) {
   const toast = useToast();
@@ -91,6 +102,7 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
     let delay = 1000;
 
     const connect = () => {
+      if (document.hidden) return;
       source = new EventSource("/api/events");
       source.onopen = () => {
         delay = 1000;
@@ -101,6 +113,8 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
         setConnected(false);
         // The browser retries a dropped stream by itself but gives up on a refused one (a 401, a restart).
         if (source?.readyState !== EventSource.CLOSED) return;
+        // The stream cannot report a 401, this call sends an expired session to sign in.
+        refreshUnread();
         retry = setTimeout(connect, delay);
         delay = Math.min(delay * 2, RETRY_MAX_MS);
       };
@@ -116,25 +130,41 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
       });
     };
 
+    // Hidden tabs let go of their stream: over HTTP/1.1 the browser allows only 6 connections per origin, shared by every tab.
+    const onVisibility = () => {
+      clearTimeout(retry);
+      source?.close();
+      source = null;
+      setConnected(false);
+      delay = 1000;
+      connect();
+    };
+
     connect();
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
       clearTimeout(retry);
       clearTimeout(stale);
       source?.close();
     };
-  }, []);
+  }, [refreshUnread]);
 
   useEffect(() => {
     refreshUnread();
     countActive();
   }, [epoch, refreshUnread, countActive]);
 
-  useEffect(() => subscribe((a) => {
-    if (a.downloadId !== null) countActive();
-    if (toastKinds.has(a.kind) || a.level === "Error") {
-      toast({ key: titleKey(a) ?? `activity:${a.id}`, icon: kindIcon[a.kind], tone: levelTone[a.level], title: a.title, message: a.message, href: activityHref(a) });
-    }
-  }), [subscribe, countActive, toast]);
+  useEffect(() => {
+    const active = settled(countActive);
+    const unsubscribe = subscribe((a) => {
+      if (a.downloadId !== null) active.run();
+      if (toastKinds.has(a.kind) || a.level === "Error") {
+        toast({ key: titleKey(a) ?? `activity:${a.id}`, icon: kindIcon[a.kind], tone: levelTone[a.level], title: a.title, message: a.message, href: activityHref(a) });
+      }
+    });
+    return () => { unsubscribe(); active.cancel(); };
+  }, [subscribe, countActive, toast]);
 
   return (
     <ActivityContext value={{ connected, epoch, unread, activeDownloads, progress, subscribe, markRead }}>
@@ -177,11 +207,16 @@ export function useActivityFeed(scope: Scope) {
   return { items, setItems, more, loadMore, error };
 }
 
-// Runs for every live activity about one title.
-export function useTitleEvents(scope: Scope, onEvent: () => void) {
+// Runs onEvent once a burst of matching live activities has settled.
+export function useActivityRefresh(match: (activity: Activity) => boolean, onEvent: () => void) {
   const { subscribe } = useActivity();
-  const handler = useRef(onEvent);
-  useEffect(() => { handler.current = onEvent; });
-  const { seriesId, movieId } = scope;
-  useEffect(() => subscribe((a) => { if (inScope(a, { seriesId, movieId })) handler.current(); }), [subscribe, seriesId, movieId]);
+  const latest = useRef({ match, onEvent });
+  useEffect(() => { latest.current = { match, onEvent }; });
+  useEffect(() => {
+    const refresh = settled(() => latest.current.onEvent());
+    const unsubscribe = subscribe((a) => { if (latest.current.match(a)) refresh.run(); });
+    return () => { unsubscribe(); refresh.cancel(); };
+  }, [subscribe]);
 }
+
+export const useTitleEvents = (scope: Scope, onEvent: () => void) => useActivityRefresh((a) => inScope(a, scope), onEvent);

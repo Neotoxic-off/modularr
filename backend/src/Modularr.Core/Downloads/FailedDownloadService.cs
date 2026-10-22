@@ -40,8 +40,15 @@ public sealed class FailedDownloadService(
     // shortcut: a search that throws is not retried and the download stays failed, add a pending re-grab flag if indexers fail often.
     private async Task RegrabAsync(TrackedDownload download, CancellationToken cancellationToken)
     {
-        if (await RegrabRequestAsync(db, download, options.Value.Torrents.MaxAutomaticRegrabs, cancellationToken).ConfigureAwait(false) is not ReleaseSearchRequest request)
+        int maxRegrabs = options.Value.Torrents.MaxAutomaticRegrabs;
+        if (await RegrabRequestAsync(db, download, maxRegrabs, cancellationToken).ConfigureAwait(false) is not ReleaseSearchRequest request)
         {
+            if (download.Regrabs >= maxRegrabs)
+            {
+                await activities.RecordAsync(
+                    Activity.For(download, ActivityKind.NothingFound, ActivityLevel.Warning, "Regrab limit reached, no replacement will be tried"), cancellationToken).ConfigureAwait(false);
+            }
+
             return;
         }
 
