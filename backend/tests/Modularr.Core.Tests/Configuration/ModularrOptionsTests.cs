@@ -82,6 +82,11 @@ public sealed class ModularrOptionsTests : IDisposable
     [Theory]
     [InlineData("""{ "Torrents": { "ListenPort": 0 } }""")]
     [InlineData("""{ "Torrents": { "SeedRatioLimit": -1 } }""")]
+    [InlineData("""{ "Torrents": { "MetadataTimeout": "00:00:10" } }""")]
+    [InlineData("""{ "Torrents": { "NoProgressTimeout": "31.00:00:00" } }""")]
+    [InlineData("""{ "Torrents": { "MinimumAverageSpeed": -1 } }""")]
+    [InlineData("""{ "Torrents": { "StallRetries": -1 } }""")]
+    [InlineData("""{ "Torrents": { "MaxAutomaticRegrabs": -1 } }""")]
     [InlineData("""{ "Paths": { "Series": "" } }""")]
     [InlineData("""{ "PostProcessing": { "SubtitleExtensions": ["srt"] } }""")]
     [InlineData("""{ "Indexers": { "RequestTimeout": "00:00:00" } }""")]
@@ -114,6 +119,7 @@ public sealed class ModularrOptionsTests : IDisposable
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<LibraryService>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<DownloadService>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<DownloadImporter>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<FailedDownloadService>());
     }
 
     [Fact]

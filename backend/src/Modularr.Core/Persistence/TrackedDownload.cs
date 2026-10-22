@@ -26,4 +26,10 @@ public sealed class TrackedDownload
     public required string ReleaseTitle { get; set; }
     public string? Indexer { get; set; }
     public TrackedDownloadState State { get; set; }
+
+    // Why it failed; kept here because the torrent, and its status message, is removed.
+    public string? Message { get; set; }
+
+    // Automatic re-grabs in a row that led to this download, capped by torrents.maxAutomaticRegrabs.
+    public int Regrabs { get; set; }
 }

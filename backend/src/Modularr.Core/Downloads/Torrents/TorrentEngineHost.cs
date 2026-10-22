@@ -12,7 +12,7 @@ public sealed class TorrentEngineHost(IOptions<ModularrOptions> options) : IHost
     public TorrentEngine Engine => _engine ?? throw new InvalidOperationException("The torrent engine is not started.");
 
     public async Task StartAsync(CancellationToken cancellationToken) =>
-        _engine = await TorrentEngine.StartAsync(options.Value.Torrents);
+        _engine = await TorrentEngine.StartAsync(options.Value.Torrents, options.Value.PostProcessing);
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {

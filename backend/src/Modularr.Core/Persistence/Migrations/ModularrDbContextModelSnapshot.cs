@@ -415,7 +415,13 @@ namespace Modularr.Core.Persistence.Migrations
                         .HasColumnType("TEXT")
                         .UseCollation("NOCASE");
 
+                    b.Property<string>("Message")
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("MovieId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Regrabs")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("ReleaseTitle")
