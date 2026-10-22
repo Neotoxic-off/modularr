@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Modularr.Api/Modularr.Api.csproj" />
+    <Project Path="src/Modularr.Core/Modularr.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Modularr.Core.Tests/Modularr.Core.Tests.csproj" />
+  </Folder>
+</Solution>
