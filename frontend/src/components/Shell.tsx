@@ -128,8 +128,7 @@ function Frame({ children }: { children: ReactNode }) {
 }
 
 function Rail({ pathname }: { pathname: string }) {
-  const { user, managed } = useSession();
-  const apps = appLinks(managed);
+  const { user } = useSession();
   const { activeDownloads } = useActivity();
   return (
     <aside className="sticky top-0 hidden h-dvh shrink-0 p-3 md:block">
@@ -143,17 +142,6 @@ function Rail({ pathname }: { pathname: string }) {
             <RailItem key={item.href} item={item} current={isCurrent(pathname, item.href)} count={item.downloads ? activeDownloads : 0} />
           ))}
         </nav>
-        {apps.length > 0 && (
-          <nav aria-label="Apps" className="mt-3 flex flex-col gap-1 border-t border-hair-2 pt-3">
-            {apps.map((app) => (
-              <a key={app.href} href={app.href} target="_blank" rel="noopener noreferrer" title={app.label}
-                className="flex h-11 items-center gap-3 rounded-pill px-3.5 text-body font-medium text-ink-2 transition hover:bg-fill hover:text-ink max-xl:justify-center max-xl:px-0">
-                <Icon name={app.icon} size={20} className="shrink-0" />
-                <span className="flex-1 truncate max-xl:sr-only">{app.label}</span>
-              </a>
-            ))}
-          </nav>
-        )}
         {user.role === "Admin" && (
           <div className="mt-3 border-t border-hair-2 pt-3">
             <RailItem item={settings} current={pathname.startsWith(settings.href)} count={0} />
@@ -264,7 +252,7 @@ function UserMenu() {
       <MenuItem icon="user" href="/settings/#account">Account</MenuItem>
       {user.role === "Admin" && <MenuItem icon="settings" href="/settings/" className="md:hidden">Settings</MenuItem>}
       {appLinks(managed).map((app) => (
-        <MenuItem key={app.href} icon={app.icon} onClick={() => window.open(app.href, "_blank", "noopener,noreferrer")} className="md:hidden">{app.label}</MenuItem>
+        <MenuItem key={app.href} icon={app.icon} onClick={() => window.open(app.href, "_blank", "noopener,noreferrer")}>{app.label}</MenuItem>
       ))}
       <MenuItem icon="logout" onClick={logout}>Sign out</MenuItem>
     </Menu>
