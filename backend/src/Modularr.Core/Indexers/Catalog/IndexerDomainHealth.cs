@@ -10,6 +10,9 @@ public sealed class IndexerDomainHealth(IOptions<ModularrOptions> options)
 {
     public const int FailoverThreshold = 3;
 
+    // Once every mirror has failed in turn, searches skip the indexer for this long instead of waiting for its timeout each time.
+    public static readonly TimeSpan Cooldown = TimeSpan.FromMinutes(15);
+
     private readonly ConcurrentDictionary<string, DomainState> _states = new(StringComparer.OrdinalIgnoreCase);
 
     public string ActiveBaseUrl(CardigannDefinition definition)
@@ -19,6 +22,15 @@ public sealed class IndexerDomainHealth(IOptions<ModularrOptions> options)
         lock (state)
         {
             return state.ActiveUrl;
+        }
+    }
+
+    public bool IsCoolingDown(CardigannDefinition definition, DateTimeOffset now)
+    {
+        DomainState state = State(definition, Candidates(definition));
+        lock (state)
+        {
+            return state.CoolingUntil > now;
         }
     }
 
@@ -41,6 +53,8 @@ public sealed class IndexerDomainHealth(IOptions<ModularrOptions> options)
             if (state.ActiveUrl == baseUrl)
             {
                 state.Failures = 0;
+                state.Failovers = 0;
+                state.CoolingUntil = null;
             }
         }
     }
@@ -62,6 +76,11 @@ public sealed class IndexerDomainHealth(IOptions<ModularrOptions> options)
             int index = IndexOf(candidates, state.ActiveUrl);
             state.ActiveUrl = candidates[(index + 1) % candidates.Count];
             state.Failures = 0;
+            if (++state.Failovers >= candidates.Count)
+            {
+                state.Failovers = 0;
+                state.CoolingUntil = state.LastCheck + Cooldown;
+            }
         }
     }
 
@@ -76,7 +95,23 @@ public sealed class IndexerDomainHealth(IOptions<ModularrOptions> options)
         }
     }
 
-    private IReadOnlyList<string> Candidates(CardigannDefinition definition) =>
+    // A mirror found to answer becomes the active domain straight away (the scheduled test tries every mirror).
+    public void Promote(CardigannDefinition definition, string baseUrl)
+    {
+        DomainState state = State(definition, Candidates(definition));
+        lock (state)
+        {
+            state.ActiveUrl = baseUrl;
+            state.Failures = 0;
+            state.Failovers = 0;
+            state.CoolingUntil = null;
+            state.LastError = null;
+            state.LastCheck = DateTimeOffset.UtcNow;
+        }
+    }
+
+    // The active domain first, then the definition's other mirrors.
+    public IReadOnlyList<string> Candidates(CardigannDefinition definition) =>
         definition.CandidateBaseUrls(options.Value.Indexers.BaseUrls.GetValueOrDefault(definition.Id));
 
     private DomainState State(CardigannDefinition definition, IReadOnlyList<string> candidates)
@@ -112,6 +147,8 @@ public sealed class IndexerDomainHealth(IOptions<ModularrOptions> options)
     {
         public required string ActiveUrl { get; set; }
         public int Failures { get; set; }
+        public int Failovers { get; set; }
+        public DateTimeOffset? CoolingUntil { get; set; }
         public string? LastError { get; set; }
         public DateTimeOffset? LastCheck { get; set; }
     }

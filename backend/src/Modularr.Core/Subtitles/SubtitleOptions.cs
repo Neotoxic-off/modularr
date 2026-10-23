@@ -15,7 +15,7 @@ public sealed record SubtitleOptions
     public OpenSubtitlesOptions OpenSubtitles { get; init; } = new();
 
     // What a non-admin may see: the provider secrets removed.
-    public SubtitleOptions Redacted() => this with { OpenSubtitles = OpenSubtitles with { ApiKey = null, Password = null } };
+    public SubtitleOptions Redacted() => this with { OpenSubtitles = OpenSubtitles with { ApiKey = null, Username = null, Password = null } };
 }
 
 // OpenSubtitles.com REST v1: the provider is used once an API key is set; an account raises the daily download quota.

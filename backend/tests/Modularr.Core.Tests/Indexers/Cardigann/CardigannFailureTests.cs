@@ -101,9 +101,9 @@ public sealed class CardigannFailureTests
     }
 
     [Theory]
-    [InlineData("type: public", "type: private")]
-    [InlineData("search:\n", "login:\n  path: login.php\n  method: post\nsearch:\n")]
-    public async Task PrivateOrLoginDefinitionsAreUnsupported(string from, string to)
+    [InlineData("search:\n", "login:\n  path: login.php\n  method: post\n  inputs:\n    username: \"{{ .Config.username }}\"\n    password: \"{{ .Config.password }}\"\nsearch:\n")]
+    [InlineData("search:\n", "settings:\n  - name: apikey\n    type: text\nsearch:\n  headers:\n    x-api-key: [\"{{ .Config.apikey }}\"]\n")]
+    public async Task LoginsWithoutCredentialsAreUnsupported(string from, string to)
     {
         CardigannDefinition definition = CardigannDefinitionLoader.Load(CardigannDefinitionLoaderTests.Minimal.Replace(from, to, StringComparison.Ordinal));
         StubHttpHandler handler = new(_ => throw new InvalidOperationException("must not be called"));

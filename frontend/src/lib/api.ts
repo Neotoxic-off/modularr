@@ -16,11 +16,21 @@ export interface User {
   username: string;
   role: Role;
   created: string;
+  // Versioned picture URL, null without one.
+  avatar: string | null;
+  // The server the account comes from ("linkarr"), null for a local account.
+  external: string | null;
+}
+
+// The hub (linkarr) that manages the accounts and links to the other apps, when one is set.
+export interface Managed {
+  name: string;
+  url: string;
 }
 
 export interface AuthState {
-  setupRequired: boolean;
   user: User | null;
+  managed: Managed | null;
 }
 
 // A movie (tmdbId) or show (tvdbId) from /lookup and /discover.
@@ -77,6 +87,46 @@ export interface Movie extends ItemBase {
   tmdbId: number;
   imdbId: string | null;
   hasFile: boolean;
+  // Its TMDB collection (saga), null when none.
+  collectionTmdbId: number | null;
+  collectionName: string | null;
+}
+
+// A collection id is signed: a TMDB collection, or a TMDB keyword franchise negated (-180547 is the MCU).
+export interface CollectionCard {
+  id: number;
+  name: string;
+  poster: string | null;
+  backdrop: string | null;
+  followed: boolean;
+  monitored: boolean;
+  qualityProfileId: number | null;
+  // Null when the source could not be read.
+  parts: number | null;
+  inLibrary: number;
+}
+
+export interface CollectionPart {
+  tmdbId: number;
+  title: string;
+  year: number;
+  release: string | null;
+  poster: string | null;
+  released: boolean;
+  movieId: number | null;
+  hasFile: boolean;
+}
+
+export interface CollectionDetail extends Omit<CollectionCard, "parts" | "inLibrary"> {
+  overview: string | null;
+  parts: CollectionPart[];
+}
+
+export interface CollectionSummary {
+  id: number;
+  name: string;
+  poster: string | null;
+  backdrop: string | null;
 }
 
 export interface Season {
@@ -143,12 +193,35 @@ export interface ItemPatch {
 export interface AddOptions {
   qualityProfileId?: number | null;
   version?: string | null;
+  // The title's own wanted subtitle languages; null follows the category default.
+  subtitles?: string[] | null;
   searchNow?: boolean;
   monitor?: SeriesMonitor;
+  // Read with monitor "Custom" only; picked episodes are the only monitored ones (their seasons are monitored too).
+  seasons?: number[];
+  episodes?: { season: number; episode: number }[];
 }
 
-export type SeriesMonitor = "All" | "Latest" | "Future" | "First" | "None";
+export interface LookupSeason {
+  number: number;
+  episodes: { number: number; title: string | null; airDate: string | null }[];
+}
+
+export type SeriesMonitor = "All" | "Latest" | "Future" | "First" | "Custom" | "None";
 export type ImportMode = "Move" | "Hardlink";
+
+export interface ImportSettings {
+  importMode: ImportMode;
+  renameFiles: boolean;
+  recycleBinPath: string;
+}
+
+// Hours between runs, 0 turns one off.
+export interface AutomationSettings {
+  refreshIntervalHours: number;
+  searchIntervalHours: number;
+  searchTitlesPerCycle: number;
+}
 
 export interface Release {
   id: string;
@@ -184,6 +257,18 @@ export interface SearchResult {
 export type DownloadState =
   | "Downloading" | "ImportBlocked" | "ImportPending" | "Importing" | "Imported" | "FailedPending" | "Failed" | "Ignored";
 
+// A release never grabbed again, with why it was refused.
+export interface BlocklistItem {
+  id: number;
+  seriesId: number | null;
+  movieId: number | null;
+  title: string;
+  quality: string;
+  indexer: string | null;
+  reason: string | null;
+  date: string;
+}
+
 export interface Download {
   id: number;
   releaseTitle: string;
@@ -202,6 +287,20 @@ export interface Download {
   uploadRate: number | null;
   ratio: number | null;
   eta: number | null;
+  hasMetadata: boolean | null;
+  seeds: number | null;
+  peers: number | null;
+}
+
+// The public address torrent traffic leaves from (a VPN's exit when there is one), checked every 5 minutes.
+export interface DownloadNetwork {
+  publicIp: string | null;
+  org: string | null;
+  country: string | null;
+  checkedAt: string | null;
+  error: string | null;
+  listenPort: number;
+  openConnections: number;
 }
 
 export interface Indexer {
@@ -210,7 +309,42 @@ export interface Indexer {
   language: string;
   privacy: string;
   enabled: boolean;
+  // Disabled automatically because its last test failed; re-enabled when a test passes.
+  failing: boolean;
+  // Its definition reads credentials (login, cookie, API key); configured once they are filled in.
+  needsLogin: boolean;
+  configured: boolean;
   health: { activeUrl: string; failures: number; lastError: string | null; lastCheck: string | null };
+  description: string;
+  categories: string[];
+  mirrors: string[];
+}
+
+export interface IndexerTest {
+  releases: number;
+  error: string | null;
+  health: Indexer["health"];
+}
+
+// One field of an indexer's login form, from its definition's settings; a secret's value is never sent, only whether it is set.
+export interface IndexerSettingField {
+  name: string;
+  type: "text" | "password" | "checkbox" | "select" | "info";
+  label: string;
+  default: string | null;
+  options: { value: string; label: string }[] | null;
+  secret: boolean;
+  required: boolean;
+  value: string | null;
+  set: boolean;
+}
+
+export interface IndexerSettings {
+  id: string;
+  needsLogin: boolean;
+  configured: boolean;
+  captcha: boolean;
+  fields: IndexerSettingField[];
 }
 
 export interface IndexerList {
@@ -277,8 +411,35 @@ export interface SubtitleSettings {
   openSubtitles: { apiKey: string | null; username: string | null; password: string | null };
 }
 
+export type NotificationType = "Webhook" | "Discord" | "Plex" | "Jellyfin" | "Emby";
+
+export interface NotificationConnection {
+  name: string;
+  type: NotificationType;
+  url: string;
+  token: string | null;
+  onGrab: boolean;
+  onImport: boolean;
+  onFailure: boolean;
+}
+
+// Rates in bytes per second (0 is unlimited); durations as .NET TimeSpan strings ("d.hh:mm:ss").
+// The other TorrentEngineOptions keys come back too and are sent back unchanged.
+export interface TorrentSettings {
+  listenPort: number;
+  maxConnections: number;
+  maxDownloadRate: number;
+  maxUploadRate: number;
+  dhtEnabled: boolean;
+  localPeerDiscoveryEnabled: boolean;
+  seedRatioLimit: number | null;
+  seedTimeLimit: string | null;
+  stallRetries: number;
+  maxAutomaticRegrabs: number;
+}
+
 // A movie's file or an episode's file.
-export type SubtitleTarget = { movieId: number } | { episodeId: number };
+export type SubtitleTarget ={ movieId: number } | { episodeId: number };
 
 export interface SubtitleFile {
   language: string;
@@ -290,6 +451,31 @@ export interface SubtitleFile {
 export interface SubtitleStatus {
   present: SubtitleFile[];
   missing: string[];
+}
+
+// A library title on the Subtitles page: covered counts the files having the language or needing none (audio in it).
+export interface TitleSubtitles {
+  id: number;
+  kind: Category;
+  title: string;
+  year: number;
+  poster: string | null;
+  wanted: string[];
+  ownLanguages: boolean;
+  files: number;
+  coverage: { language: string; code: string | null; covered: number }[];
+}
+
+export interface LanguageState {
+  language: string;
+  state: "Present" | "Missing" | "Audio";
+  hearingImpaired: boolean;
+  forced: boolean;
+}
+
+export interface SeasonSubtitles {
+  number: number;
+  episodes: { id: number; episodeNumber: number; title: string | null; languages: LanguageState[] }[];
 }
 
 export interface SubtitleCandidate {
@@ -402,7 +588,7 @@ export type CalendarEvent = { date: string; title: string; poster: string | null
 
 // Storage sizes cover the whole disks holding the library and downloads; libraryBytes is the imported files only.
 export interface Dashboard {
-  counts: { movies: number; series: number; anime: number; episodes: number; episodesWithFile: number; missing: number };
+  counts: { movies: number; series: number; anime: number; episodes: number; episodesWithFile: number; missingMovies: number; missingEpisodes: number };
   storage: { usedBytes: number; freeBytes: number; totalBytes: number; libraryBytes: number };
   subtitles: { covered: number; total: number };
   inProgress: Download[];
@@ -439,13 +625,23 @@ export interface ActivityQuery {
   movieId?: number;
 }
 
+// A daily (or admin-made) zip of the database and settings, or the database copy taken before a migration.
+export interface Backup {
+  name: string;
+  size: number;
+  created: string;
+}
+
+export const backupHref = (name: string) => `/api/backups/${encodeURIComponent(name)}`;
+
 // Fired on any 401 so the auth gate drops back to the sign-in screen.
 export const UNAUTHORIZED = "modularr:unauthorized";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, {
     ...init,
-    headers: init?.body ? { "Content-Type": "application/json" } : undefined,
+    // A Blob body (a picture) carries its own type.
+    headers: typeof init?.body === "string" ? { "Content-Type": "application/json" } : undefined,
   });
   if (response.status === 401 && !path.startsWith("/auth/")) window.dispatchEvent(new Event(UNAUTHORIZED));
   if (!response.ok) {
@@ -474,19 +670,16 @@ export const titleHref = (kind: Kind, id: number) => `/title/?type=${kind === "m
 
 export const api = {
   authState: () => request<AuthState>("/auth/state"),
-  setup: (username: string, password: string) => send<User>("POST", "/auth/setup", { username, password }),
   login: (username: string, password: string) => send<User>("POST", "/auth/login", { username, password }),
   logout: () => send<void>("POST", "/auth/logout"),
-  changePassword: (currentPassword: string, newPassword: string) =>
-    send<User>("POST", "/auth/password", { currentPassword, newPassword }),
 
-  users: () => request<User[]>("/users"),
-  createUser: (username: string, password: string, role: Role) => send<User>("POST", "/users", { username, password, role }),
-  updateUser: (id: number, patch: { role?: Role; password?: string }) => send<User>("PATCH", `/users/${id}`, patch),
-  deleteUser: (id: number) => send<void>("DELETE", `/users/${id}`),
+  uploadAvatar: (image: Blob) => request<User>("/auth/avatar", { method: "PUT", body: image }),
+  removeAvatar: () => send<User>("DELETE", "/auth/avatar"),
+  endOtherSessions: () => send<void>("POST", "/auth/sessions/end-others"),
 
   lookup: (term: string, signal?: AbortSignal) =>
     request<DiscoveryItem[]>(`/lookup?type=all&term=${encodeURIComponent(term)}`, { signal }),
+  lookupSeasons: (tvdbId: number) => request<LookupSeason[]>(`/lookup/seasons?tvdbId=${tvdbId}`),
   discover: (kind: Kind, list: string) => request<DiscoverList>(`/discover/${kind === "movie" ? "movies" : kind}?list=${list}`),
 
   explore: (kind: Kind, filter: ExploreQuery) => request<ExplorePage>(`/explore/${kind === "movie" ? "movies" : kind}?${query(filter)}`),
@@ -499,6 +692,16 @@ export const api = {
 
   movies: () => request<Movie[]>("/movies"),
   movie: (id: number) => request<MovieDetail>(`/movies/${id}`),
+  // The followed sagas, those of library movies and the curated popular ones.
+  collections: () => request<CollectionCard[]>("/collections?suggested=true"),
+  collection: (id: number) => request<CollectionDetail>(`/collections/${id}`),
+  lookupCollections: (term: string, signal?: AbortSignal) =>
+    request<CollectionSummary[]>(`/collections/lookup?term=${encodeURIComponent(term)}`, { signal }),
+  followCollection: (id: number, options: { monitored?: boolean; addMissing?: boolean; qualityProfileId?: number } = {}) =>
+    send<CollectionDetail>("POST", "/collections", { ...(id > 0 ? { tmdbId: id } : { keywordId: -id }), ...options }),
+  updateCollection: (id: number, patch: { monitored?: boolean; qualityProfileId?: number }) => send<CollectionDetail>("PATCH", `/collections/${id}`, patch),
+  unfollowCollection: (id: number) => send<void>("DELETE", `/collections/${id}`),
+  addMissing: (id: number) => send<{ added: number }>("POST", `/collections/${id}/add-missing`),
   series: () => request<Series[]>("/series"),
   seriesDetail: (id: number) => request<SeriesDetail>(`/series/${id}`),
   add: (item: DiscoveryItem, options: AddOptions = {}) =>
@@ -517,19 +720,23 @@ export const api = {
   rescanLibrary: () => send<ScanResult>("POST", "/library/rescan"),
   importProposals: (root: LibraryRoot) => request<ImportProposals>(`/library/import?root=${root}`),
   importFolders: (items: ImportItem[]) => send<ImportOutcome[]>("POST", "/library/import", { items }),
-  releases: (item: LibraryItem, season?: number) =>
+  releases: (item: LibraryItem, season?: number, episode?: number) =>
     request<SearchResult>(isSeries(item)
-      ? `/search?type=series&tvdbId=${item.tvdbId}${season === undefined ? "" : `&season=${season}`}`
+      ? `/search?type=series&tvdbId=${item.tvdbId}${season === undefined ? "" : `&season=${season}`}${episode === undefined ? "" : `&episode=${episode}`}`
       : `/search?type=movie&tmdbId=${item.tmdbId}`),
   grab: (item: LibraryItem, release: Release) =>
     send<{ id: number }>("POST", "/releases/grab", isSeries(item) ? { release, seriesId: item.id } : { release, movieId: item.id }),
 
   downloads: () => request<Download[]>("/downloads"),
+  network: () => request<DownloadNetwork>("/downloads/network"),
+  refreshNetwork: () => send<DownloadNetwork>("POST", "/downloads/network/refresh"),
   pause: (id: number) => send<void>("POST", `/downloads/${id}/pause`),
   resume: (id: number) => send<void>("POST", `/downloads/${id}/resume`),
   retryImport: (id: number) => send<void>("POST", `/downloads/${id}/retry`),
   removeDownload: (id: number, deleteData: boolean, blocklist: boolean) =>
     send<void>("DELETE", `/downloads/${id}?deleteData=${deleteData}&blocklist=${blocklist}`),
+  blocklist: () => request<BlocklistItem[]>("/blocklist"),
+  unblock: (id: number) => send<void>("DELETE", `/blocklist/${id}`),
 
   activity: (filter: ActivityQuery = {}) =>
     request<Activity[]>(`/activity?${query(filter)}`),
@@ -537,6 +744,11 @@ export const api = {
   markRead: (upTo?: number) => send<void>("POST", `/activity/read${upTo === undefined ? "" : `?upTo=${upTo}`}`),
 
   indexers: () => request<IndexerList>("/indexers"),
+  testIndexer: (id: string) => send<IndexerTest>("POST", `/indexers/${encodeURIComponent(id)}/test`),
+  indexerSettings: (id: string) => request<IndexerSettings>(`/indexers/${encodeURIComponent(id)}/settings`),
+  // An empty secret keeps the stored one.
+  saveIndexerSettings: (id: string, values: Record<string, string>) =>
+    send<IndexerSettings>("PUT", `/indexers/${encodeURIComponent(id)}/settings`, values),
 
   qualities: () => request<Quality[]>("/qualities"),
   languages: () => request<Language[]>("/languages"),
@@ -553,14 +765,30 @@ export const api = {
   subtitles: (target: SubtitleTarget) => request<SubtitleStatus>(`/subtitles?${query(target)}`),
   searchSubtitles: (target: SubtitleTarget, language?: string) => send<SubtitleCandidate[]>("POST", "/subtitles/search", { ...target, language }),
   downloadSubtitle: (target: SubtitleTarget, candidate: SubtitleCandidate) => send<SubtitleFile>("POST", "/subtitles/download", { ...target, ...candidate }),
+  subtitleOverview: () => request<TitleSubtitles[]>("/subtitles/overview"),
+  seriesSubtitles: (id: number) => request<{ seasons: SeasonSubtitles[] }>(`/subtitles/series/${id}`),
+  movieSubtitles: (id: number) => request<{ languages: LanguageState[] | null }>(`/subtitles/movies/${id}`),
+  searchMissingSubtitles: (kind: Kind, id: number) => send<void>("POST", `/subtitles${libraryPath(kind)}/${id}/search`),
   paths: () => request<Paths>("/settings/paths"),
   savePaths: (paths: Paths) => send<Paths>("PUT", "/settings/paths", paths),
-  importMode: () => request<{ importMode: ImportMode }>("/settings/import"),
-  saveImportMode: (importMode: ImportMode) => send<{ importMode: ImportMode }>("PUT", "/settings/import", { importMode }),
+  importSettings: () => request<ImportSettings>("/settings/import"),
+  saveImportSettings: (settings: ImportSettings) => send<ImportSettings>("PUT", "/settings/import", settings),
+  automation: () => request<AutomationSettings>("/settings/automation"),
+  saveAutomation: (settings: AutomationSettings) => send<AutomationSettings>("PUT", "/settings/automation", settings),
   metadata: () => request<MetadataSettings>("/settings/metadata"),
   saveMetadata: (tmdbApiKey: string | null) => send<MetadataSettings>("PUT", "/settings/metadata", { tmdbApiKey }),
   testMetadata: () => send<{ ok: boolean; error: string | null }>("POST", "/settings/metadata/test"),
+  apiKey: () => request<{ apiKey: string | null; fromEnvironment: boolean }>("/settings/apikey"),
+  regenerateApiKey: () => send<{ apiKey: string }>("POST", "/settings/apikey"),
+  notifications: () => request<NotificationConnection[]>("/settings/notifications"),
+  saveNotifications: (connections: NotificationConnection[]) => send<NotificationConnection[]>("PUT", "/settings/notifications", connections),
+  testNotification: (connection: NotificationConnection) => send<{ ok: boolean; error: string | null }>("POST", "/settings/notifications/test", connection),
+  torrentSettings: () => request<TorrentSettings>("/settings/torrents"),
+  saveTorrentSettings: (settings: TorrentSettings) => send<TorrentSettings>("PUT", "/settings/torrents", settings),
   folders: (path: string | null) => request<Folder>(`/filesystem${path ? `?path=${encodeURIComponent(path)}` : ""}`),
+  backups: () => request<Backup[]>("/backups"),
+  createBackup: () => send<Backup>("POST", "/backups"),
+  deleteBackup: (name: string) => send<void>("DELETE", `/backups/${encodeURIComponent(name)}`),
 };
 
 const units = ["B", "KB", "MB", "GB", "TB"];
@@ -583,18 +811,7 @@ export function formatRuntime(minutes: number): string | null {
   return minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
 
-const relative = {
-  long: new Intl.RelativeTimeFormat("en", { numeric: "auto" }),
-  short: new Intl.RelativeTimeFormat("en", { numeric: "auto", style: "narrow" }),
-};
-
-export function formatAgo(iso: string, style: keyof typeof relative = "long"): string {
-  const format = relative[style];
-  const minutes = Math.round((new Date(iso).getTime() - Date.now()) / 60000);
-  if (Math.abs(minutes) < 60) return format.format(minutes, "minute");
-  if (Math.abs(minutes) < 1440) return format.format(Math.round(minutes / 60), "hour");
-  return format.format(Math.round(minutes / 1440), "day");
-}
+export { ago as formatAgo } from "@/lib/format";
 
 export const errorMessage = (e: unknown) => (e instanceof Error ? e.message : String(e));
 

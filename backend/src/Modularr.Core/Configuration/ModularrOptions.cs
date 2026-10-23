@@ -4,6 +4,7 @@ using Modularr.Core.Downloads.Torrents;
 using Modularr.Core.Indexers;
 using Modularr.Core.Library;
 using Modularr.Core.Metadata;
+using Modularr.Core.Notifications;
 using Modularr.Core.Persistence;
 using Modularr.Core.PostProcessing;
 using Modularr.Core.Subtitles;
@@ -42,17 +43,30 @@ public sealed class ModularrOptions
 
     public SubtitleOptions Subtitles { get; set; } = new();
 
+    [ValidateObjectMembers]
+    public AutomationOptions Automation { get; set; } = new();
+
+    public IReadOnlyList<NotificationConnection> Notifications { get; set; } = [];
+
+    public AuthOptions Auth { get; set; } = new();
+
+    public ManagedOptions? Managed { get; set; }
+
     // Every section, with the secrets a non-admin must not see removed.
     public ModularrOptions Redacted() => new()
     {
         Paths = Paths,
         Torrents = Torrents,
         PostProcessing = PostProcessing,
-        Indexers = Indexers,
+        Indexers = Indexers.Redacted(),
         Database = Database,
         Metadata = Metadata.Redacted(),
         Decisions = Decisions,
         Media = Media,
         Subtitles = Subtitles.Redacted(),
+        Automation = Automation,
+        Notifications = [.. Notifications.Select(n => n.Redacted())],
+        Auth = Auth.Redacted(),
+        Managed = Managed,
     };
 }

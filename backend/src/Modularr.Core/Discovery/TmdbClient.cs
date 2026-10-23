@@ -97,6 +97,51 @@ public sealed class TmdbClient(HttpClient httpClient, IOptionsMonitor<ModularrOp
         return ([.. page.Results.Select(m => ToItem(m, genres))], page.Page < Math.Min(page.TotalPages, ExploreQuery.MaxPage));
     }
 
+    // TMDB collections matching a name.
+    public async Task<IReadOnlyList<CollectionSummary>> SearchCollectionsAsync(string query, CancellationToken cancellationToken)
+    {
+        CollectionPage page = await GetAsync<CollectionPage>($"search/collection?language=en-US&include_adult=false&{Parameter("query", query)}", cancellationToken).ConfigureAwait(false);
+        return [.. page.Results.Select(c => new CollectionSummary(c.Id, c.Name, Image("w500", c.PosterPath), Image("w1280", c.BackdropPath)))];
+    }
+
+    // A franchise that is not a TMDB collection (the MCU): every movie tagged with the keyword. The id is returned negated, as stored.
+    // shortcut: the first MaxKeywordPages pages (400 movies) only, page further if a franchise ever outgrows that.
+    public async Task<CollectionInfo> GetKeywordFranchiseAsync(int keywordId, CancellationToken cancellationToken)
+    {
+        const int MaxKeywordPages = 20;
+        TmdbKeyword keyword = await GetAsync<TmdbKeyword>($"keyword/{keywordId.ToString(CultureInfo.InvariantCulture)}?language=en-US", cancellationToken).ConfigureAwait(false);
+        List<TmdbMovie> movies = [];
+        for (int page = 1; page <= MaxKeywordPages; page++)
+        {
+            DiscoverPage result = await GetAsync<DiscoverPage>(
+                $"discover/movie?include_adult=false&include_video=false&language=en-US&sort_by=primary_release_date.asc&{Parameter("with_keywords", keywordId)}&{Parameter("page", page)}",
+                cancellationToken).ConfigureAwait(false);
+            movies.AddRange(result.Results);
+            if (result.Page >= result.TotalPages)
+            {
+                break;
+            }
+        }
+
+        IReadOnlyList<CollectionPart> parts = CollectionInfo.InReleaseOrder(movies.Select(m =>
+        {
+            DateOnly? released = DateOnly.TryParseExact(m.ReleaseDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly day) ? day : null;
+            return new CollectionPart(m.Id, m.Title, released?.Year ?? 0, released, Image("w500", m.PosterPath), Image("w1280", m.BackdropPath));
+        }));
+        // Named after the keyword, pictured by its latest released part.
+        CollectionPart? cover = parts.LastOrDefault(p => p.Poster is not null && p.IsReleased(DateOnly.FromDateTime(DateTime.UtcNow)));
+        return new CollectionInfo
+        {
+            Id = -keywordId,
+            Name = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(keyword.Name),
+            Poster = cover?.Poster,
+            Backdrop = cover?.Backdrop,
+            Parts = parts,
+        };
+    }
+
+    private static string? Image(string size, string? path) => path is null ? null : ImageUrl + size + path;
+
     private static DiscoveryItem ToItem(TmdbMovie movie, IReadOnlyDictionary<int, string> genres) => new()
     {
         Kind = MediaType.Movie,
@@ -142,6 +187,20 @@ public sealed class TmdbClient(HttpClient httpClient, IOptionsMonitor<ModularrOp
     private sealed record TmdbGenre(int Id, string Name);
 
     private sealed record DiscoverPage(int Page, [property: JsonPropertyName("total_pages")] int TotalPages, List<TmdbMovie> Results);
+
+    private sealed record TmdbKeyword(int Id, string Name);
+
+    private sealed record CollectionPage(List<TmdbCollection> Results);
+
+    private sealed record TmdbCollection
+    {
+        public int Id { get; init; }
+        public required string Name { get; init; }
+        [JsonPropertyName("poster_path")]
+        public string? PosterPath { get; init; }
+        [JsonPropertyName("backdrop_path")]
+        public string? BackdropPath { get; init; }
+    }
 
     private sealed record TmdbMovie
     {

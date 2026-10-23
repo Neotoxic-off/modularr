@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Activities;
@@ -113,7 +114,7 @@ public sealed class LibraryImportServiceTests : IDisposable
         return new LibraryImportService(
             db,
             DiscoveryServiceTests.Create(client, _cache, db),
-            new LibraryService(db, series, movies, settings, new SearchRunner(null!), activities),
+            new LibraryService(db, series, movies, settings, new SearchRunner(null!, NullLogger<SearchRunner>.Instance), activities),
             new DiskScanService(db, activities, settings),
             activities,
             settings);

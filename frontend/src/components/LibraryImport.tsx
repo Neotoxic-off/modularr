@@ -17,7 +17,7 @@ const roots: readonly { value: LibraryRoot; label: string }[] = [
 
 const confidence: Record<MatchConfidence, { tone: Tone; label: string }> = {
   High: { tone: "ok", label: "Sure match" },
-  Medium: { tone: "live", label: "Likely match" },
+  Medium: { tone: "neutral", label: "Likely match" },
   Low: { tone: "warn", label: "Unsure match" },
   None: { tone: "neutral", label: "No match" },
 };
@@ -92,12 +92,12 @@ export function LibraryImport() {
 
   return (
     <>
-      <PageHeader title="Library import" description="Adds titles for folders already in your library, with their files. Nothing is searched, moved or renamed." />
+      <PageHeader title="Import" description="Adds titles for folders already in your library, without searching, moving or renaming anything." />
 
       <ol aria-label="Steps" className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2">
         {steps.map((label, i) => (
-          <li key={label} aria-current={i === step ? "step" : undefined} className="flex items-center gap-2.5 text-sm font-medium text-ink-3 aria-[current=step]:text-ink">
-            <span className={`grid size-7 place-items-center rounded-full text-[13px] font-semibold tabular-nums ${i < step ? "bg-ok text-canvas" : i === step ? "bg-white text-canvas" : "bg-fill-2"}`}>
+          <li key={label} aria-current={i === step ? "step" : undefined} className="flex items-center gap-2.5 text-body font-medium text-ink-3 aria-[current=step]:text-ink">
+            <span className={`grid size-7 place-items-center rounded-full text-meta font-semibold tabular-nums ${i < step ? "bg-ok text-canvas" : i === step ? "bg-white text-canvas" : "bg-fill-2"}`}>
               {i < step ? <Icon name="check" size={14} strokeWidth={3} /> : i + 1}
             </span>
             <span className={i === step ? "" : "max-sm:sr-only"}>{label}</span>
@@ -112,20 +112,20 @@ export function LibraryImport() {
         {step === 0 && (
           <section className="glass max-w-[720px] space-y-5 rounded-panel p-5">
             <div className="space-y-2">
-              <p className="text-sm font-medium">Which library?</p>
+              <p className="text-body font-medium">Which library?</p>
               <Segmented label="Library folder" value={root} onChange={setRoot} options={roots} />
             </div>
-            <p className="flex items-start gap-3 text-sm text-ink-2">
-              <Icon name="folder" size={18} className="mt-0.5 shrink-0 text-ink-3" />
+            <p className="flex items-start gap-3 text-meta text-ink-2">
+              <Icon name="folder" size={16} className="mt-0.5 shrink-0 text-ink-3" />
               <span className="min-w-0 break-all">{paths ? paths[root] : "…"}</span>
             </p>
-            <p className="text-[13px] text-ink-3">Every folder in it that no title owns yet gets matched to a title. Change the folder in <Link href="/settings/#folders" className="font-medium text-ink-2 underline underline-offset-2 hover:text-ink">Settings</Link>.</p>
+            <p className="text-meta text-ink-3">Every folder in it that no title owns yet gets matched to a title. Change the folder in <Link href="/settings/#library" className="font-medium text-ink-2 underline underline-offset-2 hover:text-ink">Settings</Link>.</p>
             <Button variant="primary" icon="search" onClick={review}>Find folders</Button>
           </section>
         )}
 
         {step === 1 && (!proposals ? (
-          !error && <div className="space-y-3">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-20 rounded-[20px]" />)}</div>
+          !error && <div className="space-y-3">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-20 rounded-card" />)}</div>
         ) : items.length === 0 ? (
           <Empty icon="folder" title="Nothing to import here">
             <p>Every folder in this library already belongs to a title.</p>
@@ -133,7 +133,7 @@ export function LibraryImport() {
           </Empty>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-3 px-1 text-sm">
+            <div className="flex flex-wrap items-center gap-3 px-1 text-meta">
               <label className="flex min-h-11 cursor-pointer items-center gap-2.5">
                 <input type="checkbox" className="size-4 cursor-pointer accent-white"
                   checked={chosen.length > 0 && chosen.length === importable.length}
@@ -156,7 +156,7 @@ export function LibraryImport() {
 
             <div className="glass sticky bottom-[calc(92px+env(safe-area-inset-bottom))] z-20 flex items-center gap-3 rounded-tile px-4 py-3 md:bottom-4">
               <Button variant="ghost" onClick={() => setStep(0)}>Back</Button>
-              <span className="mr-auto text-[13px] text-ink-3 max-sm:hidden">Added with their files, no search.</span>
+              <span className="mr-auto text-meta text-ink-3 max-sm:hidden">Added with their files, no search.</span>
               <Button variant="primary" icon="download" onClick={importChosen} loading={importing} disabled={chosen.length === 0} className="max-sm:flex-1">
                 Import {chosen.length} of {items.length}
               </Button>
@@ -195,25 +195,25 @@ function Row({ proposal, match, selected, onToggle, onChange }: {
   onChange: () => void;
 }) {
   const changed = match !== proposal.match;
-  const badge = changed ? { tone: "live" as Tone, label: "Chosen by you" } : confidence[proposal.confidence];
+  const badge = changed ? { tone: "neutral" as Tone, label: "Chosen by you" } : confidence[proposal.confidence];
   const name = folderName(proposal.folder);
   return (
-    <li className={`well flex items-center gap-3 rounded-[20px] py-2 pr-2 pl-4 transition sm:gap-4 ${selected ? "bg-fill-2" : ""}`}>
+    <li className={`well flex items-center gap-3 rounded-card py-2 pr-2 pl-4 transition sm:gap-4 ${selected ? "bg-fill-2" : ""}`}>
       <input type="checkbox" checked={selected} onChange={onToggle} disabled={!match} aria-label={`Import ${name}`}
         className="size-4 shrink-0 cursor-pointer accent-white disabled:cursor-not-allowed" />
-      <PosterArt src={match?.poster ?? null} title={match?.title ?? name} className="w-11 shrink-0 rounded-md" />
+      <PosterArt src={match?.poster ?? null} title={match?.title ?? name} className="w-11 shrink-0" />
       <div className="grid min-w-0 flex-1 gap-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] md:items-center md:gap-6">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 truncate text-sm font-medium" title={proposal.folder}><Icon name="folder" size={14} className="shrink-0 text-ink-3" />{name}</p>
+          <p className="flex items-center gap-1.5 truncate text-body font-medium" title={proposal.folder}><Icon name="folder" size={14} className="shrink-0 text-ink-3" />{name}</p>
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
           {match ? (
-            <span className="min-w-0 truncate text-sm">
+            <span className="min-w-0 truncate text-meta">
               <Icon name="chevronRight" size={14} className="mr-1 inline text-ink-3 max-md:hidden" />
               {match.title}{match.year && <span className="text-ink-3"> ({match.year})</span>}
             </span>
           ) : (
-            <span className="text-sm text-ink-3">No title found for “{proposal.parsed.lookupTerm}”</span>
+            <span className="text-meta text-ink-3">No title found for “{proposal.parsed.lookupTerm}”</span>
           )}
           <Badge tone={badge.tone}>{badge.label}</Badge>
         </div>
@@ -252,15 +252,12 @@ function MatchPicker({ proposal, current, root, onPick, onClose }: {
   return (
     <Modal onClose={onClose} title="Change match" description={<span title={proposal.folder}>For the folder “{folderName(proposal.folder)}”</span>}>
       <div className="space-y-3 px-5 pb-5">
-        <div className="relative">
-          <Icon name="search" size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-3" />
-          <Input value={term} onChange={(e) => setTerm(e.target.value)} aria-label="Search a title" placeholder="Title, year, or tmdb:603 / tvdb:81189" className="pl-9" />
-        </div>
+        <Input icon="search" value={term} onChange={(e) => setTerm(e.target.value)} aria-label="Search a title" placeholder="Title, year, or tmdb:603 / tvdb:81189" />
         {error && <Alert>{error}</Alert>}
         {query.length < 2 ? null : !results && !error ? (
           <div className="space-y-2">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-16" />)}</div>
         ) : results && results.length === 0 ? (
-          <p className="rounded-card border border-dashed border-hair px-5 py-8 text-center text-sm text-ink-3">No title matches “{query}”. Try the original title or an id.</p>
+          <p className="rounded-card border border-dashed border-hair px-5 py-8 text-center text-meta text-ink-3">No title matches “{query}”. Try the original title or an id.</p>
         ) : results && (
           <ul className="well max-h-[50vh] divide-y divide-hair-2 overflow-y-auto rounded-card">
             {results.map((item) => {
@@ -269,12 +266,12 @@ function MatchPicker({ proposal, current, root, onPick, onClose }: {
                 <li key={`${item.kind}${item.tmdbId}${item.tvdbId}`}>
                   <button onClick={() => onPick(item)} disabled={item.inLibrary} aria-current={isCurrent || undefined}
                     className="flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left transition hover:bg-fill-2 disabled:cursor-not-allowed disabled:opacity-50">
-                    <PosterArt src={item.poster} title={item.title} className="w-9 shrink-0 rounded-md" />
+                    <PosterArt src={item.poster} title={item.title} className="w-9 shrink-0" />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{item.title}</span>
-                      <span className="block text-xs text-ink-3">{item.year ?? "Year unknown"}{item.inLibrary && ", already in your library"}</span>
+                      <span className="block truncate text-body font-medium">{item.title}</span>
+                      <span className="block text-meta text-ink-3">{item.year ?? "Year unknown"}{item.inLibrary && ", already in your library"}</span>
                     </span>
-                    {isCurrent && <Badge tone="live"><Icon name="check" size={11} />Current</Badge>}
+                    {isCurrent && <Badge><Icon name="check" size={14} />Current</Badge>}
                   </button>
                 </li>
               );
@@ -290,7 +287,7 @@ function Outcomes({ outcomes }: { outcomes: ImportOutcome[] }) {
   const failed = outcomes.filter((o) => o.error);
   const added = outcomes.filter((o) => !o.error);
   return (
-    <div role="status" className="glass max-w-[720px] animate-fade space-y-2 rounded-panel p-5 text-sm">
+    <div role="status" className="glass max-w-[720px] animate-fade space-y-2 rounded-panel p-5 text-meta">
       <div className="flex items-center gap-2">
         <Icon name={failed.length ? "alert" : "check"} size={16} className={failed.length ? "text-warn" : "text-ok"} />
         <p className="flex-1">

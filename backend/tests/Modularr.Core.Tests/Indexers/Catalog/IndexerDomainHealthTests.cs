@@ -75,6 +75,23 @@ public sealed class IndexerDomainHealthTests
     }
 
     [Fact]
+    public void CoolsDownOnceEveryMirrorFailedAndASuccessEndsIt()
+    {
+        IndexerDomainHealth health = Health();
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+
+        Fail(health, IndexerDomainHealth.FailoverThreshold); // primary down, still a mirror to try
+        Assert.False(health.IsCoolingDown(Definition, now));
+
+        Fail(health, IndexerDomainHealth.FailoverThreshold); // the mirror too: every link failed
+        Assert.True(health.IsCoolingDown(Definition, now));
+        Assert.False(health.IsCoolingDown(Definition, now + IndexerDomainHealth.Cooldown + TimeSpan.FromMinutes(1)));
+
+        health.ReportSuccess(Definition, health.ActiveBaseUrl(Definition));
+        Assert.False(health.IsCoolingDown(Definition, now));
+    }
+
+    [Fact]
     public void IgnoresFailuresOfADomainNoLongerActive()
     {
         IndexerDomainHealth health = Health();

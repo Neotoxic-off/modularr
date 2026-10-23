@@ -239,7 +239,8 @@ public static partial class EpisodeParser
 
     private static bool ValidateBeforeParsing(string title)
     {
-        if ((title.Contains("password", StringComparison.OrdinalIgnoreCase) && title.Contains("yenc", StringComparison.OrdinalIgnoreCase))
+        if (title.Length > Movies.MovieTitleParser.MaxTitleLength
+            || (title.Contains("password", StringComparison.OrdinalIgnoreCase) && title.Contains("yenc", StringComparison.OrdinalIgnoreCase))
             || !title.Any(char.IsLetterOrDigit))
         {
             return false;

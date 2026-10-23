@@ -57,7 +57,7 @@ public sealed class DashboardServiceTests : IDisposable
             Media = new MediaOptions { Movies = new MediaDefaults { Subtitles = [Language.French] } },
         }).GetAsync(Today, TestContext.Current.CancellationToken);
 
-        Assert.Equal(new DashboardCounts(Movies: 3, Series: 1, Anime: 1, Episodes: 3, EpisodesWithFile: 1, Missing: 2), summary.Counts);
+        Assert.Equal(new DashboardCounts(Movies: 3, Series: 1, Anime: 1, Episodes: 3, EpisodesWithFile: 1, MissingMovies: 1, MissingEpisodes: 1), summary.Counts);
         Assert.Equal(175, summary.Storage.LibraryBytes);
         Assert.True(summary.Storage.TotalBytes > 0 && summary.Storage.FreeBytes > 0);
         Assert.Equal(summary.Storage.TotalBytes - summary.Storage.FreeBytes, summary.Storage.UsedBytes);
@@ -74,7 +74,7 @@ public sealed class DashboardServiceTests : IDisposable
     {
         DashboardSummary summary = await Service(new ModularrOptions()).GetAsync(Today, TestContext.Current.CancellationToken);
 
-        Assert.Equal(new DashboardCounts(0, 0, 0, 0, 0, 0), summary.Counts);
+        Assert.Equal(new DashboardCounts(0, 0, 0, 0, 0, 0, 0), summary.Counts);
         Assert.Equal((0, 0), (summary.Storage.LibraryBytes, summary.Subtitles.Total));
         Assert.Empty(summary.Airing);
     }

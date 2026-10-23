@@ -4,7 +4,9 @@ using Microsoft.Extensions.Options;
 using Modularr.Core.Configuration;
 using Modularr.Core.Decisions;
 using Modularr.Core.Languages;
+using Modularr.Core.Downloads.Torrents;
 using Modularr.Core.Library;
+using Modularr.Core.Notifications;
 using Modularr.Core.PostProcessing;
 using Modularr.Core.Subtitles;
 
@@ -102,6 +104,18 @@ public sealed class SettingsFileTests : IDisposable
     }
 
     [Fact]
+    public void TheOldVisularrSectionIsDroppedBeforeBinding()
+    {
+        File.WriteAllText(ConfigFile, """{ "Torrents": { "ListenPort": 51413 }, "visularr": { "Url": "http://tv.local" } }""");
+
+        using ServiceProvider provider = new ServiceCollection().AddModularrCore(_configDirectory).BuildServiceProvider();
+
+        Assert.Equal(51413, provider.GetRequiredService<IOptions<ModularrOptions>>().Value.Torrents.ListenPort);
+        Assert.Equal(["Torrents"], JsonNode.Parse(File.ReadAllText(ConfigFile))!.AsObject().Select(p => p.Key));
+        Assert.False(SettingsFile.RemoveVisularrSection(_configDirectory)); // once only
+    }
+
+    [Fact]
     public void TheLanguagePolicyIsMigratedToVersionsBeforeBinding()
     {
         File.WriteAllText(ConfigFile, """
@@ -139,7 +153,8 @@ public sealed class SettingsFileTests : IDisposable
         SubtitleOptions saved = provider.GetRequiredService<IOptionsMonitor<ModularrOptions>>().CurrentValue.Subtitles;
         Assert.Equal(subtitles, saved);
         Assert.DoesNotContain("Enabled", File.ReadAllText(ConfigFile), StringComparison.Ordinal); // derived: the binder would refuse it at the next start
-        Assert.Equal((null, "me", null), (saved.Redacted().OpenSubtitles.ApiKey, saved.Redacted().OpenSubtitles.Username, saved.Redacted().OpenSubtitles.Password));
+        // Members see no part of the account, the user name included.
+        Assert.Equal((null, null, null), (saved.Redacted().OpenSubtitles.ApiKey, saved.Redacted().OpenSubtitles.Username, saved.Redacted().OpenSubtitles.Password));
         Assert.Null(provider.GetRequiredService<IOptionsMonitor<ModularrOptions>>().CurrentValue.Redacted().Subtitles.OpenSubtitles.ApiKey);
     }
 
@@ -153,5 +168,50 @@ public sealed class SettingsFileTests : IDisposable
 
         Assert.StartsWith("anime:", error.Message, StringComparison.Ordinal);
         Assert.False(File.Exists(ConfigFile));
+    }
+
+    [Fact]
+    public async Task NotificationsRoundTripAndMembersSeeNoSecret()
+    {
+        using ServiceProvider provider = new ServiceCollection().AddModularrCore(_configDirectory).BuildServiceProvider();
+        IOptionsMonitor<ModularrOptions> options = provider.GetRequiredService<IOptionsMonitor<ModularrOptions>>();
+        SettingsFile settings = provider.GetRequiredService<SettingsFile>();
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        NotificationConnection plex = new() { Name = "Plex", Type = NotificationType.Plex, Url = "http://192.168.1.10:32400", Token = "secret", OnGrab = false };
+
+        await settings.SaveNotificationsAsync([plex, new NotificationConnection { Name = "Hook", Url = "https://example.com/hook" }], ct);
+
+        Assert.Equal(plex, options.CurrentValue.Notifications[0]);
+        Assert.Equal(2, options.CurrentValue.Notifications.Count);
+        Assert.All(options.CurrentValue.Redacted().Notifications, n => Assert.Equal((null, ""), (n.Token, n.Url)));
+
+        await settings.SaveNotificationsAsync([], ct);
+        Assert.Empty(options.CurrentValue.Notifications);
+        await Assert.ThrowsAsync<ArgumentException>(() => settings.SaveNotificationsAsync([plex with { Url = "file:///etc/passwd" }], ct));
+    }
+
+    [Fact]
+    public async Task TorrentSettingsRoundTripKeepingTheStateDirectory()
+    {
+        File.WriteAllText(ConfigFile, """{ "Torrents": { "StateDirectory": "state" } }""");
+        using ServiceProvider provider = new ServiceCollection().AddModularrCore(_configDirectory).BuildServiceProvider();
+        IOptionsMonitor<ModularrOptions> options = provider.GetRequiredService<IOptionsMonitor<ModularrOptions>>();
+        SettingsFile settings = provider.GetRequiredService<SettingsFile>();
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        TorrentEngineOptions torrents = options.CurrentValue.Torrents with
+        {
+            StateDirectory = "elsewhere",
+            MaxDownloadRate = 1_000_000,
+            SeedRatioLimit = 2,
+            SeedTimeLimit = TimeSpan.FromDays(3),
+            DhtEnabled = false,
+        };
+
+        await settings.SaveTorrentsAsync(torrents, ct);
+
+        Assert.Equal(torrents with { StateDirectory = Path.Combine(_configDirectory, "state") }, options.CurrentValue.Torrents);
+        Assert.Equal("state", (string)JsonNode.Parse(File.ReadAllText(ConfigFile))!["Torrents"]!["StateDirectory"]!);
+        await Assert.ThrowsAsync<ArgumentException>(() => settings.SaveTorrentsAsync(torrents with { ListenPort = 0 }, ct));
+        await Assert.ThrowsAsync<ArgumentException>(() => settings.SaveTorrentsAsync(torrents with { SeedRatioLimit = -1 }, ct));
     }
 }

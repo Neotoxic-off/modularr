@@ -12,6 +12,8 @@ using Modularr.Core.Search;
 
 namespace Modularr.Core.Library;
 
+public sealed record EpisodeKey(int Season, int Episode);
+
 // Sonarr's add-series monitor choices that matter here. Specials are monitored only when Custom names season 0.
 public enum SeriesMonitor
 {
@@ -71,8 +73,9 @@ public sealed class LibraryService(
     // Windows' set, so folder names are the same on every OS.
     private static readonly char[] InvalidNameChars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
 
+    // Split: one joined query would repeat every series row (overview, genres, seasons) once per episode.
     public async Task<IReadOnlyList<Series>> ListSeriesAsync(CancellationToken cancellationToken) =>
-        await db.Series.AsNoTracking().Include(s => s.Episodes).OrderBy(s => s.SortTitle).ToListAsync(cancellationToken).ConfigureAwait(false);
+        await db.Series.AsNoTracking().Include(s => s.Episodes).AsSplitQuery().OrderBy(s => s.SortTitle).ToListAsync(cancellationToken).ConfigureAwait(false);
 
     // With whether each movie has a file, in one query.
     public async Task<IReadOnlyList<(Movie Movie, bool HasFile)>> ListMoviesAsync(CancellationToken cancellationToken) =>
@@ -81,7 +84,7 @@ public sealed class LibraryService(
             .ToListAsync(cancellationToken).ConfigureAwait(false)).Select(m => (m.Movie, m.HasFile))];
 
     public async Task<Series> GetSeriesAsync(int id, CancellationToken cancellationToken) =>
-        await db.Series.AsNoTracking().Include(s => s.Episodes).FirstOrDefaultAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false)
+        await db.Series.AsNoTracking().Include(s => s.Episodes).AsSplitQuery().FirstOrDefaultAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"Series {id} is not in the library.");
 
     public async Task<(Movie Movie, MediaFile? File)> GetMovieAsync(int id, CancellationToken cancellationToken)
@@ -92,12 +95,15 @@ public sealed class LibraryService(
     }
 
     // Adding an existing series returns it unchanged. No profile: the category default (series or anime) from MediaOptions.
-    // A monitored series is searched in the background unless search is false. Seasons are read for SeriesMonitor.Custom only.
+    // A monitored series is searched in the background unless search is false. Seasons and episodes are read for
+    // SeriesMonitor.Custom only: picked episodes, when given, are the only monitored ones in their seasons.
     public async Task<Series> AddSeriesAsync(
-        int tvdbId, int? qualityProfileId, ReleaseVersion? version, SeriesMonitor monitor, IReadOnlyCollection<int>? seasons, bool search, CancellationToken cancellationToken)
+        int tvdbId, int? qualityProfileId, ReleaseVersion? version, SeriesMonitor monitor, IReadOnlyCollection<int>? seasons, bool search, CancellationToken cancellationToken,
+        IReadOnlyCollection<EpisodeKey>? episodes = null, IReadOnlyList<Language>? subtitles = null)
     {
+        MediaOptions.EnsureSubtitleLanguages(subtitles);
         Series series = await db.Series.Include(s => s.Episodes).FirstOrDefaultAsync(s => s.TvdbId == tvdbId, cancellationToken).ConfigureAwait(false)
-            ?? await CreateSeriesAsync(tvdbId, qualityProfileId, version, monitor, seasons, cancellationToken).ConfigureAwait(false);
+            ?? await CreateSeriesAsync(tvdbId, qualityProfileId, version, monitor, seasons, episodes, subtitles, cancellationToken).ConfigureAwait(false);
         if (search && series.Monitored)
         {
             searches.Enqueue(new SearchJob(series.Id, MovieId: null));
@@ -106,10 +112,13 @@ public sealed class LibraryService(
         return series;
     }
 
-    public async Task<Movie> AddMovieAsync(int tmdbId, int? qualityProfileId, ReleaseVersion? version, bool search, CancellationToken cancellationToken)
+    // Subtitles, when given, override the category's wanted subtitle languages from the start.
+    public async Task<Movie> AddMovieAsync(
+        int tmdbId, int? qualityProfileId, ReleaseVersion? version, bool search, CancellationToken cancellationToken, IReadOnlyList<Language>? subtitles = null)
     {
+        MediaOptions.EnsureSubtitleLanguages(subtitles);
         Movie movie = await db.Movies.FirstOrDefaultAsync(m => m.TmdbId == tmdbId, cancellationToken).ConfigureAwait(false)
-            ?? await CreateMovieAsync(tmdbId, qualityProfileId, version, cancellationToken).ConfigureAwait(false);
+            ?? await CreateMovieAsync(tmdbId, qualityProfileId, version, subtitles, cancellationToken).ConfigureAwait(false);
         if (search && movie.Monitored)
         {
             searches.Enqueue(new SearchJob(SeriesId: null, movie.Id));
@@ -119,14 +128,17 @@ public sealed class LibraryService(
     }
 
     private async Task<Series> CreateSeriesAsync(
-        int tvdbId, int? qualityProfileId, ReleaseVersion? version, SeriesMonitor monitor, IReadOnlyCollection<int>? seasons, CancellationToken cancellationToken)
+        int tvdbId, int? qualityProfileId, ReleaseVersion? version, SeriesMonitor monitor, IReadOnlyCollection<int>? seasons,
+        IReadOnlyCollection<EpisodeKey>? episodes, IReadOnlyList<Language>? subtitles, CancellationToken cancellationToken)
     {
         SeriesInfo info = await seriesMetadata.GetSeriesAsync(tvdbId, cancellationToken: cancellationToken).ConfigureAwait(false);
         MediaType category = TypeOf(info) == SeriesType.Anime ? MediaType.Anime : MediaType.Series;
         int profileId = qualityProfileId ?? options.CurrentValue.Media.For(category).ProfileId;
         await EnsureProfileAsync(profileId, cancellationToken).ConfigureAwait(false);
-        Series series = ToSeries(info, profileId, options.CurrentValue.Paths, DateTime.UtcNow, monitor, seasons);
+        Series series = ToSeries(info, profileId, options.CurrentValue.Paths, DateTime.UtcNow, monitor, seasons, episodes);
+        series.Path = await OwnFolderAsync(series.Path, $"tvdbid-{tvdbId}", cancellationToken).ConfigureAwait(false);
         series.Version = version;
+        series.Subtitles = subtitles;
         db.Series.Add(series);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await activities.RecordAsync(
@@ -135,13 +147,15 @@ public sealed class LibraryService(
         return series;
     }
 
-    private async Task<Movie> CreateMovieAsync(int tmdbId, int? qualityProfileId, ReleaseVersion? version, CancellationToken cancellationToken)
+    private async Task<Movie> CreateMovieAsync(int tmdbId, int? qualityProfileId, ReleaseVersion? version, IReadOnlyList<Language>? subtitles, CancellationToken cancellationToken)
     {
         int profileId = qualityProfileId ?? options.CurrentValue.Media.Movies.ProfileId;
         await EnsureProfileAsync(profileId, cancellationToken).ConfigureAwait(false);
         MovieInfo info = await movieMetadata.GetMovieAsync(tmdbId, cancellationToken).ConfigureAwait(false);
         Movie movie = ToMovie(info, profileId, options.CurrentValue.Paths);
+        movie.Path = await OwnFolderAsync(movie.Path, $"tmdbid-{tmdbId}", cancellationToken).ConfigureAwait(false);
         movie.Version = version;
+        movie.Subtitles = subtitles;
         db.Movies.Add(movie);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await activities.RecordAsync(
@@ -180,6 +194,115 @@ public sealed class LibraryService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return filled;
+    }
+
+    // Fetches every title's metadata again, one at a time with a pause between them so the sources are not hammered. A title that
+    // fails (source down, removed meanwhile) is left for the next refresh. Returns the number of titles refreshed.
+    public async Task<int> RefreshAllAsync(TimeSpan pause, CancellationToken cancellationToken)
+    {
+        List<int> seriesIds = await db.Series.Select(s => s.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
+        List<int> movieIds = await db.Movies.Select(m => m.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
+        int refreshed = 0;
+        async Task RefreshOneAsync(Func<Task> refresh)
+        {
+            try
+            {
+                await refresh().ConfigureAwait(false);
+                refreshed++;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException && ex is not OutOfMemoryException)
+            {
+            }
+            finally
+            {
+                db.ChangeTracker.Clear();
+            }
+
+            await Task.Delay(pause, cancellationToken).ConfigureAwait(false);
+        }
+
+        foreach (int id in seriesIds)
+        {
+            await RefreshOneAsync(() => RefreshSeriesAsync(id, cancellationToken)).ConfigureAwait(false);
+        }
+
+        foreach (int id in movieIds)
+        {
+            await RefreshOneAsync(() => RefreshMovieAsync(id, cancellationToken)).ConfigureAwait(false);
+        }
+
+        return refreshed;
+    }
+
+    private async Task RefreshSeriesAsync(int id, CancellationToken cancellationToken)
+    {
+        Series series = await db.Series.Include(s => s.Episodes).FirstAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false);
+        SeriesInfo info = await seriesMetadata.GetSeriesAsync(series.TvdbId, cancellationToken: cancellationToken).ConfigureAwait(false);
+        ApplyMetadata(series, info);
+        int added = MergeEpisodes(series, info);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        if (added > 0)
+        {
+            await activities.RecordAsync(
+                new Activity { Kind = ActivityKind.Added, Level = ActivityLevel.Info, Title = series.Title, Message = $"{added} new episode(s)", SeriesId = series.Id },
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task RefreshMovieAsync(int id, CancellationToken cancellationToken)
+    {
+        Movie movie = await db.Movies.FirstAsync(m => m.Id == id, cancellationToken).ConfigureAwait(false);
+        ApplyMetadata(movie, await movieMetadata.GetMovieAsync(movie.TmdbId, cancellationToken).ConfigureAwait(false));
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    // Brings a series' seasons and episodes in line with its source and returns the number of episodes added. A new season is
+    // monitored with the series (specials never), a new episode when its season and the series are. An episode gone upstream is
+    // removed unless it has a file; none is when the source lists no episode at all (a partial answer, not an emptied show).
+    public static int MergeEpisodes(Series series, SeriesInfo info)
+    {
+        ArgumentNullException.ThrowIfNull(series);
+        ArgumentNullException.ThrowIfNull(info);
+        foreach (SeasonInfo season in info.Seasons.Where(s => series.Seasons.All(known => known.Number != s.SeasonNumber)))
+        {
+            series.Seasons.Add(new Season { Number = season.SeasonNumber, Monitored = series.Monitored && season.SeasonNumber > 0 });
+        }
+
+        HashSet<int> monitoredSeasons = [.. series.Seasons.Where(s => s.Monitored).Select(s => s.Number)];
+        Dictionary<(int, int), EpisodeInfo> upstream = info.Episodes.DistinctBy(e => (e.SeasonNumber, e.EpisodeNumber)).ToDictionary(e => (e.SeasonNumber, e.EpisodeNumber));
+        if (upstream.Count > 0)
+        {
+            foreach (Episode gone in series.Episodes.Where(e => e.MediaFileId is null && !upstream.ContainsKey((e.SeasonNumber, e.EpisodeNumber))).ToList())
+            {
+                series.Episodes.Remove(gone);
+            }
+        }
+
+        Dictionary<(int, int), Episode> known = series.Episodes.DistinctBy(e => (e.SeasonNumber, e.EpisodeNumber)).ToDictionary(e => (e.SeasonNumber, e.EpisodeNumber));
+        int added = 0;
+        foreach (EpisodeInfo episode in upstream.Values)
+        {
+            if (known.TryGetValue((episode.SeasonNumber, episode.EpisodeNumber), out Episode? existing))
+            {
+                existing.AirDate = episode.AirDate;
+                existing.Title = episode.Title;
+                existing.AbsoluteEpisodeNumber = episode.AbsoluteEpisodeNumber;
+                continue;
+            }
+
+            series.Episodes.Add(new Episode
+            {
+                SeasonNumber = episode.SeasonNumber,
+                EpisodeNumber = episode.EpisodeNumber,
+                AbsoluteEpisodeNumber = episode.AbsoluteEpisodeNumber,
+                AirDate = episode.AirDate,
+                Title = episode.Title,
+                Monitored = series.Monitored && monitoredSeasons.Contains(episode.SeasonNumber),
+            });
+            added++;
+        }
+
+        return added;
     }
 
     private static async Task<T?> FetchAsync<T>(Func<Task<T>> fetch, CancellationToken cancellationToken)
@@ -272,7 +395,7 @@ public sealed class LibraryService(
     {
         Series series = await db.Series.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id, cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"Series {id} is not in the library.");
-        DeleteFolder(deleteFiles, series.Path);
+        await DeleteFolderAsync(deleteFiles, series.Path, seriesId: id, movieId: null, cancellationToken).ConfigureAwait(false);
         await db.Series.Where(s => s.Id == id).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
         await activities.RecordAsync(Removed(series.Title, deleteFiles, seriesId: id, movieId: null), cancellationToken).ConfigureAwait(false);
     }
@@ -281,7 +404,7 @@ public sealed class LibraryService(
     {
         Movie movie = await db.Movies.AsNoTracking().FirstOrDefaultAsync(m => m.Id == id, cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"Movie {id} is not in the library.");
-        DeleteFolder(deleteFiles, movie.Path);
+        await DeleteFolderAsync(deleteFiles, movie.Path, seriesId: null, movieId: id, cancellationToken).ConfigureAwait(false);
         await db.Movies.Where(m => m.Id == id).ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
         await activities.RecordAsync(Removed(movie.Title, deleteFiles, seriesId: null, movieId: id), cancellationToken).ConfigureAwait(false);
     }
@@ -296,15 +419,15 @@ public sealed class LibraryService(
         MovieId = movieId,
     };
 
-    // Never a drive root or a library root (a blank title would make the root the item's folder).
+    // Only a folder strictly inside a library root that holds no configured root (library or downloads), whatever the roots were
+    // when the title was added: never a root, an old root, a parent of a root or anything outside the library.
     public static bool IsDeletableFolder(string path, PathOptions paths)
     {
         ArgumentNullException.ThrowIfNull(paths);
-        string folder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
-        string[] roots = [paths.Series, paths.Movies, paths.Anime, paths.Downloads];
-        return Path.GetDirectoryName(folder) is not null
-            && !roots.Any(root =>
-                string.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)), folder, StringComparison.OrdinalIgnoreCase));
+        string folder = LibraryPaths.Normalize(path);
+        string[] all = [paths.Series, paths.Movies, paths.Anime, paths.Downloads];
+        return LibraryPaths.Roots(paths).Any(root => LibraryPaths.IsInside(folder, root))
+            && !all.Any(root => string.Equals(LibraryPaths.Normalize(root), folder, LibraryPaths.Comparison) || LibraryPaths.IsInside(root, folder));
     }
 
     public static SeriesType TypeOf(SeriesInfo info)
@@ -318,8 +441,16 @@ public sealed class LibraryService(
     // The monitored seasons: every regular one (All, Future), the last or first one, the given ones (Custom) or none. Future then
     // monitors only the episodes airing on or after the add day (or not dated yet).
     public static Series ToSeries(
-        SeriesInfo info, int qualityProfileId, PathOptions paths, DateTime added, SeriesMonitor monitor = SeriesMonitor.All, IReadOnlyCollection<int>? seasons = null)
+        SeriesInfo info, int qualityProfileId, PathOptions paths, DateTime added, SeriesMonitor monitor = SeriesMonitor.All, IReadOnlyCollection<int>? seasons = null,
+        IReadOnlyCollection<EpisodeKey>? episodes = null)
     {
+        HashSet<EpisodeKey>? picked = monitor == SeriesMonitor.Custom && episodes is not null ? [.. episodes] : null;
+        if (picked is not null)
+        {
+            // A season holding a picked episode is monitored, like ticking one episode on the title page.
+            seasons = [.. (seasons ?? []).Concat(picked.Select(e => e.Season)).Distinct()];
+        }
+
         SeriesType type = TypeOf(info);
         DateOnly today = DateOnly.FromDateTime(added);
         int year = info.Year ?? 0;
@@ -363,8 +494,10 @@ public sealed class LibraryService(
                 AbsoluteEpisodeNumber = episode.AbsoluteEpisodeNumber,
                 AirDate = episode.AirDate,
                 Title = episode.Title,
-                Monitored = monitoredSeasons.Contains(episode.SeasonNumber)
-                    && (monitor != SeriesMonitor.Future || episode.AirDate is not DateOnly aired || aired >= today),
+                Monitored = picked is not null
+                    ? picked.Contains(new EpisodeKey(episode.SeasonNumber, episode.EpisodeNumber))
+                    : monitoredSeasons.Contains(episode.SeasonNumber)
+                        && (monitor != SeriesMonitor.Future || episode.AirDate is not DateOnly aired || aired >= today),
             });
         }
 
@@ -403,6 +536,8 @@ public sealed class LibraryService(
         movie.InCinemas = DayOf(info.InCinemas);
         movie.DigitalRelease = DayOf(info.DigitalRelease);
         movie.PhysicalRelease = DayOf(info.PhysicalRelease);
+        movie.CollectionTmdbId = info.CollectionTmdbId;
+        movie.CollectionName = info.CollectionTitle;
     }
 
     private static DateOnly? DayOf(DateTime? time) => time is DateTime t ? DateOnly.FromDateTime(t) : null;
@@ -425,8 +560,9 @@ public sealed class LibraryService(
         return string.Concat(name.Split(InvalidNameChars)).Trim().TrimEnd('.');
     }
 
-    // Files go before the rows, so a failed delete leaves the item in the library to retry.
-    private void DeleteFolder(bool deleteFiles, string path)
+    // Files go before the rows, so a failed delete leaves the item in the library to retry. A folder another title also uses is
+    // never deleted: its files are that title's too.
+    private async Task DeleteFolderAsync(bool deleteFiles, string path, int? seriesId, int? movieId, CancellationToken cancellationToken)
     {
         if (!deleteFiles || !Directory.Exists(path))
         {
@@ -435,10 +571,37 @@ public sealed class LibraryService(
 
         if (!IsDeletableFolder(path, options.CurrentValue.Paths))
         {
-            throw new ArgumentException($"Refusing to delete '{path}': it is a root folder.", nameof(path));
+            throw new ArgumentException($"Refusing to delete '{path}': it is not a title folder inside a library root.", nameof(path));
+        }
+
+        List<string> others =
+        [
+            .. await db.Series.Where(s => s.Id != seriesId).Select(s => s.Path).ToListAsync(cancellationToken).ConfigureAwait(false),
+            .. await db.Movies.Where(m => m.Id != movieId).Select(m => m.Path).ToListAsync(cancellationToken).ConfigureAwait(false),
+        ];
+        if (others.Exists(other => LibraryPaths.Overlaps(other, path)))
+        {
+            throw new ArgumentException($"Refusing to delete '{path}': another title uses this folder. Remove it without its files.", nameof(path));
         }
 
         Directory.Delete(path, recursive: true);
+    }
+
+    // "Title (Year) [tvdbid-N]": Jellyfin (and Plex, Emby) match the title by the id in the folder name instead of guessing from
+    // the title, and the id keeps two titles from ever sharing a folder (a delete with files would take both).
+    private async Task<string> OwnFolderAsync(string path, string tag, CancellationToken cancellationToken)
+    {
+        PathOptions paths = options.CurrentValue.Paths;
+        bool isRoot = LibraryPaths.Roots(paths).Any(root => string.Equals(root, LibraryPaths.Normalize(path), LibraryPaths.Comparison));
+        string candidate = isRoot ? Path.Combine(path, $"[{tag}]") : Path.Combine(Path.GetDirectoryName(LibraryPaths.Normalize(path))!, $"{Path.GetFileName(LibraryPaths.Normalize(path))} [{tag}]");
+        List<string> owned =
+        [
+            .. await db.Series.Select(s => s.Path).ToListAsync(cancellationToken).ConfigureAwait(false),
+            .. await db.Movies.Select(m => m.Path).ToListAsync(cancellationToken).ConfigureAwait(false),
+        ];
+        return owned.Exists(o => LibraryPaths.Overlaps(o, candidate))
+            ? throw new ArgumentException($"'{candidate}' is already used by another title in the library.", nameof(path))
+            : candidate;
     }
 
     private async Task<int> ProfileIdAsync(ItemUpdate update, int current, CancellationToken cancellationToken)

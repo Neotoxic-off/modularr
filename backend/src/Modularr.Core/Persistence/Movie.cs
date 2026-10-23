@@ -37,4 +37,8 @@ public sealed class Movie
     public DateOnly? InCinemas { get; set; }
     public DateOnly? DigitalRelease { get; set; }
     public DateOnly? PhysicalRelease { get; set; }
+
+    // The TMDB collection (saga) the movie belongs to, null when none or not fetched yet.
+    public int? CollectionTmdbId { get; set; }
+    public string? CollectionName { get; set; }
 }

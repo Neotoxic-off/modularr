@@ -38,9 +38,6 @@ namespace Modularr.Core.Persistence.Migrations
                     b.Property<int?>("MovieId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("Read")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int?>("SeriesId")
                         .HasColumnType("INTEGER");
 
@@ -189,6 +186,44 @@ namespace Modularr.Core.Persistence.Migrations
                         {
                             t.HasCheckConstraint("CK_BlocklistItem_SeriesOrMovie", "(SeriesId IS NULL) <> (MovieId IS NULL)");
                         });
+                });
+
+            modelBuilder.Entity("Modularr.Core.Persistence.CollectionFollow", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Added")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Backdrop")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Monitored")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Poster")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("QualityProfileId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TmdbId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QualityProfileId");
+
+                    b.HasIndex("TmdbId")
+                        .IsUnique();
+
+                    b.ToTable("Collections");
                 });
 
             modelBuilder.Entity("Modularr.Core.Persistence.Episode", b =>
@@ -353,6 +388,12 @@ namespace Modularr.Core.Persistence.Migrations
                     b.Property<string>("Certification")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CollectionName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("CollectionTmdbId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateOnly?>("DigitalRelease")
                         .HasColumnType("TEXT");
 
@@ -411,6 +452,8 @@ namespace Modularr.Core.Persistence.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CollectionTmdbId");
 
                     b.HasIndex("QualityProfileId");
 
@@ -497,6 +540,27 @@ namespace Modularr.Core.Persistence.Migrations
                     b.ToTable("Series");
                 });
 
+            modelBuilder.Entity("Modularr.Core.Persistence.Session", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Created")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastSeen")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Sessions");
+                });
+
             modelBuilder.Entity("Modularr.Core.Persistence.TrackedDownload", b =>
                 {
                     b.Property<int>("Id")
@@ -558,12 +622,27 @@ namespace Modularr.Core.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("AvatarUpdated")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("Created")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Disabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ExternalId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExternalProvider")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("ReadActivityUpTo")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("Role")
                         .HasColumnType("INTEGER");
@@ -578,7 +657,28 @@ namespace Modularr.Core.Persistence.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
+                    b.HasIndex("ExternalProvider", "ExternalId")
+                        .IsUnique();
+
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Modularr.Core.Persistence.UserAvatar", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UserAvatars");
                 });
 
             modelBuilder.Entity("Modularr.Core.Persistence.BlocklistItem", b =>
@@ -592,6 +692,14 @@ namespace Modularr.Core.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("SeriesId")
                         .OnDelete(DeleteBehavior.Cascade);
+                });
+
+            modelBuilder.Entity("Modularr.Core.Persistence.CollectionFollow", b =>
+                {
+                    b.HasOne("Modularr.Core.Decisions.QualityProfile", null)
+                        .WithMany()
+                        .HasForeignKey("QualityProfileId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Modularr.Core.Persistence.Episode", b =>
@@ -688,6 +796,15 @@ namespace Modularr.Core.Persistence.Migrations
                     b.Navigation("Seasons");
                 });
 
+            modelBuilder.Entity("Modularr.Core.Persistence.Session", b =>
+                {
+                    b.HasOne("Modularr.Core.Persistence.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Modularr.Core.Persistence.TrackedDownload", b =>
                 {
                     b.HasOne("Modularr.Core.Persistence.Movie", null)
@@ -699,6 +816,15 @@ namespace Modularr.Core.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("SeriesId")
                         .OnDelete(DeleteBehavior.Cascade);
+                });
+
+            modelBuilder.Entity("Modularr.Core.Persistence.UserAvatar", b =>
+                {
+                    b.HasOne("Modularr.Core.Persistence.User", null)
+                        .WithOne()
+                        .HasForeignKey("Modularr.Core.Persistence.UserAvatar", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Modularr.Core.Persistence.Series", b =>

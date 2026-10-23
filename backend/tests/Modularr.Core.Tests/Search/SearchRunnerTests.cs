@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Data.Common;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +23,7 @@ public sealed class SearchRunnerTests
             .AddScoped<ActivityLog>()
             .AddScoped(services => new AutoSearch(services.GetRequiredService<ModularrDbContext>(), null!, null!, services.GetRequiredService<ActivityLog>()))
             .BuildServiceProvider();
-        using SearchRunner runner = new(provider.GetRequiredService<IServiceScopeFactory>());
+        using SearchRunner runner = new(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<SearchRunner>.Instance);
         await runner.StartAsync(ct);
 
         runner.Enqueue(new SearchJob(SeriesId: null, MovieId: 1));

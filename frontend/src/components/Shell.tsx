@@ -7,14 +7,14 @@ import type { ReactNode } from "react";
 import { Ambient } from "@/components/Ambient";
 import { useSession } from "@/components/AuthGate";
 import { ActivityProvider, useActivity } from "@/components/Activity";
-import { NotificationPanel } from "@/components/ActivityFeed";
+import { NotificationPeek } from "@/components/ActivityFeed";
 import { AddDialogProvider } from "@/components/AddDialog";
 import { Icon } from "@/components/icons";
-import { navGroups as groups, pages, settingsItem as settings, tabs } from "@/components/nav";
+import { appLinks, navItems, pages, settingsItem as settings, tabs } from "@/components/nav";
 import type { NavItem } from "@/components/nav";
 import { SearchPalette } from "@/components/SearchPalette";
 import { ToastProvider } from "@/components/Toasts";
-import { Count, IconButton, Logo, Menu, MenuItem, Modal } from "@/components/ui";
+import { Avatar, Count, IconButton, Logo, Menu, MenuItem, Modal } from "@/components/ui";
 
 const shortcuts = pages.filter((i): i is NavItem & { shortcut: string } => !!i.shortcut);
 
@@ -64,6 +64,7 @@ export function Shell({ children }: { children: ReactNode }) {
 function Frame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const admin = useSession().user.role === "Admin";
   const [chrome, setChrome] = useState<Chrome>({});
   const [searching, setSearching] = useState(false);
   const [notifying, setNotifying] = useState(false);
@@ -91,7 +92,7 @@ function Frame({ children }: { children: ReactNode }) {
       if (e.ctrlKey || e.metaKey || e.altKey || target.closest("input, textarea, select, [contenteditable], [role=dialog]")) return;
       if (chord) {
         chord = false;
-        const item = shortcuts.find((s) => s.shortcut === e.key);
+        const item = shortcuts.find((s) => s.shortcut === e.key && (!s.admin || admin));
         if (item) { e.preventDefault(); router.push(item.href); }
         return;
       }
@@ -102,7 +103,7 @@ function Frame({ children }: { children: ReactNode }) {
     };
     window.addEventListener("keydown", key);
     return () => { window.removeEventListener("keydown", key); clearTimeout(chordTimer); };
-  }, [router]);
+  }, [router, admin]);
 
   return (
     <ChromeContext value={setChrome}>
@@ -119,7 +120,7 @@ function Frame({ children }: { children: ReactNode }) {
           <BottomBar pathname={pathname} />
         </div>
         {searching && <SearchPalette onClose={() => setSearching(false)} />}
-        {notifying && <NotificationPanel onClose={() => setNotifying(false)} />}
+        {notifying && <NotificationPeek onClose={() => setNotifying(false)} />}
         {cheatSheet && <CheatSheet onClose={() => setCheatSheet(false)} />}
       </SearchContext>
     </ChromeContext>
@@ -127,7 +128,8 @@ function Frame({ children }: { children: ReactNode }) {
 }
 
 function Rail({ pathname }: { pathname: string }) {
-  const { user } = useSession();
+  const { user, managed } = useSession();
+  const apps = appLinks(managed);
   const { activeDownloads } = useActivity();
   return (
     <aside className="sticky top-0 hidden h-dvh shrink-0 p-3 md:block">
@@ -136,24 +138,27 @@ function Rail({ pathname }: { pathname: string }) {
           <span className="xl:hidden"><Logo markOnly /></span>
           <span className="max-xl:hidden"><Logo /></span>
         </Link>
-        <nav aria-label="Main" className="flex flex-1 flex-col gap-4 overflow-y-auto">
-          {groups.map((group) => (
-            <div key={group.label ?? "home"} className="flex flex-col gap-1">
-              {group.label && (
-                <>
-                  <p className="caption px-3.5 pb-1 max-xl:hidden">{group.label}</p>
-                  <span aria-hidden="true" className="mx-2 mb-1 h-px bg-hair-2 xl:hidden" />
-                </>
-              )}
-              {group.items.filter((i) => !i.admin || user.role === "Admin").map((item) => (
-                <RailItem key={item.href} item={item} current={isCurrent(pathname, item.href)} count={item.downloads ? activeDownloads : 0} />
-              ))}
-            </div>
+        <nav aria-label="Main" className="flex flex-1 flex-col gap-1 overflow-y-auto">
+          {navItems.filter((item) => !item.admin || user.role === "Admin").map((item) => (
+            <RailItem key={item.href} item={item} current={isCurrent(pathname, item.href)} count={item.downloads ? activeDownloads : 0} />
           ))}
         </nav>
-        <div className="mt-3 border-t border-hair-2 pt-3">
-          <RailItem item={settings} current={pathname.startsWith(settings.href)} count={0} />
-        </div>
+        {apps.length > 0 && (
+          <nav aria-label="Apps" className="mt-3 flex flex-col gap-1 border-t border-hair-2 pt-3">
+            {apps.map((app) => (
+              <a key={app.href} href={app.href} target="_blank" rel="noopener noreferrer" title={app.label}
+                className="flex h-11 items-center gap-3 rounded-pill px-3.5 text-body font-medium text-ink-2 transition hover:bg-fill hover:text-ink max-xl:justify-center max-xl:px-0">
+                <Icon name={app.icon} size={20} className="shrink-0" />
+                <span className="flex-1 truncate max-xl:sr-only">{app.label}</span>
+              </a>
+            ))}
+          </nav>
+        )}
+        {user.role === "Admin" && (
+          <div className="mt-3 border-t border-hair-2 pt-3">
+            <RailItem item={settings} current={pathname.startsWith(settings.href)} count={0} />
+          </div>
+        )}
       </div>
     </aside>
   );
@@ -163,12 +168,12 @@ function RailItem({ item, current, count }: { item: NavItem; current: boolean; c
   return (
     <Link href={item.href} aria-current={current ? "page" : undefined} title={item.label}
       aria-keyshortcuts={item.shortcut ? `g ${item.shortcut}` : undefined}
-      className="relative flex h-11 items-center gap-3 rounded-pill px-3.5 text-sm font-medium text-ink-2 transition hover:bg-fill hover:text-ink aria-[current=page]:bg-fill-2 aria-[current=page]:text-ink max-xl:justify-center max-xl:px-0">
-      <Icon name={item.icon} size={19} className="shrink-0" />
+      className="relative flex h-11 items-center gap-3 rounded-pill px-3.5 text-body font-medium text-ink-2 transition hover:bg-fill hover:text-ink aria-[current=page]:bg-fill-2 aria-[current=page]:text-ink max-xl:justify-center max-xl:px-0">
+      <Icon name={item.icon} size={20} className="shrink-0" />
       <span className="flex-1 truncate max-xl:sr-only">{item.label}</span>
       {count > 0 && (
         <>
-          <span className="text-[12px] font-semibold text-live tabular-nums max-xl:hidden">{count}<span className="sr-only"> active</span></span>
+          <span className="text-meta font-semibold text-live tabular-nums max-xl:hidden">{count}<span className="sr-only"> active</span></span>
           <span aria-hidden="true" className="absolute top-1.5 right-1.5 size-2 rounded-full bg-live xl:hidden" />
         </>
       )}
@@ -198,21 +203,21 @@ function Header({ pathname, crumb, onSearch, onNotifications }: { pathname: stri
       <Link href="/" aria-label="modularr, Dashboard" className="rounded-pill md:hidden"><Logo /></Link>
       <div className="min-w-0 flex-1 max-md:hidden">
         {crumb ? (
-          <p className="flex min-w-0 items-baseline gap-2 font-display text-[24px] leading-none">
+          <p className="flex min-w-0 items-baseline gap-2 font-display text-[24px] leading-tight">
             <Link href={crumb.href} className="shrink-0 text-ink-2 hover:text-ink">{crumb.label}</Link>
             <span aria-hidden="true" className="text-ink-3">/</span>
             <span className="truncate">{crumb.title}</span>
           </p>
         ) : (
-          <p aria-hidden="true" className={`truncate font-display text-[24px] leading-none transition duration-300 ${scrolled ? "opacity-100" : "translate-y-1 opacity-0"}`}>{title}</p>
+          <p aria-hidden="true" className={`truncate font-display text-[24px] leading-tight transition duration-300 ${scrolled ? "opacity-100" : "translate-y-1 opacity-0"}`}>{title}</p>
         )}
       </div>
       <div className="ml-auto flex items-center gap-2">
         <button onClick={onSearch} aria-keyshortcuts="Control+K Meta+K /"
-          className="glass flex h-11 cursor-pointer items-center gap-2.5 rounded-pill px-4 text-sm font-medium text-ink-2 transition hover:bg-fill-2 hover:text-ink max-md:w-11 max-md:justify-center max-md:px-0 md:w-64 lg:w-80">
-          <Icon name="search" size={18} className="shrink-0" />
-          <span className="flex-1 text-left max-md:sr-only">Search or add…</span>
-          <kbd className="rounded-chip bg-fill px-1.5 py-0.5 font-sans text-[11px] text-ink-3 max-md:hidden">⌘K</kbd>
+          className="glass flex h-11 cursor-pointer items-center gap-2.5 rounded-pill px-4 text-body font-medium text-ink-2 transition hover:bg-fill-2 hover:text-ink max-md:w-11 max-md:justify-center max-md:px-0 md:w-64 lg:w-80">
+          <Icon name="search" size={20} className="shrink-0" />
+          <span className="flex-1 text-left max-md:sr-only">Search library…</span>
+          <kbd className="rounded-chip bg-fill px-1.5 py-0.5 font-sans text-caption text-ink-3 max-md:hidden">⌘K</kbd>
         </button>
         <IconButton icon="bell" label={unread ? `Notifications, ${unread} unread` : "Notifications"} badge={unread} onClick={onNotifications} aria-keyshortcuts="n" />
         <UserMenu />
@@ -223,18 +228,22 @@ function Header({ pathname, crumb, onSearch, onNotifications }: { pathname: stri
 
 function BottomBar({ pathname }: { pathname: string }) {
   const { activeDownloads } = useActivity();
+  const { user } = useSession();
+  const shown = tabs.filter((tab) => !tab.admin || user.role === "Admin");
   return (
-    <nav aria-label="Main" className="glass fixed inset-x-0 bottom-0 z-30 mx-3 mb-[max(12px,env(safe-area-inset-bottom))] grid h-16 grid-cols-5 rounded-[26px] px-1 md:hidden">
-      {tabs.map((tab) => {
+    <nav aria-label="Main" style={{ gridTemplateColumns: `repeat(${shown.length}, minmax(0, 1fr))` }}
+      className="glass fixed inset-x-0 bottom-0 z-30 mx-3 mb-[max(12px,env(safe-area-inset-bottom))] grid h-16 rounded-panel px-1 md:hidden">
+      {shown.map((tab) => {
         const current = tab.label === "Library" ? libraryPaths.some((p) => pathname.startsWith(p)) : isCurrent(pathname, tab.href);
         return (
           <Link key={tab.href} href={tab.href} aria-current={current ? "page" : undefined}
-            className="group flex flex-col items-center justify-center gap-0.5 rounded-[22px] text-[11px] font-semibold text-ink-3 transition aria-[current=page]:text-ink">
+            className="group flex flex-col items-center justify-center gap-0.5 rounded-tile text-caption font-semibold text-ink-3 transition aria-[current=page]:text-ink">
             <span className="relative grid h-8 w-12 place-items-center rounded-pill transition group-aria-[current=page]:bg-fill-2">
               <Icon name={tab.icon} size={20} />
-              {tab.downloads && activeDownloads > 0 && <Count value={activeDownloads} className="absolute -top-1 right-0 bg-live" />}
+              {tab.downloads && activeDownloads > 0 && <Count value={activeDownloads} bg="bg-live" className="absolute -top-1 right-0" />}
             </span>
             {tab.label}
+            {tab.downloads && activeDownloads > 0 && <span className="sr-only">, {activeDownloads} active</span>}
           </Link>
         );
       })}
@@ -243,17 +252,20 @@ function BottomBar({ pathname }: { pathname: string }) {
 }
 
 function UserMenu() {
-  const { user, logout } = useSession();
+  const { user, managed, logout } = useSession();
   return (
-    <Menu label={`Account menu for ${user.username}`} trigger={user.username[0]}
-      className="grid size-11 cursor-pointer place-items-center rounded-full bg-white font-display text-[22px] leading-none text-canvas uppercase transition hover:bg-white/85">
+    <Menu label={`Account menu for ${user.username}`}
+      trigger={user.avatar ? <Avatar user={user} className="size-11" /> : user.username[0]}
+      className={`grid size-11 cursor-pointer place-items-center overflow-hidden rounded-full font-display text-[22px] leading-none uppercase transition ${user.avatar ? "hover:opacity-85" : "bg-white text-canvas hover:bg-ink"}`}>
       <div className="mb-1 border-b border-hair-2 px-3 pt-2 pb-3">
-        <p className="truncate text-[15px] font-semibold">{user.username}</p>
-        <p className="text-[13px] text-ink-3">{user.role === "Admin" ? "Administrator" : "Member"}</p>
+        <p className="truncate text-body font-semibold">{user.username}</p>
+        <p className="text-meta text-ink-3">{user.role === "Admin" ? "Administrator" : "Member"}</p>
       </div>
       <MenuItem icon="user" href="/settings/#account">Account</MenuItem>
-      <MenuItem icon="settings" href="/settings/" className="md:hidden">Settings</MenuItem>
-      {user.role === "Admin" && <MenuItem icon="folder" href="/import/" className="md:hidden">Import</MenuItem>}
+      {user.role === "Admin" && <MenuItem icon="settings" href="/settings/" className="md:hidden">Settings</MenuItem>}
+      {appLinks(managed).map((app) => (
+        <MenuItem key={app.href} icon={app.icon} onClick={() => window.open(app.href, "_blank", "noopener,noreferrer")} className="md:hidden">{app.label}</MenuItem>
+      ))}
       <MenuItem icon="logout" onClick={logout}>Sign out</MenuItem>
     </Menu>
   );
@@ -263,35 +275,36 @@ const OFFLINE_GRACE_MS = 4000;
 
 // The live stream reconnects with backoff on its own; this only says so when it stays down.
 function OfflineBanner() {
-  const { connected } = useActivity();
-  const [offline, setOffline] = useState(false);
+  const { offline } = useActivity();
+  const [shown, setShown] = useState(false);
   useEffect(() => {
-    if (connected) return;
-    const timer = setTimeout(() => setOffline(!document.hidden), OFFLINE_GRACE_MS);
-    return () => { clearTimeout(timer); setOffline(false); };
-  }, [connected]);
-  if (!offline) return null;
+    if (!offline) return;
+    const timer = setTimeout(() => setShown(!document.hidden), OFFLINE_GRACE_MS);
+    return () => { clearTimeout(timer); setShown(false); };
+  }, [offline]);
+  if (!shown) return null;
   return (
-    <p role="status" className="glass mx-4 mt-3 flex animate-rise items-center gap-3 rounded-pill px-4 py-2.5 text-[13px] font-medium lg:mx-5">
+    <p role="status" className="glass mx-4 mt-3 flex animate-rise items-center gap-3 rounded-pill px-4 py-2.5 text-meta font-medium lg:mx-5">
       <span className="size-2 animate-pulse-dot rounded-full bg-warn" />Can’t reach modularr server. Retrying…
     </p>
   );
 }
 
 function CheatSheet({ onClose }: { onClose: () => void }) {
+  const { user } = useSession();
   const rows: [string, string][] = [
-    ["⌘K or /", "Search or add"],
-    ...shortcuts.map((s): [string, string] => [`g ${s.shortcut}`, s.label === "Movies" ? "Library" : s.label]),
+    ["⌘K or /", "Search library"],
+    ...shortcuts.filter((s) => !s.admin || user.role === "Admin").map((s): [string, string] => [`g ${s.shortcut}`, s.label]),
     ["n", "Notifications"],
     ["?", "This list"],
     ["Esc", "Close"],
   ];
   return (
     <Modal onClose={onClose} title="Keyboard shortcuts">
-      <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-2 px-5 pb-6 text-sm">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-5 gap-y-2 px-5 pb-6 text-body">
         {rows.map(([keys, label]) => (
           <div key={keys} className="contents">
-            <dt><kbd className="well rounded-chip px-2 py-1 font-sans text-[12px] font-semibold">{keys}</kbd></dt>
+            <dt><kbd className="well rounded-chip px-2 py-1 font-sans text-meta font-semibold">{keys}</kbd></dt>
             <dd className="self-center text-ink-2">{label}</dd>
           </div>
         ))}

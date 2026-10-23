@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -15,7 +16,7 @@ namespace Modularr.Core.Downloads;
 // and replaces the ones the content check rejected or that stalled.
 // shortcut: polling every 30 s like Sonarr's queue refresh, switch to MonoTorrent completion events if imports must be immediate.
 // shortcut: stall timers live in memory and restart with the app, persist them if restarts hide stalled downloads.
-public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHost torrents, IOptions<ModularrOptions> options) : BackgroundService
+public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHost torrents, IOptionsMonitor<ModularrOptions> options, ILogger<DownloadMonitor> logger) : BackgroundService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
 
@@ -33,8 +34,9 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
             {
                 await CheckAsync(stoppingToken).ConfigureAwait(false);
             }
-            catch (Exception) when (!stoppingToken.IsCancellationRequested)
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
+                logger.JobFailed("Download monitor", ex);
                 // An exception escaping ExecuteAsync stops the host; a failed poll (busy database...) is retried on the next tick.
             }
         }
@@ -64,6 +66,7 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
             }
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
+                logger.JobFailed("Download monitor", ex);
                 // Any failure (disk, database, torrent engine) blocks this download for a manual retry instead of failing every poll;
                 // a download already failed (and blocklisted) stays failed when only its replacement search broke.
                 await BlockAsync(id, ex.Message, cancellationToken).ConfigureAwait(false);
@@ -88,7 +91,7 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
     }
 
     // Picks up what the import replaced, left aside or moved before failing; the download keeps its state whatever happens here.
-    private static async Task RescanAsync(DiskScanService scans, TrackedDownload download, CancellationToken cancellationToken)
+    private async Task RescanAsync(DiskScanService scans, TrackedDownload download, CancellationToken cancellationToken)
     {
         try
         {
@@ -96,8 +99,9 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
                 ? await scans.ScanMovieAsync(movieId, record: true, cancellationToken).ConfigureAwait(false)
                 : await scans.ScanSeriesAsync(download.SeriesId ?? 0, record: true, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
+            logger.JobFailed("Download monitor", ex);
             // The periodic library scan catches up.
         }
     }
@@ -168,18 +172,20 @@ public sealed class DownloadMonitor(IServiceScopeFactory scopes, TorrentEngineHo
                     _started.Add(id);
                 }
 
-                StallCheck check = StallDetector.Evaluate(_stalls.GetValueOrDefault(id), torrent, DateTimeOffset.UtcNow, options.Value.Torrents);
+                StallCheck check = StallDetector.Evaluate(_stalls.GetValueOrDefault(id), torrent, DateTimeOffset.UtcNow, options.CurrentValue.Torrents);
                 _stalls[id] = check.State;
                 if (check is { Action: StallAction.Retry, Reason: string stalled })
                 {
                     await torrents.Engine.ReannounceAsync(download.InfoHash).ConfigureAwait(false);
                     await activities.RecordAsync(
-                        Activity.For(download, ActivityKind.DownloadStalled, ActivityLevel.Warning, $"{stalled}, retry {check.State.Retries} of {options.Value.Torrents.StallRetries}"),
+                        Activity.For(download, ActivityKind.DownloadStalled, ActivityLevel.Warning, $"{stalled}, retry {check.State.Retries} of {options.CurrentValue.Torrents.StallRetries}"),
                         cancellationToken).ConfigureAwait(false);
                 }
                 else if (check is { Action: StallAction.GiveUp, Reason: string reason })
                 {
-                    await failed.FailAsync(download, reason, cancellationToken).ConfigureAwait(false);
+                    // Missing metadata is not the release's fault for sure: one hostile peer can stall the fetch on every retry, and a
+                    // blocklist entry would then ban a good release. It is failed and re-grabbed (bounded) but stays allowed.
+                    await failed.FailAsync(download, reason, cancellationToken, blocklist: torrent.HasMetadata).ConfigureAwait(false);
                 }
 
                 break;

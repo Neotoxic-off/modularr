@@ -183,6 +183,15 @@ public sealed class CardigannDefinitionLoaderTests
         Assert.Throws<InvalidDataException>(() => CardigannDefinitionLoader.Load(yaml));
     }
 
+    [Fact]
+    public void RejectsDeepNestingInsteadOfOverflowingTheStack()
+    {
+        // Run-3 audit: 100000 nested sequences killed the process at startup with an uncatchable stack overflow.
+        string yaml = Minimal + $"\nextra: {new string('[', 100_000)}{new string(']', 100_000)}\n";
+
+        Assert.Throws<InvalidDataException>(() => CardigannDefinitionLoader.Load(yaml));
+    }
+
     [Theory]
     [InlineData("id: test\n", "")]
     [InlineData("name: Test\n", "")]

@@ -1,3 +1,5 @@
+using YamlDotNet.Serialization;
+
 namespace Modularr.Core.Indexers.Definitions;
 
 // Cardigann YAML model (Prowlarr schema v11/v12); YAML keys match property names case-insensitively.
@@ -26,6 +28,10 @@ public sealed record CardigannDefinition
     public RatioBlock? Ratio { get; init; }
     public required SearchBlock Search { get; init; }
     public DownloadBlock? Download { get; init; }
+
+    // Setting names the templates read as .Config.<name>, filled by the loader from the YAML text.
+    [YamlIgnore]
+    public IReadOnlySet<string> UsedSettings { get; init; } = new HashSet<string>();
 
     public static IReadOnlyList<SettingsField> DefaultSettings { get; } =
     [

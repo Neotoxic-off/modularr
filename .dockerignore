@@ -5,5 +5,10 @@
 **/obj
 .git
 /media
-.env
-*.env
+# Local secrets and dev state must never enter an image.
+**/.env
+**/.env.*
+**/*.env
+backend/src/Modularr.Api/config
+backend/src/Modularr.Api/wwwroot
+**/TestResults

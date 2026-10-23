@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Modularr.Core.Persistence;
 
 namespace Modularr.Core.Activities;
@@ -45,8 +46,12 @@ public sealed class Activity
     public int? MovieId { get; set; }
     public int? DownloadId { get; set; }
 
-    // shortcut: read is shared by every user, keep a per-user read mark if several people use the feed.
+    // Not stored: filled for the reader from their own read mark (User.ReadActivityUpTo).
     public bool Read { get; set; }
+
+    // Not stored nor sent: the imported title's folder, so a media server can refresh just that path.
+    [JsonIgnore]
+    public string? Path { get; set; }
 
     public static Activity For(TrackedDownload download, ActivityKind kind, ActivityLevel level, string? message)
     {

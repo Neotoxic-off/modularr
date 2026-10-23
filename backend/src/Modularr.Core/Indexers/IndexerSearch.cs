@@ -13,9 +13,12 @@ public sealed record IndexerSearchResult(IReadOnlyList<ReleaseInfo> Releases, IR
 // Prowlarr's search fan-out: every indexer in parallel, each under its own timeout; one failing indexer never fails the search.
 public sealed class IndexerSearch(CardigannSearcher searcher, IndexerDomainHealth health, IOptions<ModularrOptions> options)
 {
-    public async Task<IndexerSearchResult> SearchAsync(IEnumerable<CardigannDefinition> definitions, CardigannSearchQuery query, CancellationToken cancellationToken)
+    // Tests pass includeCoolingDown: they are how a cooling-down indexer shows it answers again.
+    public async Task<IndexerSearchResult> SearchAsync(
+        IEnumerable<CardigannDefinition> definitions, CardigannSearchQuery query, CancellationToken cancellationToken, bool includeCoolingDown = false)
     {
-        CardigannDefinition[] all = [.. definitions];
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        CardigannDefinition[] all = [.. definitions.Where(d => includeCoolingDown || !health.IsCoolingDown(d, now))];
         (IReadOnlyList<ReleaseInfo> Releases, IndexerError? Error)[] outcomes =
             await Task.WhenAll(all.Select(definition => SearchOneAsync(definition, query, cancellationToken))).ConfigureAwait(false);
 
@@ -25,10 +28,28 @@ public sealed class IndexerSearch(CardigannSearcher searcher, IndexerDomainHealt
             all.Length);
     }
 
+    // Every mirror of the indexer, in parallel: mirrors do not all carry the same catalogue. Their releases are merged without
+    // duplicates; the indexer only fails when no mirror answered.
     private async Task<(IReadOnlyList<ReleaseInfo> Releases, IndexerError? Error)> SearchOneAsync(
         CardigannDefinition definition, CardigannSearchQuery query, CancellationToken cancellationToken)
     {
-        string baseUrl = health.ActiveBaseUrl(definition);
+        string active = health.ActiveBaseUrl(definition);
+        string[] mirrors = [active, .. health.Candidates(definition).Where(url => url != active)];
+        (IReadOnlyList<ReleaseInfo>? Releases, CardigannFailure? Failure)[] results =
+            await Task.WhenAll(mirrors.Select(url => SearchMirrorAsync(definition, url, query, cancellationToken))).ConfigureAwait(false);
+
+        if (results.All(r => r.Releases is null))
+        {
+            CardigannFailure failure = results[0].Failure!;
+            return ([], new IndexerError(definition.Id, definition.Name, failure.Kind, failure.Message));
+        }
+
+        return ([.. results.SelectMany(r => r.Releases ?? []).DistinctBy(DuplicateKey)], null);
+    }
+
+    private async Task<(IReadOnlyList<ReleaseInfo>? Releases, CardigannFailure? Failure)> SearchMirrorAsync(
+        CardigannDefinition definition, string baseUrl, CardigannSearchQuery query, CancellationToken cancellationToken)
+    {
         TimeSpan searchTimeout = options.Value.Indexers.SearchTimeout;
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(searchTimeout);
@@ -59,12 +80,16 @@ public sealed class IndexerSearch(CardigannSearcher searcher, IndexerDomainHealt
                     health.ReportError(definition, failure.Message);
                 }
 
-                return ([], new IndexerError(definition.Id, definition.Name, failure.Kind, failure.Message));
+                return (null, failure);
 
             default:
                 throw new InvalidOperationException($"Unknown search result {result}.");
         }
     }
+
+    // The same torrent seen on two mirrors: by info hash when the site gives one, otherwise by title and size.
+    internal static string DuplicateKey(ReleaseInfo release) =>
+        release.InfoHash is { Length: > 0 } hash ? hash.ToUpperInvariant() : $"{release.Title.Trim().ToUpperInvariant()}|{release.Size}";
 
     // Failures a mirror can cure; a definition or response the engine cannot use stays broken on every domain.
     private static bool IsDomainFailure(CardigannFailureKind kind) =>

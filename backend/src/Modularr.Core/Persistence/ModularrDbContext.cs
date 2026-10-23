@@ -22,7 +22,10 @@ public sealed class ModularrDbContext(DbContextOptions<ModularrDbContext> option
     public DbSet<HistoryItem> History => Set<HistoryItem>();
     public DbSet<TrackedDownload> TrackedDownloads => Set<TrackedDownload>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Session> Sessions => Set<Session>();
+    public DbSet<UserAvatar> UserAvatars => Set<UserAvatar>();
     public DbSet<Activity> Activities => Set<Activity>();
+    public DbSet<CollectionFollow> Collections => Set<CollectionFollow>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -70,6 +73,13 @@ public sealed class ModularrDbContext(DbContextOptions<ModularrDbContext> option
         {
             movie.HasIndex(m => m.TmdbId).IsUnique();
             movie.HasOne(m => m.QualityProfile).WithMany().OnDelete(DeleteBehavior.Restrict);
+            movie.HasIndex(m => m.CollectionTmdbId);
+        });
+
+        modelBuilder.Entity<CollectionFollow>(collection =>
+        {
+            collection.HasIndex(c => c.TmdbId).IsUnique();
+            collection.HasOne<QualityProfile>().WithMany().HasForeignKey(c => c.QualityProfileId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<MediaFile>(file =>
@@ -102,10 +112,26 @@ public sealed class ModularrDbContext(DbContextOptions<ModularrDbContext> option
             BelongsToSeriesOrMovie(download, d => d.SeriesId, d => d.MovieId);
         });
 
+        modelBuilder.Entity<Activity>().Ignore(a => a.Read);
+        modelBuilder.Entity<Activity>().Ignore(a => a.Path);
+
         modelBuilder.Entity<User>(user =>
         {
             user.Property(u => u.Username).UseCollation(NoCase);
             user.HasIndex(u => u.Username).IsUnique();
+            user.HasIndex(u => new { u.ExternalProvider, u.ExternalId }).IsUnique();
+        });
+
+        modelBuilder.Entity<UserAvatar>(avatar =>
+        {
+            avatar.HasKey(a => a.UserId);
+            avatar.HasOne<User>().WithOne().HasForeignKey<UserAvatar>(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Session>(session =>
+        {
+            session.HasKey(s => s.Id);
+            session.HasOne<User>().WithMany().HasForeignKey(s => s.UserId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 

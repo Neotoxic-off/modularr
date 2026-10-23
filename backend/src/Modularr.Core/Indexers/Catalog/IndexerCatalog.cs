@@ -54,8 +54,8 @@ public sealed partial record IndexerCatalog
             IReadOnlyList<string> categories = Categories(definition);
             if (categories.Any(IsVideoCategory) && !IsAdult(definition))
             {
-                // shortcut: private, semi-private and login-only indexers stay disabled until credentials can be configured.
-                bool enabled = CardigannSearcher.IsSupported(definition) && !disabled.Contains(definition.Id);
+                // An indexer whose login needs credentials stays disabled until they are filled in.
+                bool enabled = CardigannSearcher.IsSupported(definition, options.Settings.GetValueOrDefault(definition.Id)) && !disabled.Contains(definition.Id);
                 entries.Add(new IndexerCatalogEntry(definition, categories, enabled));
             }
         }
@@ -70,7 +70,7 @@ public sealed partial record IndexerCatalog
     // Newznab category names the indexer maps to, from either caps.categories or caps.categorymappings.
     private static IReadOnlyList<string> Categories(CardigannDefinition definition) =>
     [
-        .. (definition.Caps.Categories?.Values ?? [])
+        .. (definition.Caps.Categories?.Values ?? []).OfType<string>()
             .Concat(definition.Caps.CategoryMappings?.Select(mapping => mapping.Cat).OfType<string>() ?? [])
             .Distinct(StringComparer.OrdinalIgnoreCase),
     ];

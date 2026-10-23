@@ -40,16 +40,27 @@ public sealed class ActivityLogTests : IDisposable
         Movie movie = _database.AddMovie(1);
         int[] ids = [.. _database.Insert([.. Enumerable.Range(1, 5).Select(i => New(Now, movieId: i % 2 == 0 ? movie.Id : null))]).Select(a => a.Id)];
         using ModularrDbContext db = _database.NewContext();
+        User alice = new() { Username = "alice", PasswordHash = "x" }, bob = new() { Username = "bob", PasswordHash = "x" };
+        db.Users.AddRange(alice, bob);
+        await db.SaveChangesAsync(ct);
         ActivityLog log = new(db, new ActivityFeed());
 
-        Assert.Equal([ids[4], ids[3]], (await log.ListAsync(before: null, limit: 2, null, null, ct)).Select(a => a.Id));
-        Assert.Equal([ids[2], ids[1]], (await log.ListAsync(before: ids[3], limit: 2, null, null, ct)).Select(a => a.Id));
-        Assert.Equal([ids[3], ids[1]], (await log.ListAsync(before: null, limit: 50, null, movie.Id, ct)).Select(a => a.Id));
+        Assert.Equal([ids[4], ids[3]], (await log.ListAsync(alice.Id, before: null, limit: 2, null, null, ct)).Select(a => a.Id));
+        Assert.Equal([ids[2], ids[1]], (await log.ListAsync(alice.Id, before: ids[3], limit: 2, null, null, ct)).Select(a => a.Id));
+        Assert.Equal([ids[3], ids[1]], (await log.ListAsync(alice.Id, before: null, limit: 50, null, movie.Id, ct)).Select(a => a.Id));
 
-        await log.MarkReadAsync(ids[2], ct);
-        Assert.Equal(2, await log.UnreadCountAsync(ct));
-        await log.MarkReadAsync(upTo: null, ct);
-        Assert.Equal(0, await log.UnreadCountAsync(ct));
+        await log.MarkReadAsync(alice.Id, ids[2], ct);
+        Assert.Equal(2, await log.UnreadCountAsync(alice.Id, ct));
+        Assert.Equal([false, false, true, true, true], (await log.ListAsync(alice.Id, null, 50, null, null, ct)).Select(a => a.Read));
+        Assert.Equal(5, await log.UnreadCountAsync(bob.Id, ct)); // one user's reads are not another's
+        await log.MarkReadAsync(alice.Id, ids[0], ct);
+        Assert.Equal(2, await log.UnreadCountAsync(alice.Id, ct)); // the mark never moves back
+        await log.MarkReadAsync(alice.Id, upTo: null, ct);
+        Assert.Equal(0, await log.UnreadCountAsync(alice.Id, ct));
+        await log.MarkReadAsync(bob.Id, upTo: int.MaxValue, ct);
+        Assert.Equal(0, await log.UnreadCountAsync(bob.Id, ct));
+        // Clamped to the newest existing id, so later activities stay unread.
+        Assert.Equal(ids[4], await db.Users.AsNoTracking().Where(u => u.Id == bob.Id).Select(u => u.ReadActivityUpTo).SingleAsync(ct));
     }
 
     [Fact]

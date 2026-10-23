@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Modularr.Core.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -7,7 +9,7 @@ using Modularr.Core.Persistence;
 namespace Modularr.Core.Activities;
 
 // Prunes the feed to its retention at startup and every hour.
-public sealed class ActivityPruner(IServiceScopeFactory scopes) : BackgroundService
+public sealed class ActivityPruner(IServiceScopeFactory scopes, ILogger<ActivityPruner> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -19,8 +21,9 @@ public sealed class ActivityPruner(IServiceScopeFactory scopes) : BackgroundServ
                 await using AsyncServiceScope scope = scopes.CreateAsyncScope();
                 await scope.ServiceProvider.GetRequiredService<ActivityLog>().PruneAsync(DateTime.UtcNow, stoppingToken).ConfigureAwait(false);
             }
-            catch (Exception) when (!stoppingToken.IsCancellationRequested)
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
+                logger.JobFailed("Activity pruning", ex);
                 // An exception escaping ExecuteAsync stops the host; a busy database is pruned on the next tick.
             }
         }
@@ -29,7 +32,7 @@ public sealed class ActivityPruner(IServiceScopeFactory scopes) : BackgroundServ
 }
 
 // Publishes the running downloads' progress every 2 s, only while a live client listens.
-public sealed class DownloadProgressTicker(IServiceScopeFactory scopes, TorrentEngineHost torrents, ActivityFeed feed) : BackgroundService
+public sealed class DownloadProgressTicker(IServiceScopeFactory scopes, TorrentEngineHost torrents, ActivityFeed feed, ILogger<DownloadProgressTicker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -45,8 +48,9 @@ public sealed class DownloadProgressTicker(IServiceScopeFactory scopes, TorrentE
             {
                 await TickAsync(stoppingToken).ConfigureAwait(false);
             }
-            catch (Exception) when (!stoppingToken.IsCancellationRequested)
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
+                logger.JobFailed("Download progress", ex);
                 // The engine not started yet or a busy database: the next tick tries again.
             }
         }

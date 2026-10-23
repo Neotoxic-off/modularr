@@ -1,14 +1,19 @@
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Modularr.Core.Accounts;
 using Modularr.Core.Configuration;
 using Modularr.Core.Decisions;
 using Modularr.Core.Discovery;
 using Modularr.Core.Downloads;
 using Modularr.Core.Indexers;
+using Modularr.Core.Indexers.Cardigann;
 using Modularr.Core.Indexers.Catalog;
 using Modularr.Core.Languages;
 using Modularr.Core.Library;
+using Modularr.Core.Downloads.Torrents;
 using Modularr.Core.Metadata;
+using Modularr.Core.Notifications;
 using Modularr.Core.Persistence;
 using Modularr.Core.PostProcessing;
 using Modularr.Core.Qualities;
@@ -21,9 +26,11 @@ namespace Modularr.Api;
 public static class ApiEndpoints
 {
     // No profile: the category default; no version: the version policy; the search runs in the background unless SearchNow is false.
-    public sealed record AddSeriesRequest(int TvdbId, int? QualityProfileId = null, ReleaseVersion? Version = null, bool SearchNow = true, SeriesMonitor Monitor = SeriesMonitor.All, IReadOnlyList<int>? Seasons = null);
+    public sealed record AddSeriesRequest(int TvdbId, int? QualityProfileId = null, ReleaseVersion? Version = null, bool SearchNow = true, SeriesMonitor Monitor = SeriesMonitor.All, IReadOnlyList<int>? Seasons = null,
+        IReadOnlyList<EpisodeKey>? Episodes = null, IReadOnlyList<Language>? Subtitles = null);
 
-    public sealed record AddMovieRequest(int TmdbId, int? QualityProfileId = null, ReleaseVersion? Version = null, bool SearchNow = true);
+    // Subtitles: the title's own wanted subtitle languages; none follows the category default.
+    public sealed record AddMovieRequest(int TmdbId, int? QualityProfileId = null, ReleaseVersion? Version = null, bool SearchNow = true, IReadOnlyList<Language>? Subtitles = null);
 
     public sealed record ImportRequest(IReadOnlyList<ImportItem> Items);
 
@@ -31,7 +38,7 @@ public static class ApiEndpoints
 
     public sealed record EpisodesMonitoredRequest(IReadOnlyList<int> EpisodeIds, bool Monitored);
 
-    public sealed record ImportModeRequest(ImportMode ImportMode);
+    public sealed record ImportModeRequest(ImportMode ImportMode, bool RenameFiles, string? RecycleBinPath);
 
     public sealed record MetadataRequest(string? TmdbApiKey);
 
@@ -41,18 +48,47 @@ public static class ApiEndpoints
         api.MapGet("/config", (IOptions<ModularrOptions> options, HttpContext context) =>
             Results.Ok(IsAdmin(context) ? options.Value : options.Value.Redacted()));
         api.MapGet("/indexers", Indexers);
-        api.MapGet("/search", Search);
-        api.MapGet("/lookup", Lookup);
+        api.MapPost("/indexers/{id}/test", TestIndexer);
+        api.MapGet("/indexers/{id}/settings", (string id, IndexerCatalogHost host, IOptionsMonitor<ModularrOptions> options) =>
+            IndexerSettings(FindIndexer(host, id), options.CurrentValue)).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        // An empty secret keeps the stored one; the saved login takes effect at once (new session, indexer enabled when complete).
+        api.MapPut("/indexers/{id}/settings", async (string id, Dictionary<string, string?> values, IndexerCatalogHost host, SettingsFile settings, CardigannSessions sessions,
+            IOptionsMonitor<ModularrOptions> options, CancellationToken ct) =>
+        {
+            IndexerCatalogEntry entry = FindIndexer(host, id);
+            IReadOnlyDictionary<string, string> merged = CardigannSettings.Merge(entry.Definition, options.CurrentValue.Indexers.Settings.GetValueOrDefault(entry.Id), values);
+            await settings.SaveIndexerSettingsAsync(entry.Id, merged, ct);
+            sessions.Clear(entry.Id);
+            host.Reload();
+
+            // A test failed with the old settings says nothing about the new ones.
+            host.Report(entry.Id, works: true);
+            return IndexerSettings(FindIndexer(host, id), options.CurrentValue);
+        }).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        // Each of these makes the server call indexers or metadata providers (the operator's quota): a per-user limit.
+        api.MapGet("/search", Search).RequireRateLimiting(AuthEndpoints.OutboundRateLimit);
+        api.MapGet("/lookup", Lookup).RequireRateLimiting(AuthEndpoints.OutboundRateLimit);
+        // The regular seasons of a series not added yet, to pick which ones to monitor.
+        api.MapGet("/lookup/seasons", async (int tvdbId, SeriesMetadataClient metadata, CancellationToken ct) =>
+        {
+            SeriesInfo info = await metadata.GetSeriesAsync(tvdbId, cancellationToken: ct);
+            return info.Seasons.Where(s => s.SeasonNumber > 0).OrderBy(s => s.SeasonNumber).Select(s => new
+            {
+                number = s.SeasonNumber,
+                episodes = info.Episodes.Where(e => e.SeasonNumber == s.SeasonNumber).DistinctBy(e => e.EpisodeNumber).OrderBy(e => e.EpisodeNumber)
+                    .Select(e => new { number = e.EpisodeNumber, e.Title, e.AirDate }),
+            });
+        }).RequireRateLimiting(AuthEndpoints.OutboundRateLimit);
         api.MapGet("/discover/movies", (string? list, DiscoveryService discovery, CancellationToken ct) =>
-            discovery.DiscoverMoviesAsync(ParseEnum(list, MovieList.Popular), ct));
+            discovery.DiscoverMoviesAsync(ParseEnum(list, MovieList.Popular), ct)).RequireRateLimiting(AuthEndpoints.OutboundRateLimit);
         api.MapGet("/discover/series", (string? list, DiscoveryService discovery, CancellationToken ct) =>
-            discovery.DiscoverSeriesAsync(ParseEnum(list, SeriesList.Popular), ct));
+            discovery.DiscoverSeriesAsync(ParseEnum(list, SeriesList.Popular), ct)).RequireRateLimiting(AuthEndpoints.OutboundRateLimit);
         api.MapGet("/discover/anime", (string? list, DiscoveryService discovery, CancellationToken ct) =>
-            discovery.DiscoverAnimeAsync(ParseEnum(list, AnimeList.Trending), ct));
+            discovery.DiscoverAnimeAsync(ParseEnum(list, AnimeList.Trending), ct)).RequireRateLimiting(AuthEndpoints.OutboundRateLimit);
         api.MapGet("/series", async (LibraryService library, ItemDtos dtos, CancellationToken ct) => (await library.ListSeriesAsync(ct)).Select(dtos.Of));
         api.MapGet("/series/{id:int}", async (int id, LibraryService library, ItemDtos dtos, CancellationToken ct) => dtos.Detail(await library.GetSeriesAsync(id, ct)));
         api.MapPost("/series", async (AddSeriesRequest request, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
-            dtos.Of(await library.AddSeriesAsync(request.TvdbId, request.QualityProfileId, request.Version, request.Monitor, request.Seasons, request.SearchNow, ct)));
+            dtos.Of(await library.AddSeriesAsync(request.TvdbId, request.QualityProfileId, request.Version, request.Monitor, request.Seasons, request.SearchNow, ct, request.Episodes, request.Subtitles)));
         api.MapPatch("/series/{id:int}", async (int id, ItemUpdate update, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
             dtos.Of(await library.UpdateSeriesAsync(id, update, ct)));
         api.MapPatch("/series/{id:int}/seasons/{number:int}", async (int id, int number, MonitoredRequest request, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
@@ -87,7 +123,7 @@ public static class ApiEndpoints
             };
         });
         api.MapPost("/movies", async (AddMovieRequest request, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
-            await MovieAsync((await library.AddMovieAsync(request.TmdbId, request.QualityProfileId, request.Version, request.SearchNow, ct)).Id, library, dtos, ct));
+            await MovieAsync((await library.AddMovieAsync(request.TmdbId, request.QualityProfileId, request.Version, request.SearchNow, ct, request.Subtitles)).Id, library, dtos, ct));
         api.MapPatch("/movies/{id:int}", async (int id, ItemUpdate update, LibraryService library, ItemDtos dtos, CancellationToken ct) =>
         {
             await library.UpdateMovieAsync(id, update, ct);
@@ -114,8 +150,9 @@ public static class ApiEndpoints
                 Language = string.IsNullOrWhiteSpace(language) ? null : Language.FindByName(language),
                 Status = status is null ? null : ParseEnum(status, ExploreStatus.Released),
                 Sort = ParseEnum(sort, ExploreSort.Popularity),
-            }, ct));
-        api.MapGet("/explore/{kind}/genres", (string kind, DiscoveryService discovery, CancellationToken ct) => discovery.ExploreGenresAsync(ExploreKind(kind), ct));
+            }, ct)).RequireRateLimiting(AuthEndpoints.OutboundRateLimit);
+        api.MapGet("/explore/{kind}/genres", (string kind, DiscoveryService discovery, CancellationToken ct) => discovery.ExploreGenresAsync(ExploreKind(kind), ct))
+            .RequireRateLimiting(AuthEndpoints.OutboundRateLimit);
         api.MapGet("/dashboard", async (DashboardService dashboard, DownloadService downloads, CancellationToken ct) =>
         {
             DashboardSummary summary = await dashboard.GetAsync(DateOnly.FromDateTime(DateTime.Now), ct);
@@ -154,6 +191,10 @@ public static class ApiEndpoints
         api.MapPost("/releases/grab", async (GrabRequest request, DownloadService downloads, CancellationToken ct) =>
             ToDto(await downloads.GrabAsync(request, ct)));
         api.MapGet("/downloads", async (DownloadService downloads, CancellationToken ct) => (await downloads.ListAsync(inProgressOnly: false, ct)).Select(ToDto));
+        // The public address torrent traffic leaves from (the VPN's when there is one) and the engine's listen port.
+        api.MapGet("/downloads/network", (PublicIpMonitor ip, TorrentEngineHost torrents) => ToNetworkDto(ip.Last, torrents.Engine));
+        api.MapPost("/downloads/network/refresh", async (PublicIpMonitor ip, TorrentEngineHost torrents, CancellationToken ct) =>
+            ToNetworkDto(await ip.RefreshAsync(ct), torrents.Engine));
         api.MapPost("/downloads/{id:int}/pause", async (int id, DownloadService downloads, CancellationToken ct) =>
         {
             await downloads.SetPausedAsync(id, paused: true, ct);
@@ -174,13 +215,22 @@ public static class ApiEndpoints
             await downloads.RemoveAsync(id, deleteData ?? false, blocklist ?? false, ct);
             return Results.NoContent();
         });
-        api.MapDelete("/series/{id:int}", async (int id, bool? deleteFiles, LibraryService library, CancellationToken ct) =>
+        // Releases never grabbed again: removed by hand, failed, stalled or refused by the content check. Deleting one lifts the ban.
+        api.MapGet("/blocklist", async (ModularrDbContext db, CancellationToken ct) =>
+            (await db.Blocklist.AsNoTracking().OrderByDescending(b => b.Id).Take(500).ToListAsync(ct))
+                .Select(b => new { b.Id, b.SeriesId, b.MovieId, Title = b.SourceTitle, Quality = b.Quality.Quality.Name, b.Indexer, b.Reason, b.Date }));
+        api.MapDelete("/blocklist/{id:int}", async (int id, ModularrDbContext db, CancellationToken ct) =>
+            await db.Blocklist.Where(b => b.Id == id).ExecuteDeleteAsync(ct) == 0 ? Results.NotFound() : Results.NoContent());
+        api.MapDelete("/series/{id:int}", async (int id, bool? deleteFiles, LibraryService library, DownloadService downloads, CancellationToken ct) =>
         {
+            // Torrents first: deleting the title cascades to its download rows, after which they cannot be found.
+            await downloads.RemoveForTitleAsync(id, movieId: null, deleteFiles ?? false, ct);
             await library.DeleteSeriesAsync(id, deleteFiles ?? false, ct);
             return Results.NoContent();
         }).RequireAuthorization(AuthEndpoints.AdminPolicy);
-        api.MapDelete("/movies/{id:int}", async (int id, bool? deleteFiles, LibraryService library, CancellationToken ct) =>
+        api.MapDelete("/movies/{id:int}", async (int id, bool? deleteFiles, LibraryService library, DownloadService downloads, CancellationToken ct) =>
         {
+            await downloads.RemoveForTitleAsync(seriesId: null, id, deleteFiles ?? false, ct);
             await library.DeleteMovieAsync(id, deleteFiles ?? false, ct);
             return Results.NoContent();
         }).RequireAuthorization(AuthEndpoints.AdminPolicy);
@@ -203,11 +253,18 @@ public static class ApiEndpoints
             await settings.SaveSubtitlesAsync(subtitles, ct);
             return options.CurrentValue.Subtitles;
         }).RequireAuthorization(AuthEndpoints.AdminPolicy);
-        api.MapGet("/settings/import", (IOptionsMonitor<ModularrOptions> options) => new { options.CurrentValue.PostProcessing.ImportMode });
+        api.MapGet("/settings/import", (IOptionsMonitor<ModularrOptions> options) => ImportSettings(options.CurrentValue.PostProcessing))
+            .RequireAuthorization(AuthEndpoints.AdminPolicy);
         api.MapPut("/settings/import", async (ImportModeRequest request, SettingsFile settings, IOptionsMonitor<ModularrOptions> options, CancellationToken ct) =>
         {
-            await settings.SaveImportModeAsync(request.ImportMode, ct);
-            return new { options.CurrentValue.PostProcessing.ImportMode };
+            await settings.SaveImportAsync(request.ImportMode, request.RenameFiles, request.RecycleBinPath, ct);
+            return ImportSettings(options.CurrentValue.PostProcessing);
+        }).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapGet("/settings/automation", (IOptionsMonitor<ModularrOptions> options) => options.CurrentValue.Automation);
+        api.MapPut("/settings/automation", async (AutomationOptions automation, SettingsFile settings, IOptionsMonitor<ModularrOptions> options, CancellationToken ct) =>
+        {
+            await settings.SaveAutomationAsync(automation, ct);
+            return options.CurrentValue.Automation;
         }).RequireAuthorization(AuthEndpoints.AdminPolicy);
         api.MapGet("/settings/metadata", (IOptionsMonitor<ModularrOptions> options) => MetadataSettings(options.CurrentValue.Metadata))
             .RequireAuthorization(AuthEndpoints.AdminPolicy);
@@ -220,6 +277,28 @@ public static class ApiEndpoints
         {
             string? error = await tmdb.TestAsync(ct);
             return new { ok = error is null, error };
+        }).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapGet("/settings/notifications", (IOptionsMonitor<ModularrOptions> options) => options.CurrentValue.Notifications)
+            .RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapPut("/settings/notifications", async (IReadOnlyList<NotificationConnection> notifications, SettingsFile settings, IOptionsMonitor<ModularrOptions> options, CancellationToken ct) =>
+        {
+            await settings.SaveNotificationsAsync(notifications, ct);
+            return options.CurrentValue.Notifications;
+        }).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        // Takes the connection as edited, so it can be tried before it is saved.
+        api.MapPost("/settings/notifications/test", async (NotificationConnection connection, NotificationSender sender, CancellationToken ct) =>
+        {
+            connection.EnsureValid();
+            string? error = await sender.SendAsync(connection, new NotificationMessage(NotificationEvent.Test, "Modularr", "Test notification", null, null, DateTime.UtcNow), ct);
+            return new { ok = error is null, error };
+        }).RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapGet("/settings/torrents", (IOptionsMonitor<ModularrOptions> options) => options.CurrentValue.Torrents)
+            .RequireAuthorization(AuthEndpoints.AdminPolicy);
+        api.MapPut("/settings/torrents", async (TorrentEngineOptions torrents, SettingsFile settings, TorrentEngineHost engine, IOptionsMonitor<ModularrOptions> options, CancellationToken ct) =>
+        {
+            await settings.SaveTorrentsAsync(torrents, ct);
+            await engine.Engine.ApplyAsync(options.CurrentValue.Torrents);
+            return options.CurrentValue.Torrents;
         }).RequireAuthorization(AuthEndpoints.AdminPolicy);
         api.MapGet("/filesystem", (string? path) => DirectoryBrowser.Browse(path)).RequireAuthorization(AuthEndpoints.AdminPolicy);
         return api;
@@ -243,9 +322,38 @@ public static class ApiEndpoints
         await context.Response.WriteAsJsonAsync(new { error = message });
     }));
 
-    private static object Indexers(IndexerCatalogHost host, IndexerDomainHealth health)
+    private static IndexerCatalogEntry FindIndexer(IndexerCatalogHost host, string id) =>
+        host.Catalog.Find(id) ?? throw new KeyNotFoundException($"Unknown indexer '{id}'.");
+
+    // The login form of an indexer, generated from its definition's settings; a secret's value is never sent back, only whether it is set.
+    private static object IndexerSettings(IndexerCatalogEntry entry, ModularrOptions options)
+    {
+        IReadOnlyDictionary<string, string> values = options.Indexers.Settings.GetValueOrDefault(entry.Id) ?? new Dictionary<string, string>();
+        return new
+        {
+            id = entry.Id,
+            needsLogin = CardigannSettings.NeedsLogin(entry.Definition),
+            configured = CardigannSettings.IsConfigured(entry.Definition, values),
+            captcha = entry.Definition.Login?.Captcha is not null,
+            fields = entry.Definition.Settings.Where(f => f.Type != "cardigannCaptcha").Select(f => new
+            {
+                name = f.Name,
+                type = CardigannSettings.IsInfo(f) ? "info" : f.Type,
+                label = f.Label ?? f.Name,
+                @default = f.Default,
+                options = f.Options?.Select(o => new { value = o.Key, label = o.Value }),
+                secret = CardigannSettings.IsSecret(f),
+                required = CardigannSettings.Required(entry.Definition).Contains(f),
+                value = CardigannSettings.IsSecret(f) ? null : values.GetValueOrDefault(f.Name),
+                set = values.ContainsKey(f.Name),
+            }),
+        };
+    }
+
+    private static object Indexers(IndexerCatalogHost host, IndexerDomainHealth health, IOptionsMonitor<ModularrOptions> options)
     {
         IndexerCatalog catalog = host.Catalog;
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> settings = options.CurrentValue.Indexers.Settings;
         return new
         {
             total = catalog.Entries.Count,
@@ -259,9 +367,29 @@ public static class ApiEndpoints
                 language = e.Language,
                 privacy = e.Privacy,
                 enabled = e.Enabled,
+                failing = host.IsFailing(e.Id),
+                needsLogin = CardigannSettings.NeedsLogin(e.Definition),
+                configured = CardigannSettings.IsConfigured(e.Definition, settings.GetValueOrDefault(e.Id)),
                 health = health.Health(e.Definition),
+                description = e.Description,
+                categories = e.Categories,
+                // Every domain the definition knows (the configured override first), tried in this order when one fails.
+                mirrors = health.Candidates(e.Definition),
             }),
         };
+    }
+
+    // Prowlarr's test: a search without a term (the latest releases), which also updates the indexer's health.
+    private static async Task<IResult> TestIndexer(string id, IndexerCatalogHost host, IndexerSearch search, IndexerDomainHealth health, CancellationToken ct)
+    {
+        if (host.Catalog.Find(id) is not IndexerCatalogEntry entry)
+        {
+            return Results.NotFound(new { error = $"Unknown indexer '{id}'." });
+        }
+
+        IndexerSearchResult result = await search.SearchAsync([entry.Definition], new CardigannSearchQuery(), ct, includeCoolingDown: true);
+        host.Report(entry.Id, result.Errors.Count == 0);
+        return Results.Ok(new { releases = result.Releases.Count, error = result.Errors.Count > 0 ? result.Errors[0].Message : null, health = health.Health(entry.Definition) });
     }
 
     private static async Task<object> Search(
@@ -319,6 +447,9 @@ public static class ApiEndpoints
         effective = metadata.EffectiveTmdbApiKey is string key ? new string('•', 8) + key[^Math.Min(4, key.Length)..] : null,
     };
 
+    private static object ImportSettings(PostProcessingOptions postProcessing) =>
+        new { postProcessing.ImportMode, postProcessing.RenameFiles, postProcessing.RecycleBinPath };
+
     private static async Task<object> MovieAsync(int id, LibraryService library, ItemDtos dtos, CancellationToken ct)
     {
         (Movie movie, MediaFile? file) = await library.GetMovieAsync(id, ct);
@@ -357,7 +488,7 @@ public static class ApiEndpoints
         public object Of(Movie m, bool hasFile) => new
         {
             m.Id, m.TmdbId, m.ImdbId, m.Title, m.Year, m.Runtime, m.Monitored, m.Path, m.QualityProfileId, m.Poster, m.Backdrop, m.Overview,
-            m.Rating, m.Genres, m.Certification, m.OriginalLanguage, m.Version, m.Subtitles,
+            m.Rating, m.Genres, m.Certification, m.OriginalLanguage, m.Version, m.Subtitles, m.CollectionTmdbId, m.CollectionName,
             wantedVersion = options.CurrentValue.Media.WantedVersion(m),
             policyVersion = options.CurrentValue.Media.WantedVersion(MediaType.Movie, m.OriginalLanguage, itemVersion: null),
             wantedSubtitles = options.CurrentValue.Media.WantedSubtitles(m),
@@ -424,5 +555,14 @@ public static class ApiEndpoints
         uploadRate = item.Torrent?.UploadRate,
         ratio = item.Torrent?.SeedRatio,
         path = item.Torrent?.OutputPath,
+        hasMetadata = item.Torrent?.HasMetadata,
+        seeds = item.Torrent?.Seeds,
+        peers = item.Torrent?.Peers,
+    };
+
+    private static object ToNetworkDto(PublicIpCheck ip, TorrentEngine engine) => new
+    {
+        ip.PublicIp, ip.Org, ip.Country, ip.CheckedAt, ip.Error,
+        engine.ListenPort, engine.OpenConnections,
     };
 }

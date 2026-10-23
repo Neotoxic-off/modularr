@@ -116,7 +116,8 @@ public sealed partial class SeriesMetadataClient(HttpClient httpClient, IOptions
                 _ => SeriesStatus.Continuing,
             },
             Ratings = MapRating(show.Rating),
-            Genres = show.Genres,
+            // A JSON null overrides the [] initializer; Genres is a required column.
+            Genres = show.Genres ?? [],
             Certification = string.IsNullOrWhiteSpace(show.ContentRating) ? null : show.ContentRating.ToUpperInvariant(),
             IsDaily = dailySeries.Contains(show.TvdbId),
             Actors = [.. show.Actors.Select(a => new SeriesActor(a.Name, a.Character,

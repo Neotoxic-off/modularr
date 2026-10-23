@@ -98,15 +98,44 @@ public static class SubtitleFiles
     public static IReadOnlyList<SubtitleFile> Present(string videoPath, IReadOnlyList<string> roots)
     {
         string folder = EnsureInLibrary(videoPath, roots);
-        string prefix = Path.GetFileNameWithoutExtension(videoPath) + ".";
-        if (!Directory.Exists(folder))
+        return Directory.Exists(folder) ? Match(videoPath, Directory.EnumerateFiles(folder, "*", TopLevelFiles)) : [];
+    }
+
+    // Present for many videos, each folder checked and listed once. A video outside the roots, behind a link or unreadable has none.
+    public static Dictionary<string, IReadOnlyList<SubtitleFile>> PresentAll(IEnumerable<string> videoPaths, IReadOnlyList<string> roots)
+    {
+        Dictionary<string, string[]> folders = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, IReadOnlyList<SubtitleFile>> present = new(StringComparer.Ordinal);
+        foreach (string video in videoPaths)
         {
-            return [];
+            string key = Path.GetDirectoryName(Path.GetFullPath(video)) ?? "";
+            if (!folders.TryGetValue(key, out string[]? files))
+            {
+                try
+                {
+                    string folder = EnsureInLibrary(video, roots);
+                    files = Directory.Exists(folder) ? [.. Directory.EnumerateFiles(folder, "*", TopLevelFiles).Where(f => Extensions.Contains(Path.GetExtension(f)))] : [];
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+                {
+                    files = [];
+                }
+
+                folders[key] = files;
+            }
+
+            present[video] = Match(video, files);
         }
 
+        return present;
+    }
+
+    private static IReadOnlyList<SubtitleFile> Match(string videoPath, IEnumerable<string> files)
+    {
+        string prefix = Path.GetFileNameWithoutExtension(videoPath) + ".";
         return
         [
-            .. Directory.EnumerateFiles(folder, "*", TopLevelFiles)
+            .. files
                 .Where(f => Extensions.Contains(Path.GetExtension(f)) && Path.GetFileNameWithoutExtension(f).StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 .Select(f => Parse(f, Path.GetFileNameWithoutExtension(f)[prefix.Length..].Split('.')))
                 .OfType<SubtitleFile>(),

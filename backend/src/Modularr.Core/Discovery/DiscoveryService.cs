@@ -1,6 +1,8 @@
+using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Modularr.Core.Decisions;
 using Modularr.Core.Metadata;
 using Modularr.Core.Persistence;
@@ -29,8 +31,10 @@ public enum AnimeList
 
 // Discover lists and the add-box lookup. Source answers are cached in memory; library membership is applied per request, so it is always current.
 public sealed partial class DiscoveryService(
-    MovieMetadataClient movies, SeriesMetadataClient series, ShowDiscoveryClient shows, TmdbClient tmdb, ShowIndex showIndex, IMemoryCache cache, ModularrDbContext db)
+    MovieMetadataClient movies, SeriesMetadataClient series, ShowDiscoveryClient shows, TmdbClient tmdb, ShowIndex showIndex, [FromKeyedServices(DiscoveryService.CacheKey)] IMemoryCache cache, ModularrDbContext db)
 {
+    public const string CacheKey = "discovery";
+
     private static readonly TimeSpan ListLifetime = TimeSpan.FromHours(6);
     private static readonly TimeSpan LookupLifetime = TimeSpan.FromMinutes(5);
 
@@ -139,16 +143,38 @@ public sealed partial class DiscoveryService(
     }
 
     // A failed fetch is not cached. Each entry counts 1 against the cache's SizeLimit, so distinct lookup terms cannot fill memory.
-    private async Task<T> CachedAsync<T>(string key, TimeSpan lifetime, Func<CancellationToken, Task<T>> fetch, CancellationToken cancellationToken) =>
-        (await cache.GetOrCreateAsync(key, entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = lifetime;
-            entry.Size = 1;
+    // Concurrent misses share one fetch: a cold list (the anime mapping is megabytes) would otherwise be downloaded and parsed once
+    // per waiting request. The shared fetch is not tied to the first caller's cancellation; the client timeouts bound it.
+    private static readonly ConcurrentDictionary<string, Lazy<Task<object?>>> InFlight = new();
 
+    private async Task<T> CachedAsync<T>(string key, TimeSpan lifetime, Func<CancellationToken, Task<T>> fetch, CancellationToken cancellationToken)
+    {
+        if (cache.TryGetValue(key, out T? hit))
+        {
+            return hit!;
+        }
+
+        Lazy<Task<object?>> shared = InFlight.GetOrAdd(key, _ => new Lazy<Task<object?>>(async () =>
+        {
+            T value = await fetch(CancellationToken.None).ConfigureAwait(false);
             // Explore pages, one per filter combination, are evicted first so they never push out the long-lived lists.
-            entry.Priority = lifetime == ExploreLifetime ? CacheItemPriority.Low : CacheItemPriority.Normal;
-            return fetch(cancellationToken);
-        }).ConfigureAwait(false))!;
+            cache.Set(key, value, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = lifetime,
+                Size = 1,
+                Priority = lifetime == ExploreLifetime ? CacheItemPriority.Low : CacheItemPriority.Normal,
+            });
+            return value;
+        }));
+        try
+        {
+            return (T)(await shared.Value.WaitAsync(cancellationToken).ConfigureAwait(false))!;
+        }
+        finally
+        {
+            InFlight.TryRemove(new KeyValuePair<string, Lazy<Task<object?>>>(key, shared));
+        }
+    }
 
     private async Task<IReadOnlyList<DiscoveryItem>> WithLibraryAsync(IReadOnlyList<DiscoveryItem> items, CancellationToken cancellationToken)
     {

@@ -354,8 +354,12 @@ public static partial class MovieTitleParser
             : simpleReleaseTitle.Remove(titleGroup.Index, titleGroup.Length).Insert(titleGroup.Index, placeholder);
     }
 
+    // Real release names are well under this; longer remote text only buys regex backtracking time.
+    public const int MaxTitleLength = 512;
+
     private static bool ValidateBeforeParsing(string title) =>
-        !(title.Contains("password", StringComparison.OrdinalIgnoreCase) && title.Contains("yenc", StringComparison.OrdinalIgnoreCase))
+        title.Length <= MaxTitleLength
+        && !(title.Contains("password", StringComparison.OrdinalIgnoreCase) && title.Contains("yenc", StringComparison.OrdinalIgnoreCase))
         && title.Any(char.IsLetterOrDigit)
         && !ReleaseTitle.IsHashedMovie(ReleaseTitle.RemoveFileExtension(title));
 }
