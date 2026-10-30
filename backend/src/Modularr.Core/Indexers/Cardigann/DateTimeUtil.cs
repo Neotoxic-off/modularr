@@ -18,7 +18,7 @@ public static partial class DateTimeUtil
     /// <exception cref="FormatException">An unknown unit.</exception>
     public static DateTime FromTimeAgo(string text)
     {
-        ArgumentNullException.ThrowIfNull(text);
+        text = Bounded(text);
         text = text.ToLowerInvariant();
         if (text.Contains("now", StringComparison.Ordinal))
         {
@@ -50,12 +50,21 @@ public static partial class DateTimeUtil
 
     /// <exception cref="FormatException">No date or time found.</exception>
     public static DateTime FromFuzzyTime(string text, string? format = null) =>
-        DateTimeRoutines.TryParseDateOrTime(text, ukDate: format == "UK", out DateTime date) ? date : throw new FormatException($"FromFuzzyTime parsing failed for string {text}");
+        DateTimeRoutines.TryParseDateOrTime(Bounded(text), ukDate: format == "UK", out DateTime date) ? date : throw new FormatException($"FromFuzzyTime parsing failed for string {text}");
+
+    // Scraped date text is remote data: a real date is a few dozen characters, a longer value only feeds backtracking regexes.
+    private const int MaxDateLength = 256;
+
+    private static string Bounded(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        return text.Length <= MaxDateLength ? text : throw new FormatException($"Date text longer than {MaxDateLength} characters");
+    }
 
     /// <exception cref="FormatException">The text is not a recognizable date.</exception>
     public static DateTime FromUnknown(string text, string? format = null)
     {
-        ArgumentNullException.ThrowIfNull(text);
+        Bounded(text);
         try
         {
             text = text.Trim();

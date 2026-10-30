@@ -1,0 +1,41 @@
+{
+  "TmdbId": 135416,
+  "Name": "Prometheus Collection",
+  "Images": [
+    { "CoverType": "Poster", "Url": "https://image.tmdb.org/t/p/original/ormwCxyrBJGQmuMfE6diUnZV12R.jpg" },
+    { "CoverType": "Fanart", "Url": "https://image.tmdb.org/t/p/original/cK83Pq8SJoeSTnLJucr8IWn35KF.jpg" }
+  ],
+  "Overview": "In 2012, the science-fiction/horror film Prometheus brought Ridley Scott back to the film franchise he launched in 1979 with Alien.",
+  "Parts": [
+    {
+      "TmdbId": 126889,
+      "ImdbId": "tt2316204",
+      "Title": "Alien: Covenant",
+      "Year": 2017,
+      "InCinema": "2017-05-09T00:00:00Z",
+      "PhysicalRelease": "2017-07-13T00:00:00Z",
+      "DigitalRelease": "2017-05-12T00:00:00Z",
+      "Runtime": 122,
+      "Images": [
+        { "CoverType": "Poster", "Url": "https://image.tmdb.org/t/p/original/zecMELPbU5YMQpC81Z8ImaaXuf9.jpg" },
+        { "CoverType": "Fanart", "Url": "https://image.tmdb.org/t/p/original/iXXPaQPfQowpQ5UvhsHLj9BgFhe.jpg" }
+      ],
+      "Collection": { "TmdbId": 135416, "Name": "Prometheus Collection" }
+    },
+    {
+      "TmdbId": 70981,
+      "ImdbId": "tt1446714",
+      "Title": "Prometheus",
+      "Year": 2012,
+      "InCinema": "2012-05-30T00:00:00Z",
+      "PhysicalRelease": "2012-09-25T00:00:00Z",
+      "DigitalRelease": "2012-06-07T00:00:00Z",
+      "Runtime": 124,
+      "Images": [
+        { "CoverType": "Poster", "Url": "https://image.tmdb.org/t/p/original/qsYQflQhOuhDpQ0W2aOcwqgDAeI.jpg" },
+        { "CoverType": "Fanart", "Url": "https://image.tmdb.org/t/p/original/qDG5SlGkWNsjSJWiGTBMFI8DpzA.jpg" }
+      ],
+      "Collection": { "TmdbId": 135416, "Name": "Prometheus Collection" }
+    }
+  ]
+}

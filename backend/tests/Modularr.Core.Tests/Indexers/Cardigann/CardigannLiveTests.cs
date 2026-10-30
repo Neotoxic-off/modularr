@@ -1,6 +1,6 @@
-using Microsoft.Extensions.Options;
 using Modularr.Core.Configuration;
 using Modularr.Core.Indexers.Cardigann;
+using Modularr.Core.Tests.Library;
 
 namespace Modularr.Core.Tests.Indexers.Cardigann;
 
@@ -16,7 +16,7 @@ public sealed class CardigannLiveTests
         Assert.SkipUnless(Environment.GetEnvironmentVariable("MODULARR_LIVE_INDEXERS") == "1", "Set MODULARR_LIVE_INDEXERS=1 to search the live sites.");
         using HttpClient client = new();
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Modularr/1.0");
-        CardigannSearcher searcher = new(client, Options.Create(new ModularrOptions()));
+        CardigannSearcher searcher = new(client, new FixedOptionsMonitor(new ModularrOptions()), new CardigannSessions());
 
         CardigannSearchResult result = await searcher.SearchAsync(CardigannFixtures.Definition(definition), null, new CardigannSearchQuery { Term = term }, TestContext.Current.CancellationToken);
 

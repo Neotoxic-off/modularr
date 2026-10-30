@@ -10,7 +10,7 @@ using Modularr.Core.Subtitles;
 namespace Modularr.Core.Library;
 
 // Episodes count regular seasons only. Missing: monitored episodes aired without a file, and monitored movies without one.
-public sealed record DashboardCounts(int Movies, int Series, int Anime, int Episodes, int EpisodesWithFile, int Missing);
+public sealed record DashboardCounts(int Movies, int Series, int Anime, int Episodes, int EpisodesWithFile, int MissingMovies, int MissingEpisodes);
 
 // Used, free and total are summed over the distinct volumes holding the library and downloads folders; LibraryBytes is the
 // imported files alone.
@@ -41,8 +41,8 @@ public sealed class DashboardService(ModularrDbContext db, SubtitleService subti
         int anime = await db.Series.CountAsync(s => s.SeriesType == SeriesType.Anime, cancellationToken).ConfigureAwait(false);
         int episodes = await db.Episodes.CountAsync(e => e.SeasonNumber > 0, cancellationToken).ConfigureAwait(false);
         int episodesWithFile = await db.Episodes.CountAsync(e => e.SeasonNumber > 0 && e.MediaFileId != null, cancellationToken).ConfigureAwait(false);
-        int missing = await db.Episodes.CountAsync(e => e.Monitored && e.Series.Monitored && e.MediaFileId == null && e.AirDate <= today, cancellationToken).ConfigureAwait(false)
-            + await db.Movies.CountAsync(m => m.Monitored && !db.MediaFiles.Any(f => f.MovieId == m.Id), cancellationToken).ConfigureAwait(false);
+        int missingEpisodes = await db.Episodes.CountAsync(e => e.Monitored && e.Series.Monitored && e.MediaFileId == null && e.AirDate <= today, cancellationToken).ConfigureAwait(false);
+        int missingMovies = await db.Movies.CountAsync(m => m.Monitored && !db.MediaFiles.Any(f => f.MovieId == m.Id), cancellationToken).ConfigureAwait(false);
         long libraryBytes = await db.MediaFiles.SumAsync(f => f.Size, cancellationToken).ConfigureAwait(false);
 
         List<AiringEpisode> airing = await db.Episodes.AsNoTracking()
@@ -61,7 +61,7 @@ public sealed class DashboardService(ModularrDbContext db, SubtitleService subti
         }).ConfigureAwait(false);
 
         return new DashboardSummary(
-            new DashboardCounts(movies, series, anime, episodes, episodesWithFile, missing),
+            new DashboardCounts(movies, series, anime, episodes, episodesWithFile, missingMovies, missingEpisodes),
             Storage(libraryBytes),
             new DashboardSubtitles(covered, total),
             airing,
@@ -85,7 +85,7 @@ public sealed class DashboardService(ModularrDbContext db, SubtitleService subti
     }
 
     // Statistics of the volume holding the folder (its nearest existing parent until it is created); null when unreadable.
-    private static (string Key, long Total, long Free)? VolumeOf(string folder)
+    public static (string Key, long Total, long Free)? VolumeOf(string folder)
     {
         try
         {

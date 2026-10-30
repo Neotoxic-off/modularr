@@ -1,22 +1,20 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { api, errorMessage, isSeries, kindOf, libraryHref, titleHref } from "@/lib/api";
-import type { Download, Kind, LibraryItem } from "@/lib/api";
-import { isActive, useActivity } from "@/components/Activity";
+import type { ActivityKind, Download, Kind, LibraryItem } from "@/lib/api";
+import { isActive, useActivity, useActivityRefresh } from "@/components/Activity";
 import { useSession } from "@/components/AuthGate";
-import { Icon } from "@/components/icons";
 import { PosterCard, PosterGrid, PosterSkeleton } from "@/components/Poster";
-import { useSearch } from "@/components/Shell";
 import { useToast } from "@/components/Toasts";
-import { Alert, Button, Chip, Empty, Field, Input, Menu, MenuItem, Modal, PageHeader, Segmented, Select } from "@/components/ui";
+import { Alert, Button, ButtonLink, Empty, Field, Input, Menu, MenuItem, Modal, PageHeader, Segmented, Select } from "@/components/ui";
 import type { Status } from "@/components/ui";
 
-const statuses = ["all", "missing", "downloading", "complete", "unmonitored"] as const;
+const statuses = ["all", "missing", "complete", "unmonitored"] as const;
 type StatusFilter = (typeof statuses)[number];
-const statusLabels: Record<StatusFilter, string> = { all: "All", missing: "Missing", downloading: "Downloading", complete: "Complete", unmonitored: "Unmonitored" };
+const statusLabels: Record<StatusFilter, string> = { all: "All", missing: "Missing", complete: "Complete", unmonitored: "Unmonitored" };
 
 const sorts = { added: "Recently added", title: "Title", year: "Year", rating: "Rating" } as const;
 type Sort = keyof typeof sorts;
@@ -35,6 +33,9 @@ const sorters: Record<Sort, (a: LibraryItem, b: LibraryItem) => number> = {
 };
 
 // A series is missing only when an aired, monitored episode has no file; one waiting for its premiere is not.
+// Events that change what the grid shows: a title's files, its download state, or the titles themselves.
+const gridKinds: ReadonlySet<ActivityKind> = new Set(["Added", "Removed", "Grabbed", "Imported", "DownloadFailed", "ImportFailed", "ScanCompleted"]);
+
 const isMissing = (item: LibraryItem) => item.monitored && !item.hasFile && (!isSeries(item) || item.missing > 0);
 
 export function LibraryPage({ kind }: { kind: Kind }) {
@@ -45,15 +46,16 @@ function Library({ kind }: { kind: Kind }) {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const openSearch = useSearch();
   const toast = useToast();
   const { user } = useSession();
   const { epoch, progress } = useActivity();
   const [items, setItems] = useState<LibraryItem[] | null>(null);
   const [downloads, setDownloads] = useState<Download[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [term, setTerm] = useState("");
+  const [term, setTerm] = useState(() => params.get("q") ?? "");
+  const typing = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [scanning, setScanning] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [reload, setReload] = useState(0);
 
@@ -72,16 +74,24 @@ function Library({ kind }: { kind: Kind }) {
     const query = next.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   };
+  // The filter text goes into the URL after a pause in typing, so Back comes back to it.
+  const type = (value: string) => {
+    setTerm(value);
+    clearTimeout(typing.current);
+    typing.current = setTimeout(() => set({ q: value.trim() }), 300);
+  };
 
   useEffect(() => {
     (kind === "movie" ? api.movies() : api.series())
       .then((all) => setItems(all.filter((i) => kindOf(i) === kind)))
       .catch((e: unknown) => setError(errorMessage(e)));
-  }, [kind, reload]);
+  }, [kind, epoch, reload]);
 
   useEffect(() => {
     api.downloads().then((d) => setDownloads(d.filter(isActive))).catch(() => undefined);
   }, [epoch, reload]);
+
+  useActivityRefresh((a) => gridKinds.has(a.kind), () => setReload((n) => n + 1));
 
   async function rescan() {
     setScanning(true);
@@ -97,6 +107,24 @@ function Library({ kind }: { kind: Kind }) {
     }
   }
 
+  // One search per title, one after the other so the indexers are not hit all at once; one toast for the lot.
+  async function searchAll(list: LibraryItem[]) {
+    setSearching(true);
+    toast({ key: "library-search", icon: "search", tone: "seek", title: `Searching ${list.length} ${list.length === 1 ? "title" : "titles"}`, message: "Looking for releases…" });
+    let failed = 0;
+    for (const item of list) {
+      try {
+        await api.autoSearch(kind, item.id);
+      } catch {
+        failed++;
+      }
+    }
+    toast(failed === 0
+      ? { key: "library-search", icon: "check", tone: "ok", title: `Searched ${list.length} ${list.length === 1 ? "title" : "titles"}`, message: "Grabs show up in Downloads." }
+      : { key: "library-search", icon: "alert", tone: "bad", title: "Search all", message: `${failed} of ${list.length} searches could not start.` });
+    setSearching(false);
+  }
+
   const downloadOf = (item: LibraryItem) => downloads.find((d) => (isSeries(item) ? d.seriesId : d.movieId) === item.id);
   const statusOf = (item: LibraryItem): Status | undefined => {
     const download = downloadOf(item);
@@ -108,7 +136,6 @@ function Library({ kind }: { kind: Kind }) {
   const matches: Record<StatusFilter, (item: LibraryItem) => boolean> = {
     all: () => true,
     missing: isMissing,
-    downloading: (item) => !!downloadOf(item),
     complete: (item) => item.hasFile,
     unmonitored: (item) => !item.monitored,
   };
@@ -151,37 +178,26 @@ function Library({ kind }: { kind: Kind }) {
       {/* Phone: the Library tab lands here; the three libraries are one switch away. */}
       <Segmented label="Library" value={kind} className="mb-4 md:hidden" onChange={(k) => router.push(libraryHref[k])}
         options={(["movie", "series", "anime"] as const).map((k) => ({ value: k, label: titles[k] }))} />
-      <PageHeader title={titles[kind]} description={items && `${items.length} ${items.length === 1 ? "title" : "titles"}`}>
-        <div className="flex items-center gap-2">
-          <Button variant="primary" icon="plus" onClick={openSearch}>Add</Button>
-          {isAdmin && (
-            <Menu label="More library actions">
-              <MenuItem icon="refresh" onClick={rescan} disabled={scanning}>{scanning ? "Rescanning…" : "Rescan library"}</MenuItem>
-              <MenuItem icon="folder" href="/import/">Import existing folders</MenuItem>
-            </Menu>
-          )}
-        </div>
+      <PageHeader title={titles[kind]}>
+        {isAdmin && (
+          <Menu label="More library actions">
+            <MenuItem icon="refresh" onClick={rescan} disabled={scanning}>{scanning ? "Rescanning…" : "Rescan library"}</MenuItem>
+            <MenuItem icon="folder" href="/import/">Import existing folders</MenuItem>
+          </Menu>
+        )}
       </PageHeader>
 
-      <div className="mb-6 space-y-3">
-        <div role="group" aria-label="Status" className="rail -mx-4 flex scroll-px-4 gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
-          {statuses.map((s) => (
-            <Chip key={s} selected={status === s} onClick={() => set({ status: s === "all" ? "" : s })}>
-              {statusLabels[s]}
-              {items && <span className="text-[11px] text-ink-3 tabular-nums">{refined.filter(matches[s]).length}</span>}
-            </Chip>
-          ))}
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative min-w-0 flex-1 md:max-w-72">
-            <Icon name="search" size={16} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-ink-3" />
-            <Input value={term} onChange={(e) => setTerm(e.target.value)} placeholder={`Filter ${nouns[kind]}`} aria-label={`Filter ${nouns[kind]}`} className="pl-10" />
-          </div>
-          <div className="ml-auto hidden gap-3 md:grid md:grid-cols-[180px_130px_170px]">{filterFields.map(([, field]) => field)}</div>
-          <Button className="md:hidden" icon="sliders" onClick={() => setFiltersOpen(true)}>
-            Filters{refinements > 0 && <span className="text-ink-3 tabular-nums">{refinements}</span>}
-          </Button>
-        </div>
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <Segmented label="Status" value={status} onChange={(s) => set({ status: s === "all" ? "" : s })}
+          options={statuses.map((s) => ({ value: s, label: statusLabels[s] }))} />
+        <Input icon="search" value={term} onChange={(e) => type(e.target.value)} placeholder={`Filter ${nouns[kind]}`} aria-label={`Filter ${nouns[kind]}`} className="flex-1 basis-48 md:max-w-72" />
+        <div className="ml-auto hidden gap-3 md:grid md:grid-cols-[180px_130px_170px]">{filterFields.map(([, field]) => field)}</div>
+        {isAdmin && status === "missing" && shown.length > 0 && (
+          <Button icon="search" onClick={() => void searchAll(shown)} loading={searching}>Search all ({shown.length})</Button>
+        )}
+        <Button className="md:hidden" icon="sliders" onClick={() => setFiltersOpen(true)}>
+          Filters{refinements > 0 && <span className="text-ink-3 tabular-nums">{refinements}</span>}
+        </Button>
       </div>
 
       {error && <div className="mb-6"><Alert>{error}</Alert></div>}
@@ -191,13 +207,13 @@ function Library({ kind }: { kind: Kind }) {
       ) : items.length === 0 ? (
         <Empty icon={kind === "movie" ? "film" : kind === "series" ? "tv" : "sparkles"} title={`No ${nouns[kind]} yet.`}>
           <div className="mt-3 flex flex-wrap justify-center gap-2">
-            <Button variant="primary" icon="plus" onClick={openSearch}>Add</Button>
-            {isAdmin && <Button icon="folder" onClick={() => router.push("/import/")}>Import existing</Button>}
+            {isAdmin && <ButtonLink href="/explore/" variant="primary" icon="compass">Explore</ButtonLink>}
+            {isAdmin && <ButtonLink href="/import/" icon="folder">Import existing</ButtonLink>}
           </div>
         </Empty>
       ) : shown.length === 0 ? (
         <Empty icon="search" title="Nothing matches.">
-          <Button variant="ghost" className="mt-2" onClick={() => { setTerm(""); set({ status: "", genre: "", year: "" }); }}>Clear filters</Button>
+          <Button variant="ghost" className="mt-2" onClick={() => { setTerm(""); set({ status: "", genre: "", year: "", q: "" }); }}>Clear filters</Button>
         </Empty>
       ) : (
         <PosterGrid>

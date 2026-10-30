@@ -73,6 +73,9 @@ public sealed class TorrentEngineTests : IDisposable
         new Random(42).NextBytes(content);
         await File.WriteAllBytesAsync(Path.Combine(seedDirectory, "Series.S01E01.mkv"), content, TestContext.Current.CancellationToken);
         byte[] torrentFile = (await new TorrentCreator().CreateAsync(new TorrentFileSource(Path.Combine(seedDirectory, "Series.S01E01.mkv")), TestContext.Current.CancellationToken)).Encode();
+        // The engine keeps each torrent in a folder named by its info hash: the seeder's data goes there.
+        string ownSeedDirectory = Directory.CreateDirectory(Path.Combine(seedDirectory, Torrent.Load(torrentFile).InfoHashes.V1OrV2.ToHex().ToUpperInvariant())).FullName;
+        File.Move(Path.Combine(seedDirectory, "Series.S01E01.mkv"), Path.Combine(ownSeedDirectory, "Series.S01E01.mkv"));
 
         int seederPort = FreePort();
         await using TorrentEngine seeder = await TorrentEngine.StartAsync(Options("seeder") with { ListenPort = seederPort });
@@ -88,8 +91,17 @@ public sealed class TorrentEngineTests : IDisposable
             TorrentStatus done = await WaitForAsync(leecher, id, s => s.Status == DownloadItemStatus.Completed);
             Assert.Equal(1.0, done.Progress);
             Assert.Equal(content.LongLength, done.TotalSize);
-            Assert.Equal(Path.Combine(downloadDirectory, "Series.S01E01.mkv"), done.OutputPath);
+            Assert.Equal(Path.Combine(downloadDirectory, id, "Series.S01E01.mkv"), done.OutputPath);
             Assert.Equal(content, await File.ReadAllBytesAsync(done.OutputPath, TestContext.Current.CancellationToken));
+
+            // The checkpoint writes fast-resume while the torrent runs.
+            foreach (string file in Directory.GetFiles(leecherOptions.StateDirectory, "*.fresume", SearchOption.AllDirectories))
+            {
+                File.Delete(file);
+            }
+
+            await leecher.CheckpointAsync();
+            Assert.Single(Directory.GetFiles(leecherOptions.StateDirectory, "*.fresume", SearchOption.AllDirectories));
 
             await leecher.EnforceSeedLimitsAsync();
             Assert.True(leecher.Get(id)?.CanBeRemoved);
@@ -105,6 +117,7 @@ public sealed class TorrentEngineTests : IDisposable
             Assert.True(await restored.RemoveAsync(id, deleteData: true));
             Assert.Null(restored.Get(id));
             Assert.False(File.Exists(status.OutputPath));
+            Assert.False(Directory.Exists(Path.Combine(downloadDirectory, id))); // its own folder goes with its data
         }
     }
 
@@ -242,6 +255,62 @@ public sealed class TorrentEngineTests : IDisposable
         Assert.NotEqual(DownloadItemStatus.Failed, status.Status);
         Assert.Contains(status.Files, f => f.Path.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase));
         Assert.True(await engine.RemoveAsync(id, deleteData: true));
+    }
+
+    // MonoTorrent shuts its DHT and listeners when the last torrent stops: a magnet added while that stop ran used to leave the
+    // engine "running" with DHT shut, so it never found a peer until the app restarted.
+    [Fact]
+    public async Task StoppingOneTorrentWhileAnotherStartsKeepsTheEngineListening()
+    {
+        TorrentEngineOptions options = Options("lifecycle") with { DhtEnabled = true };
+        await using TorrentEngine engine = await TorrentEngine.StartAsync(options);
+        string downloads = Path.Combine(_root, "downloads");
+        for (int i = 0; i < 10; i++)
+        {
+            string running = await engine.AddMagnetAsync(RandomMagnet(), downloads, "tv");
+            Assert.True(IsUdpPortTaken(options.ListenPort), $"DHT not started on round {i}");
+
+            await Task.WhenAll(engine.PauseAsync(running), engine.AddMagnetAsync(RandomMagnet(), downloads, "tv"));
+
+            Assert.True(engine.IsRunning);
+            Assert.True(IsUdpPortTaken(options.ListenPort), $"DHT stopped on round {i}");
+            using TcpClient client = new();
+            await client.ConnectAsync(IPAddress.Loopback, options.ListenPort, TestContext.Current.CancellationToken);
+            foreach (TorrentStatus torrent in engine.List())
+            {
+                await engine.PauseAsync(torrent.Id);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task MagnetIdleWithAnIdleEngineIsRestartedOnceInTenMinutes()
+    {
+        await using TorrentEngine engine = await TorrentEngine.StartAsync(Options("idle"));
+        await engine.AddMagnetAsync(RandomMagnet(), Path.Combine(_root, "downloads"), "tv");
+        DateTimeOffset start = DateTimeOffset.UtcNow;
+
+        Assert.Equal(0, await engine.RestartIdleMagnetsAsync(start));
+        Assert.Equal(0, await engine.RestartIdleMagnetsAsync(start.AddMinutes(4)));
+        Assert.Equal(1, await engine.RestartIdleMagnetsAsync(start.AddMinutes(5)));
+        Assert.Equal(DownloadItemStatus.Warning, engine.List().Single().Status); // still waiting for metadata, not paused
+        Assert.Equal(0, await engine.RestartIdleMagnetsAsync(start.AddMinutes(14)));
+        Assert.Equal(1, await engine.RestartIdleMagnetsAsync(start.AddMinutes(15)));
+    }
+
+    private static string RandomMagnet() => $"magnet:?xt=urn:btih:{Convert.ToHexString(Guid.NewGuid().ToByteArray())}abcdef01&tr=udp://abc";
+
+    private static bool IsUdpPortTaken(int port)
+    {
+        try
+        {
+            using UdpClient udp = new(new IPEndPoint(IPAddress.Any, port));
+            return false;
+        }
+        catch (SocketException)
+        {
+            return true;
+        }
     }
 
     // A folder torrent of random files, with the directory that seeds it.

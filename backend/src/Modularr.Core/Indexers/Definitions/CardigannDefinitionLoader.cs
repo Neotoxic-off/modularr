@@ -1,13 +1,17 @@
 using System.Collections.Frozen;
+using System.Text.RegularExpressions;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
 
 namespace Modularr.Core.Indexers.Definitions;
 
-public static class CardigannDefinitionLoader
+public static partial class CardigannDefinitionLoader
 {
     private static readonly FrozenSet<string> Types = FrozenSet.Create("public", "semi-private", "private");
+
+    // Real definitions nest a handful of levels; deserialization recurses per level and a stack overflow cannot be caught.
+    private const int MaxDepth = 64;
 
     // Unknown keys are ignored like Prowlarr does, so newer definitions still load.
     private static readonly IDeserializer Deserializer = new DeserializerBuilder()
@@ -25,6 +29,7 @@ public static class CardigannDefinitionLoader
         CardigannDefinition? definition;
         try
         {
+            EnsureShallow(yaml);
             definition = Deserializer.Deserialize<CardigannDefinition?>(yaml);
         }
         catch (YamlException ex)
@@ -38,11 +43,34 @@ public static class CardigannDefinitionLoader
         }
 
         Validate(definition);
+        definition = definition with { UsedSettings = ConfigReference().Matches(yaml).Select(match => match.Groups[1].Value).ToHashSet(StringComparer.Ordinal) };
 
         // A single search path is shorthand for one inheriting entry in paths.
         return definition.Search.Path is null
             ? definition
             : definition with { Search = definition.Search with { Paths = [.. definition.Search.Paths, new SearchPathBlock { Path = definition.Search.Path }] } };
+    }
+
+    [GeneratedRegex(@"\.Config\.(\w+)")]
+    private static partial Regex ConfigReference();
+
+    // The parser itself is iterative, so walking its events first is safe on any input.
+    private static void EnsureShallow(string yaml)
+    {
+        Parser parser = new(new StringReader(yaml));
+        int depth = 0;
+        while (parser.MoveNext())
+        {
+            if (parser.Current is MappingStart or SequenceStart && ++depth > MaxDepth)
+            {
+                throw new InvalidDataException($"Invalid indexer definition: nested deeper than {MaxDepth} levels.");
+            }
+
+            if (parser.Current is MappingEnd or SequenceEnd)
+            {
+                depth--;
+            }
+        }
     }
 
     private static void Validate(CardigannDefinition definition)

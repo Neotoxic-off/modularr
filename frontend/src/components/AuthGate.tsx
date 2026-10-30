@@ -3,12 +3,16 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { api, errorMessage, UNAUTHORIZED } from "@/lib/api";
-import type { AuthState, User } from "@/lib/api";
+import type { AuthState, Managed, User } from "@/lib/api";
 import { Ambient } from "@/components/Ambient";
 import { Alert, Button, Field, Input, Logo, Spinner } from "@/components/ui";
 
 interface Session {
   user: User;
+  // Set when linkarr manages the accounts: the users UI links there instead.
+  managed: Managed | null;
+  // After the user changes their own name or picture.
+  setUser: (user: User) => void;
   logout: () => Promise<void>;
 }
 
@@ -42,12 +46,13 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (error) return <Centered><Alert>Can’t reach modularr server: {error}</Alert></Centered>;
   if (!state) return <Centered><Spinner className="text-ink-2" /></Centered>;
-  if (!state.user) return <Login setup={state.setupRequired} onSignedIn={(user) => setState({ setupRequired: false, user })} />;
+  if (!state.user) return <Login onSignedIn={(user) => setState({ ...state, user })} />;
 
-  return <SessionContext value={{ user: state.user, logout }}>{children}</SessionContext>;
+  const setUser = (user: User) => setState((s) => s && { ...s, user });
+  return <SessionContext value={{ user: state.user, managed: state.managed, setUser, logout }}>{children}</SessionContext>;
 }
 
-function Login({ setup, onSignedIn }: { setup: boolean; onSignedIn: (user: User) => void }) {
+function Login({ onSignedIn }: { onSignedIn: (user: User) => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -58,7 +63,7 @@ function Login({ setup, onSignedIn }: { setup: boolean; onSignedIn: (user: User)
     setBusy(true);
     setError(null);
     try {
-      onSignedIn(await (setup ? api.setup : api.login)(username, password));
+      onSignedIn(await api.login(username, password));
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -73,19 +78,20 @@ function Login({ setup, onSignedIn }: { setup: boolean; onSignedIn: (user: User)
         <div className="space-y-6">
           <Logo />
           <div>
-            <h1 className="font-display text-[40px] leading-none">{setup ? "Make it yours." : "Welcome back."}</h1>
-            <p className="mt-2 text-[13px] text-ink-2">{setup ? "Create the admin account. It manages settings, users and the library." : "Sign in to continue to your library."}</p>
+            <h1 className="font-display text-[40px] leading-none">Welcome back.</h1>
+            {/* Same sign-in card as linkarr and visularr: one account, three apps. */}
+            <p className="mt-2 text-meta text-ink-2">Sign in with your linkarr account.</p>
           </div>
         </div>
         {error && <Alert>{error}</Alert>}
         <Field label="Username">
           <Input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoFocus required />
         </Field>
-        <Field label="Password" hint={setup ? "At least 8 characters." : undefined}>
+        <Field label="Password">
           <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-            autoComplete={setup ? "new-password" : "current-password"} minLength={setup ? 8 : undefined} required />
+            autoComplete="current-password" required />
         </Field>
-        <Button variant="primary" className="w-full" loading={busy}>{setup ? "Create account" : "Sign in"}</Button>
+        <Button variant="primary" className="w-full" loading={busy}>Sign in</Button>
       </form>
     </main>
   );

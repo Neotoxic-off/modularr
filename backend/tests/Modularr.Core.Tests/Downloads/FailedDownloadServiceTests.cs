@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -16,7 +17,7 @@ namespace Modularr.Core.Tests.Downloads;
 public sealed class FailedDownloadServiceTests : IDisposable
 {
     // Never started: what the importer queues is not fetched.
-    private static readonly SubtitleRunner Subtitles = new(new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>());
+    private static readonly SubtitleRunner Subtitles = new(new ServiceCollection().BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(), NullLogger<SubtitleRunner>.Instance);
 
     private const int MaxRegrabs = 3;
 

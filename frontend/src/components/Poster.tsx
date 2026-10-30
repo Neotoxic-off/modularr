@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { errorMessage, kindOfDiscovery, titleHref } from "@/lib/api";
 import type { DiscoveryItem } from "@/lib/api";
 import { useAddDialog, useAddTitle } from "@/components/AddDialog";
+import { useSession } from "@/components/AuthGate";
 import type { OnAdded } from "@/components/AddDialog";
 import { Icon } from "@/components/icons";
 import { Rating, Skeleton, Spinner, StatusBadge } from "@/components/ui";
@@ -23,8 +24,8 @@ export function PosterArt({ src, title, className = "" }: { src: string | null; 
         <img src={src} alt="" loading="lazy" onError={() => setFailed(true)}
           className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
       ) : (
-        <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center text-[13px] font-medium text-ink-3">
-          <Icon name="film" size={22} />{title}
+        <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center text-meta font-medium text-ink-3">
+          <Icon name="film" size={20} />{title}
         </span>
       )}
     </div>
@@ -39,6 +40,7 @@ type CardProps =
 export function PosterCard({ className = "", ...props }: CardProps & { className?: string }) {
   const addTitle = useAddTitle();
   const openAdd = useAddDialog();
+  const admin = useSession().user.role === "Admin";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,8 +67,8 @@ export function PosterCard({ className = "", ...props }: CardProps & { className
 
   const art = (
     <>
-      <PosterArt src={item ? item.poster : "poster" in props ? props.poster : null} title={title} className={item?.inLibrary ? "ring-2 ring-ok/70" : ""} />
-      <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-card bg-gradient-to-t from-black/80 via-black/0 to-black/25" />
+      <PosterArt src={item ? item.poster : "poster" in props ? props.poster : null} title={title} />
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-card scrim-b" />
     </>
   );
 
@@ -75,6 +77,8 @@ export function PosterCard({ className = "", ...props }: CardProps & { className
       <div className="relative">
         {href ? (
           <Link href={href} aria-label={`${title}${item ? ", in library" : ""}`} className="block rounded-card">{art}</Link>
+        ) : !admin ? (
+          <div className="rounded-card">{art}</div>
         ) : (
           <button onClick={() => item && "onAdded" in props && openAdd(item, props.onAdded)} aria-label={`Add ${title}…`} className="block w-full cursor-pointer rounded-card text-left">{art}</button>
         )}
@@ -84,20 +88,20 @@ export function PosterCard({ className = "", ...props }: CardProps & { className
             <span className="block h-full bg-live transition-[width] duration-700" style={{ width: `${status.progress * 100}%` }} />
           </span>
         )}
-        {item && !item.inLibrary && (
+        {admin && item && !item.inLibrary && (
           <button onClick={quickAdd} disabled={busy} aria-label={`Add ${title} with your defaults`} title="Add with your defaults"
-            className="absolute right-2 bottom-2 grid size-10 cursor-pointer pointer-coarse:size-11 place-items-center rounded-full bg-white text-canvas shadow-lg shadow-black/50 transition hover:scale-105 sm:pointer-fine:opacity-0 sm:pointer-fine:group-focus-within:opacity-100 sm:pointer-fine:group-hover:opacity-100">
-            {busy ? <Spinner /> : <Icon name="plus" size={20} strokeWidth={2.4} />}
+            className="absolute right-2 bottom-2 grid size-10 cursor-pointer pointer-coarse:size-11 place-items-center rounded-full glass text-ink shadow-lg shadow-black/50 transition hover:scale-105 hover:bg-white hover:text-canvas focus-visible:bg-white focus-visible:text-canvas pointer-fine:bg-white pointer-fine:text-canvas sm:pointer-fine:opacity-0 sm:pointer-fine:group-focus-within:opacity-100 sm:pointer-fine:group-hover:opacity-100">
+            {busy ? <Spinner /> : <Icon name="plus" size={20} bold />}
           </button>
         )}
       </div>
-      <h3 className="mt-2.5 truncate px-0.5 text-sm font-semibold" title={title}>{title}</h3>
-      <p className="flex items-center gap-2 px-0.5 text-[13px] text-ink-3">
+      <h3 className="mt-2.5 truncate px-0.5 text-body font-semibold" title={title}>{title}</h3>
+      <p className="flex items-center gap-2 px-0.5 text-meta text-ink-3">
         {!!year && <span>{year}</span>}
-        <Rating value={rating} className="text-[12px]" />
+        <Rating value={rating} className="text-meta" />
         {fraction && <span className="ml-auto tabular-nums">{fraction}</span>}
       </p>
-      {error && <p role="alert" className="mt-1 line-clamp-2 text-[12px] text-bad">{error}</p>}
+      {error && <p role="alert" className="mt-1 line-clamp-2 text-meta text-bad">{error}</p>}
     </article>
   );
 }

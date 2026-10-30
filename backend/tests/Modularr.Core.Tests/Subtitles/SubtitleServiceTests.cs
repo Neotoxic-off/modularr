@@ -1,6 +1,7 @@
 using System.Text;
 using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
+using Modularr.Core.Decisions;
 using Modularr.Core.Languages;
 using Modularr.Core.Library;
 using Modularr.Core.Parsing;
@@ -137,6 +138,55 @@ public sealed class SubtitleServiceTests : IDisposable
 
         using ModularrDbContext check = _database.NewContext();
         Assert.NotNull(check.MediaFiles.Single(f => f.Id == strayFile.Id).SubtitlesSearched);
+    }
+
+    [Fact]
+    public async Task TheOverviewCountsEachWantedLanguageOverTheTitlesFiles()
+    {
+        (Movie movie, MediaFile _) = Imported("Inception.2010.1080p.BluRay.x264-GRP");
+        File.WriteAllText(Path.Combine(movie.Path, "Inception.2010.1080p.BluRay.x264-GRP.fr.hi.srt"), "x");
+        File.WriteAllText(Path.Combine(movie.Path, "Inception.2010.1080p.BluRay.x264-GRP.en.forced.srt"), "x");
+
+        // An anime wanting three languages of its own, two episodes with a file and one without.
+        Series show = _database.Insert(new Series
+        {
+            TvdbId = 1, Title = "Frieren", SortTitle = "frieren", Year = 2023, SeriesType = SeriesType.Anime, Path = _library.PathOf("anime/Frieren"),
+            QualityProfileId = 1, OriginalLanguage = Language.Japanese, Subtitles = [Language.French, Language.German, Language.Spanish],
+        })[0];
+        MediaFile[] files = _database.Insert(
+            new MediaFile { SeriesId = show.Id, Path = _library.CreateFile("anime/Frieren/Season 1/E01.mkv"), Quality = new QualityModel(Quality.Bluray1080p, new Revision()), Languages = [Language.Japanese] },
+            new MediaFile { SeriesId = show.Id, Path = _library.CreateFile("anime/Frieren/Season 1/E02.mkv"), Quality = new QualityModel(Quality.Bluray1080p, new Revision()), Languages = [Language.Japanese] });
+        _database.Insert(
+            new Episode { SeriesId = show.Id, SeasonNumber = 1, EpisodeNumber = 2, MediaFileId = files[1].Id },
+            new Episode { SeriesId = show.Id, SeasonNumber = 1, EpisodeNumber = 1, MediaFileId = files[0].Id, Title = "Journey's End" },
+            new Episode { SeriesId = show.Id, SeasonNumber = 1, EpisodeNumber = 3 });
+        foreach (string name in new[] { "E01.fr.srt", "E01.de.srt", "E02.fr.srt" })
+        {
+            File.WriteAllText(_library.PathOf("anime/Frieren/Season 1/" + name), "x");
+        }
+
+        using ModularrDbContext db = _database.NewContext();
+        SubtitleService service = Service(db);
+
+        IReadOnlyList<TitleSubtitles> overview = await service.OverviewAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(["Frieren", "Inception"], overview.Select(t => t.Title));
+        TitleSubtitles anime = overview[0];
+        Assert.Equal((MediaType.Anime, true, 2), (anime.Kind, anime.OwnLanguages, anime.Files));
+        Assert.Equal([("fr", 2), ("de", 1), ("es", 0)], anime.Coverage.Select(c => (c.Code!, c.Covered)));
+        TitleSubtitles film = overview[1];
+        Assert.Equal((MediaType.Movie, false, 1), (film.Kind, film.OwnLanguages, film.Files));
+        Assert.Equal([(Language.French, 1), (Language.English, 0)], film.Coverage.Select(c => (c.Language, c.Covered))); // forced does not cover
+
+        SeasonSubtitles season = Assert.Single(await service.SeriesAsync(show.Id, TestContext.Current.CancellationToken));
+        Assert.Equal([1, 2], season.Episodes.Select(e => e.EpisodeNumber));
+        Assert.Equal("Journey's End", season.Episodes[0].Title);
+        Assert.Equal([SubtitleState.Present, SubtitleState.Present, SubtitleState.Missing], season.Episodes[0].Languages.Select(l => l.State));
+        Assert.Equal([SubtitleState.Present, SubtitleState.Missing, SubtitleState.Missing], season.Episodes[1].Languages.Select(l => l.State));
+
+        IReadOnlyList<LanguageState>? languages = await service.MovieAsync(movie.Id, TestContext.Current.CancellationToken);
+        Assert.Equal(
+            [new LanguageState(Language.French, SubtitleState.Present, true, false), new LanguageState(Language.English, SubtitleState.Missing, false, true)],
+            languages);
     }
 
     private sealed class FakeProvider : ISubtitleProvider

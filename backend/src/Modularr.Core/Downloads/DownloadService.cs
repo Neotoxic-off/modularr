@@ -36,6 +36,7 @@ public sealed class DownloadService(
     IndexerCatalogHost catalog,
     IndexerDomainHealth health,
     CardigannSearcher searcher,
+    CardigannSessions sessions,
     IHttpClientFactory httpClientFactory,
     DownloadImporter importer,
     ActivityLog activities,
@@ -198,6 +199,18 @@ public sealed class DownloadService(
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    // A title leaving the library takes its torrents with it; they would otherwise keep running and seeding with no control.
+    public async Task RemoveForTitleAsync(int? seriesId, int? movieId, bool deleteData, CancellationToken cancellationToken)
+    {
+        List<TrackedDownload> downloads = await db.TrackedDownloads
+            .Where(d => (seriesId != null && d.SeriesId == seriesId) || (movieId != null && d.MovieId == movieId))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        foreach (TrackedDownload download in downloads)
+        {
+            await torrents.Engine.RemoveAsync(download.InfoHash, deleteData).ConfigureAwait(false);
+        }
+    }
+
     private async Task<TrackedDownload> FindAsync(int id, CancellationToken cancellationToken) =>
         await db.TrackedDownloads.FirstOrDefaultAsync(d => d.Id == id, cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"Download {id} does not exist.");
@@ -219,7 +232,9 @@ public sealed class DownloadService(
                 throw new ArgumentException($"Release '{release.Title}' links to {link.Host}, which is not a site of {entry.Name}.", nameof(release));
             }
 
-            CardigannDownloadResult resolved = await searcher.ResolveDownloadAsync(entry.Definition, health.ActiveBaseUrl(entry.Definition), link, cancellationToken).ConfigureAwait(false);
+            // Resolved on the mirror the release came from: another mirror may not have it.
+            string mirror = health.Candidates(entry.Definition).FirstOrDefault(url => IsIndexerLink(link, [url])) ?? health.ActiveBaseUrl(entry.Definition);
+            CardigannDownloadResult resolved = await searcher.ResolveDownloadAsync(entry.Definition, mirror, link, cancellationToken).ConfigureAwait(false);
             link = resolved switch
             {
                 CardigannDownloadResult.Resolved ok => ok.Link,
@@ -234,7 +249,15 @@ public sealed class DownloadService(
         }
 
         HttpClient http = httpClientFactory.CreateClient(nameof(DownloadService));
-        using HttpResponseMessage response = await http.GetAsync(link, cancellationToken).ConfigureAwait(false);
+        using HttpRequestMessage request = new(HttpMethod.Get, link);
+
+        // A private tracker serves its .torrent files to its logged-in session only.
+        if (release.IndexerId is not null && sessions.CookieHeader(release.IndexerId, link) is { } cookie)
+        {
+            request.Headers.TryAddWithoutValidation("Cookie", cookie);
+        }
+
+        using HttpResponseMessage response = await http.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
         // The handler follows http redirects only; many sites redirect their .torrent link to a magnet.
         if (response.StatusCode is >= HttpStatusCode.MovedPermanently and < HttpStatusCode.BadRequest && response.Headers.Location is Uri location && IsMagnet(location))

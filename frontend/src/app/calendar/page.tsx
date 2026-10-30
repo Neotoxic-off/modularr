@@ -5,9 +5,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, useSyncExternalStore } from "react";
 import { api, episodeCode, errorMessage, isoDay, titleHref } from "@/lib/api";
 import type { CalendarEvent, Kind } from "@/lib/api";
+import { locale, weekday } from "@/lib/format";
 import { useActivity } from "@/components/Activity";
 import { Icon } from "@/components/icons";
-import { Alert, Badge, Button, Chip, Empty, IconButton, PageHeader, Segmented, Skeleton, toneDot } from "@/components/ui";
+import { Alert, Badge, Button, Chip, Empty, IconButton, PageHeader, Segmented, Select, Skeleton, toneDot } from "@/components/ui";
 import type { Tone } from "@/components/ui";
 
 type View = "month" | "week" | "agenda";
@@ -47,17 +48,19 @@ function rangeOf(view: View, anchor: Date): { start: Date; end: Date; label: str
   if (view === "week") {
     const start = mondayOf(anchor);
     const end = addDays(start, 6);
-    return { start, end, label: new Intl.DateTimeFormat(undefined, { day: "numeric", month: "long", year: "numeric" }).formatRange(start, end) };
+    return { start, end, label: new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric" }).formatRange(start, end) };
   }
   const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
   const last = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
-  const label = first.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const label = first.toLocaleDateString(locale, { month: "long", year: "numeric" });
   return view === "month" ? { start: mondayOf(first), end: addDays(mondayOf(last), 6), label } : { start: first, end: last, label };
 }
 
+// Like the dashboard: an aired event nobody monitors is not missing, just not wanted.
 function stateOf(e: CalendarEvent, today: string): { tone: Tone; label: string } {
   if (e.hasFile) return { tone: "ok", label: "Downloaded" };
-  return e.date > today ? { tone: "neutral", label: "Upcoming" } : { tone: "warn", label: "Missing" };
+  if (e.date > today) return { tone: "neutral", label: "Upcoming" };
+  return e.monitored ? { tone: "warn", label: "Missing" } : { tone: "neutral", label: "Not monitored" };
 }
 
 const detailOf = (e: CalendarEvent) =>
@@ -67,7 +70,7 @@ const hrefOf = (e: CalendarEvent) => (e.type === "movie" ? titleHref("movie", e.
 
 const keyOf = (e: CalendarEvent) => (e.type === "movie" ? `m${e.movieId}${e.release}` : `e${e.seriesId}-${e.season}-${e.episode}`);
 
-const longDay = (day: string) => parseDay(day).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+const longDay = (day: string) => parseDay(day).toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
 
 const phoneQuery = "(max-width: 767px)";
 const subscribePhone = (onChange: () => void) => {
@@ -118,7 +121,7 @@ function Calendar() {
   }, [start, end, key]);
 
   const matches = (e: CalendarEvent) =>
-    (filter === "all" || (filter === "movie" ? e.type === "movie" : e.type === "episode" && e.kind === filter)) && (!missingOnly || !e.hasFile);
+    (filter === "all" || (filter === "movie" ? e.type === "movie" : e.type === "episode" && e.kind === filter)) && (!missingOnly || (!e.hasFile && e.monitored));
   const events = loaded?.key === key ? loaded.events.filter(matches) : null;
   const needUpNext = events?.length === 0;
 
@@ -131,7 +134,7 @@ function Calendar() {
 
   return (
     <>
-      <PageHeader title="Calendar" description="Episodes airing and movies releasing from your library." />
+      <PageHeader title="Calendar" />
       <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-3">
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={() => set({ date: "" })}>Today</Button>
@@ -139,12 +142,11 @@ function Calendar() {
           <IconButton icon="chevronRight" label={`Next ${view === "week" ? "week" : "month"}`} onClick={() => step(1)} className="size-9 pointer-coarse:size-11" />
         </div>
         <h2 aria-live="polite" className="min-w-0 flex-1 text-[20px] font-semibold tracking-tight">{range.label}</h2>
-        <Segmented label="View" value={view} options={views} onChange={(v) => set({ view: v })} />
-      </div>
-      <div role="group" aria-label="Filters" className="rail -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
-        {filters.map((f) => <Chip key={f.value} selected={filter === f.value} onClick={() => set({ show: f.value === "all" ? "" : f.value })}>{f.label}</Chip>)}
-        <span aria-hidden="true" className="mx-1 w-px shrink-0 self-stretch bg-hair" />
+        <Select aria-label="Show" className="w-36" value={filter} onChange={(e) => set({ show: e.target.value === "all" ? "" : e.target.value })}>
+          {filters.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+        </Select>
         <Chip selected={missingOnly} onClick={() => set({ missing: missingOnly ? "" : "1" })}>Only missing</Chip>
+        <Segmented label="View" value={view} options={views} onChange={(v) => set({ view: v })} />
       </div>
       {error && <div className="mb-4"><Alert>{error}</Alert></div>}
       {!events ? <Skeleton className="h-[480px] rounded-tile" />
@@ -156,10 +158,7 @@ function Calendar() {
         : !upNext ? <Skeleton className="h-[240px] rounded-tile" />
         : upNext.length > 0 ? (
           <section aria-labelledby="up-next" className="space-y-4">
-            <div>
-              <h2 id="up-next" className="text-[17px] font-semibold">Up next</h2>
-              <p className="mt-0.5 text-[13px] text-ink-3">Nothing {missingOnly || filter !== "all" ? "matches" : "lands"} in {range.label}. These are the next dates in your library.</p>
-            </div>
+            <h2 id="up-next" className="text-title font-semibold">Up next</h2>
             <Agenda events={upNext} today={today} />
           </section>
         ) : (
@@ -190,7 +189,7 @@ function MonthGrid({ events, range, month, today, onDay }: {
   return (
     <div className="glass overflow-hidden rounded-tile">
       <div aria-hidden="true" className="grid grid-cols-7 border-b border-hair-2">
-        {days.slice(0, 7).map((d) => <span key={d.getDay()} className="caption px-2 py-2.5 text-center sm:px-3 sm:text-left">{d.toLocaleDateString(undefined, { weekday: "short" })}</span>)}
+        {days.slice(0, 7).map((d) => <span key={d.getDay()} className="caption px-2 py-2.5 text-center sm:px-3 sm:text-left">{weekday(d, "short")}</span>)}
       </div>
       <ol className="grid grid-cols-7">
         {days.map((d) => {
@@ -199,16 +198,16 @@ function MonthGrid({ events, range, month, today, onDay }: {
           const outside = d.getMonth() !== month;
           return (
             <li key={day} aria-label={`${longDay(day)}, ${onDate.length} ${onDate.length === 1 ? "event" : "events"}`}
-              className={`flex min-h-16 min-w-0 flex-col gap-1 border-hair-2 p-1 not-nth-[7n]:border-r not-nth-last-[-n+7]:border-b sm:min-h-32 sm:p-1.5 ${outside ? "bg-black/50" : ""}`}>
+              className={`flex min-h-16 min-w-0 flex-col gap-1 border-hair-2 p-1 not-nth-[7n]:border-r not-nth-last-[-n+7]:border-b sm:min-h-32 sm:p-1.5 ${outside ? "bg-veil" : ""}`}>
               <button type="button" onClick={() => onDay(day)} aria-label={`Show the week of ${longDay(day)}`}
-                className={`grid size-9 cursor-pointer place-items-center self-center rounded-full sm:size-7 text-[12px] font-semibold tabular-nums transition hover:bg-fill-2 sm:self-start ${day === today ? "bg-white text-canvas hover:bg-white/85" : outside ? "text-ink-3" : "text-ink"}`}>
+                className={`grid size-9 cursor-pointer place-items-center self-center rounded-full sm:size-7 text-meta font-semibold tabular-nums transition hover:bg-fill-2 sm:self-start ${day === today ? "bg-white text-canvas hover:bg-white/85" : outside ? "text-ink-3" : "text-ink"}`}>
                 {d.getDate()}
               </button>
               <ul className="hidden min-w-0 space-y-1 sm:block">
                 {onDate.slice(0, 3).map((e) => <li key={keyOf(e)}><EventLink event={e} today={today} compact /></li>)}
               </ul>
               {onDate.length > 3 && (
-                <button type="button" onClick={() => onDay(day)} className="hidden cursor-pointer rounded-chip px-1.5 text-left text-[11px] font-semibold text-ink-3 hover:text-ink sm:block">
+                <button type="button" onClick={() => onDay(day)} className="hidden min-h-6 cursor-pointer rounded-chip px-1.5 text-left text-meta font-semibold text-ink-3 hover:text-ink sm:block">
                   {onDate.length - 3} more
                 </button>
               )}
@@ -235,10 +234,10 @@ function WeekGrid({ events, start, today }: { events: CalendarEvent[]; start: Da
           <li key={day} aria-label={longDay(day)}
             className={`glass flex min-w-0 flex-col gap-2 rounded-tile p-2.5 md:min-h-[420px] ${day === today ? "ring-1 ring-white/40" : ""} ${onDate.length === 0 ? "max-md:hidden" : ""}`}>
             <p className="flex items-baseline justify-between gap-2 px-1 pt-1">
-              <span className="caption">{parseDay(day).toLocaleDateString(undefined, { weekday: "short" })}</span>
+              <span className="caption">{weekday(parseDay(day), "short")}</span>
               <span className={`font-display text-[24px] leading-none tabular-nums ${day === today ? "" : "text-ink-2"}`}>{parseDay(day).getDate()}</span>
             </p>
-            {onDate.length === 0 ? <p className="px-1 text-[12px] text-ink-3">Nothing</p> : (
+            {onDate.length > 0 && (
               <ul className="space-y-1.5">
                 {onDate.map((e) => <li key={keyOf(e)}><EventLink event={e} today={today} stacked /></li>)}
               </ul>
@@ -255,7 +254,7 @@ function Agenda({ events, today }: { events: CalendarEvent[]; today: string }) {
     <ol className="space-y-5">
       {[...groupByDay(events)].map(([day, onDate]) => (
         <li key={day} className="grid gap-2 md:grid-cols-[180px_1fr] md:gap-5">
-          <h3 className={`pt-2 text-[13px] font-semibold ${day === today ? "text-ink" : "text-ink-2"}`}>
+          <h3 className={`pt-2 text-meta font-semibold ${day === today ? "text-ink" : "text-ink-2"}`}>
             {day === today ? "Today · " : ""}{longDay(day)}
           </h3>
           <ul className="glass divide-y divide-hair-2 overflow-hidden rounded-tile">
@@ -273,16 +272,16 @@ function EventLink({ event: e, today, compact = false, stacked = false }: { even
   const label = `${e.title}, ${detailOf(e)}, ${state.label}`;
   const poster = (className: string) => e.poster
     // eslint-disable-next-line @next/next/no-img-element
-    ? <img src={e.poster} alt="" loading="lazy" className={`shrink-0 rounded-[6px] bg-fill-2 object-cover ${className}`} />
-    : <span className={`grid shrink-0 place-items-center rounded-[6px] bg-fill-2 text-ink-3 ${className}`}><Icon name={e.type === "movie" ? "film" : "tv"} size={14} /></span>;
+    ? <img src={e.poster} alt="" loading="lazy" className={`shrink-0 rounded-thumb bg-fill-2 object-cover ${className}`} />
+    : <span className={`grid shrink-0 place-items-center rounded-thumb bg-fill-2 text-ink-3 ${className}`}><Icon name={e.type === "movie" ? "film" : "tv"} size={14} /></span>;
 
   if (compact) {
     return (
       <Link href={hrefOf(e)} aria-label={label} title={label}
-        className="flex min-w-0 items-center gap-1.5 rounded-chip p-1 text-[12px] transition hover:bg-fill-2">
+        className="flex min-w-0 items-center gap-1.5 rounded-chip p-1 text-meta transition hover:bg-fill-2">
         {poster("h-7 w-5")}
         <span className="min-w-0 flex-1 truncate font-medium">{e.title}</span>
-        <span className={`size-1.5 shrink-0 rounded-full ${toneDot[state.tone]}`} />
+        {state.tone !== "neutral" && <span className={`size-1.5 shrink-0 rounded-full ${toneDot[state.tone]}`} />}
       </Link>
     );
   }
@@ -292,12 +291,12 @@ function EventLink({ event: e, today, compact = false, stacked = false }: { even
       className={`flex min-w-0 items-center gap-3 transition hover:bg-fill-2 ${stacked ? "well rounded-card p-2 md:flex-col md:items-stretch md:gap-2" : "px-4 py-3"}`}>
       {poster(stacked ? "h-14 w-10 md:aspect-[2/3] md:h-auto md:w-full" : "h-[60px] w-10")}
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-semibold">{e.title}</span>
-        <span className={`block text-[12px] text-ink-3 truncate ${stacked ? "md:line-clamp-2 md:whitespace-normal" : ""}`}>{detailOf(e)}</span>
+        <span className="block truncate text-meta font-semibold">{e.title}</span>
+        <span className={`block text-meta text-ink-3 truncate ${stacked ? "md:line-clamp-2 md:whitespace-normal" : ""}`}>{detailOf(e)}</span>
       </span>
-      <Badge tone={state.tone} className={stacked ? "self-start" : ""}>
-        {state.tone !== "neutral" && <span className={`size-1.5 rounded-full ${toneDot[state.tone]}`} />}{state.label}
-      </Badge>
+      {/* Only Missing needs words; downloaded is a dot, upcoming is the default and shows nothing. */}
+      {state.tone === "warn" ? <Badge tone="warn" className={stacked ? "self-start" : ""}>{state.label}</Badge>
+        : state.tone === "ok" && <span className={`size-1.5 shrink-0 rounded-full ${toneDot.ok} ${stacked ? "self-start md:mt-1" : ""}`} />}
     </Link>
   );
 }

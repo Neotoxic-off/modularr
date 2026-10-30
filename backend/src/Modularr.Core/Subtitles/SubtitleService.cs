@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
+using Modularr.Core.Decisions;
 using Modularr.Core.Languages;
 using Modularr.Core.Persistence;
 
@@ -10,6 +11,25 @@ namespace Modularr.Core.Subtitles;
 
 // The subtitles of an imported file: which wanted languages are next to it, the providers' candidates, and the downloads.
 public sealed record SubtitleStatus(IReadOnlyList<SubtitleFile> Present, IReadOnlyList<Language> Missing);
+
+// A library title's subtitles at a glance: OwnLanguages when Wanted is the title's override, not its category's; Covered counts
+// the Files that have the language or need none.
+public sealed record TitleSubtitles(int Id, MediaType Kind, string Title, int Year, string? Poster, IReadOnlyList<Language> Wanted, bool OwnLanguages, int Files, IReadOnlyList<LanguageCoverage> Coverage);
+
+public sealed record LanguageCoverage(Language Language, string? Code, int Covered);
+
+public enum SubtitleState
+{
+    Present,
+    Missing,
+    Audio,
+}
+
+public sealed record LanguageState(Language Language, SubtitleState State, bool HearingImpaired, bool Forced);
+
+public sealed record EpisodeSubtitles(int Id, int EpisodeNumber, string? Title, IReadOnlyList<LanguageState> Languages);
+
+public sealed record SeasonSubtitles(int Number, IReadOnlyList<EpisodeSubtitles> Episodes);
 
 public sealed class SubtitleService(ModularrDbContext db, ActivityLog activities, IOptionsMonitor<ModularrOptions> options, IEnumerable<ISubtitleProvider> providers)
 {
@@ -240,6 +260,82 @@ public sealed class SubtitleService(ModularrDbContext db, ActivityLog activities
 
         return (covered, total);
     }
+
+    // Every library title with its wanted languages and, per language, how many of its files have it (or need none: the
+    // audio is in it). One query per table; each library folder is listed once.
+    // shortcut: reads the disk on every call (a listing per folder, not per file), cache the listings if a large library on a
+    // slow share makes the page slow.
+    public async Task<IReadOnlyList<TitleSubtitles>> OverviewAsync(CancellationToken cancellationToken)
+    {
+        ModularrOptions settings = options.CurrentValue;
+        List<Movie> movies = await db.Movies.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
+        List<Series> series = await db.Series.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
+        List<MediaFile> files = await db.MediaFiles.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
+        Dictionary<string, IReadOnlyList<SubtitleFile>> present = SubtitleFiles.PresentAll(files.Select(f => f.Path), Roots);
+        ILookup<int, MediaFile> ofMovie = files.Where(f => f.MovieId is not null).ToLookup(f => f.MovieId!.Value);
+        ILookup<int, MediaFile> ofSeries = files.Where(f => f.SeriesId is not null).ToLookup(f => f.SeriesId!.Value);
+
+        TitleSubtitles Title(int id, MediaType kind, string title, int year, string? poster, bool own, IReadOnlyList<Language> wanted, Movie? movie, Series? show, IEnumerable<MediaFile> titleFiles)
+        {
+            List<IReadOnlyList<Language>> missing = [.. titleFiles.Select(f => Missing(new Target(f, movie, show, null, Wanted(settings, f, movie, show)), present[f.Path]))];
+            return new TitleSubtitles(id, kind, title, year, poster, wanted, own, missing.Count,
+                [.. wanted.Select(l => new LanguageCoverage(l, IsoLanguages.Get(l)?.TwoLetterCode, missing.Count(m => !m.Contains(l))))]);
+        }
+
+        return
+        [
+            .. movies.Select(m => Title(m.Id, MediaType.Movie, m.Title, m.Year, m.Poster, m.Subtitles is not null, settings.Media.WantedSubtitles(m), m, null, ofMovie[m.Id]))
+                .Concat(series.Select(s => Title(s.Id, s.MediaType, s.Title, s.Year, s.Poster, s.Subtitles is not null, settings.Media.WantedSubtitles(s), null, s, ofSeries[s.Id])))
+                .OrderBy(t => t.Title, StringComparer.OrdinalIgnoreCase),
+        ];
+    }
+
+    // Each episode with a file, by season, and the state of each of the series' wanted languages.
+    public async Task<IReadOnlyList<SeasonSubtitles>> SeriesAsync(int seriesId, CancellationToken cancellationToken)
+    {
+        ModularrOptions settings = options.CurrentValue;
+        Series series = await db.Series.AsNoTracking().FirstOrDefaultAsync(s => s.Id == seriesId, cancellationToken).ConfigureAwait(false)
+            ?? throw new KeyNotFoundException($"Series {seriesId} is not in the library.");
+        Dictionary<int, MediaFile> files = await db.MediaFiles.AsNoTracking().Where(f => f.SeriesId == seriesId).ToDictionaryAsync(f => f.Id, cancellationToken).ConfigureAwait(false);
+        Episode[] episodes = await db.Episodes.AsNoTracking().Where(e => e.SeriesId == seriesId && e.MediaFileId != null)
+            .OrderBy(e => e.SeasonNumber).ThenBy(e => e.EpisodeNumber).ToArrayAsync(cancellationToken).ConfigureAwait(false);
+        Dictionary<string, IReadOnlyList<SubtitleFile>> present = SubtitleFiles.PresentAll(files.Values.Select(f => f.Path), Roots);
+        IReadOnlyList<Language> wanted = settings.Media.WantedSubtitles(series);
+        return
+        [
+            .. episodes.Where(e => files.ContainsKey(e.MediaFileId!.Value)).GroupBy(e => e.SeasonNumber).Select(season => new SeasonSubtitles(season.Key,
+            [
+                .. season.Select(e =>
+                {
+                    MediaFile file = files[e.MediaFileId!.Value];
+                    return new EpisodeSubtitles(e.Id, e.EpisodeNumber, e.Title, States(wanted, Wanted(settings, file, null, series), present[file.Path]));
+                }),
+            ])),
+        ];
+    }
+
+    // The state of each wanted language for the movie's file (the latest, as StatusAsync); null without a file.
+    public async Task<IReadOnlyList<LanguageState>?> MovieAsync(int movieId, CancellationToken cancellationToken)
+    {
+        ModularrOptions settings = options.CurrentValue;
+        Movie movie = await db.Movies.AsNoTracking().FirstOrDefaultAsync(m => m.Id == movieId, cancellationToken).ConfigureAwait(false)
+            ?? throw new KeyNotFoundException($"Movie {movieId} is not in the library.");
+        MediaFile? file = await db.MediaFiles.AsNoTracking().Where(f => f.MovieId == movieId).OrderByDescending(f => f.DateAdded).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        return file is null ? null
+            : States(settings.Media.WantedSubtitles(movie), Wanted(settings, file, movie, null), SubtitleFiles.PresentAll([file.Path], Roots)[file.Path]);
+    }
+
+    // Present: a full (not forced) subtitle is there; Audio: not needed, the audio is in that language; else Missing. The flags
+    // are those of the subtitle found, a forced one when only that is there.
+    private static IReadOnlyList<LanguageState> States(IReadOnlyList<Language> wanted, IReadOnlyList<Language> needed, IReadOnlyList<SubtitleFile> present) =>
+    [
+        .. wanted.Select(l =>
+        {
+            SubtitleFile? found = present.Where(p => p.Language == l).OrderBy(p => p.Forced).FirstOrDefault();
+            SubtitleState state = found is { Forced: false } ? SubtitleState.Present : needed.Contains(l) ? SubtitleState.Missing : SubtitleState.Audio;
+            return new LanguageState(l, state, found?.HearingImpaired ?? false, found?.Forced ?? false);
+        }),
+    ];
 
     // The item's wanted languages, less the audio's own when OnlyWhenAudioDiffers.
     private static IReadOnlyList<Language> Wanted(ModularrOptions settings, MediaFile file, Movie? movie, Series? series)

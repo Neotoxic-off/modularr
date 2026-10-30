@@ -41,16 +41,31 @@ public sealed class DiskScanService(ModularrDbContext db, ActivityLog activities
         List<int> seriesIds = await db.Series.Select(s => s.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
         List<int> movieIds = await db.Movies.Select(m => m.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
         List<ScanResult> results = [];
+        // One title that cannot be scanned (deleted meanwhile, a file gone mid-scan, a folder another title also uses) must not
+        // stop the scan of every title after it.
+        async Task ScanOneAsync(Func<Task<ScanResult>> scan)
+        {
+            try
+            {
+                results.Add(await scan().ConfigureAwait(false));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException && ex is not OutOfMemoryException)
+            {
+            }
+            finally
+            {
+                db.ChangeTracker.Clear();
+            }
+        }
+
         foreach (int id in seriesIds)
         {
-            results.Add(await ScanSeriesAsync(id, record: true, cancellationToken).ConfigureAwait(false));
-            db.ChangeTracker.Clear();
+            await ScanOneAsync(() => ScanSeriesAsync(id, record: true, cancellationToken)).ConfigureAwait(false);
         }
 
         foreach (int id in movieIds)
         {
-            results.Add(await ScanMovieAsync(id, record: true, cancellationToken).ConfigureAwait(false));
-            db.ChangeTracker.Clear();
+            await ScanOneAsync(() => ScanMovieAsync(id, record: true, cancellationToken)).ConfigureAwait(false);
         }
 
         ScanResult total = new(results.Sum(r => r.Items), results.Sum(r => r.Added), results.Sum(r => r.Removed));

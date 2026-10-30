@@ -109,6 +109,32 @@ public sealed partial class MovieMetadataClient(HttpClient httpClient, IOptions<
         return [.. movies.DistinctBy(m => m.TmdbId).Select(MapMovie)];
     }
 
+    // A TMDB collection through RadarrAPI (keyless, as Radarr's SkyHookProxy.GetCollectionInfo), parts with their release days.
+    public async Task<CollectionInfo> GetCollectionAsync(int tmdbId, CancellationToken cancellationToken = default)
+    {
+        string id = tmdbId.ToString(CultureInfo.InvariantCulture);
+        CollectionDetailResource collection = await MetadataHttp.GetJsonAsync<CollectionDetailResource>(httpClient,
+            MetadataHttp.Combine(_options.RadarrApiUrl, $"movie/collection/{id}"), cancellationToken).ConfigureAwait(false)
+            ?? throw new MetadataNotFoundException(id);
+        IReadOnlyList<MetadataImage> images = [.. collection.Images.Select(i => MetadataImage.From(i.CoverType, i.Url))];
+
+        return new CollectionInfo
+        {
+            Id = collection.TmdbId,
+            Name = collection.Name ?? id,
+            Overview = collection.Overview,
+            Poster = images.UrlOf(MediaCoverType.Poster),
+            Backdrop = images.UrlOf(MediaCoverType.Fanart),
+            Parts = CollectionInfo.InReleaseOrder(collection.Parts.Select(MapMovie).Select(m => new CollectionPart(
+                m.TmdbId,
+                m.Title,
+                m.Year,
+                new[] { m.InCinemas, m.DigitalRelease, m.PhysicalRelease }.Min() is DateTime first ? DateOnly.FromDateTime(first) : null,
+                m.Images.UrlOf(MediaCoverType.Poster),
+                m.Images.UrlOf(MediaCoverType.Fanart)))),
+        };
+    }
+
     private static async Task<IReadOnlyList<MovieInfo>> LookupAsync(Func<CancellationToken, Task<MovieInfo>> lookup, CancellationToken cancellationToken)
     {
         try
@@ -243,6 +269,15 @@ public sealed partial class MovieMetadataClient(HttpClient httpClient, IOptions<
     private sealed record CertificationResource(string? Country, string? Certification);
 
     private sealed record CollectionResource(int TmdbId, string? Name);
+
+    private sealed record CollectionDetailResource
+    {
+        public int TmdbId { get; init; }
+        public string? Name { get; init; }
+        public string? Overview { get; init; }
+        public List<ImageResource> Images { get; init; } = [];
+        public List<MovieResource> Parts { get; init; } = [];
+    }
 
     private sealed record RecommendationResource(int TmdbId);
 }

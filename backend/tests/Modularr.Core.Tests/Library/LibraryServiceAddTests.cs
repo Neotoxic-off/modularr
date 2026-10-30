@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Net;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -61,6 +62,20 @@ public sealed class LibraryServiceAddTests : IDisposable
         Assert.Equal((MediaType.Anime, 2, Language.Japanese), (series.MediaType, series.QualityProfileId, series.OriginalLanguage));
         Assert.Equal(ReleaseVersion.VOSTFR, Settings.Media.WantedVersion(series));
         Assert.Equal([Language.French], Settings.Media.WantedSubtitles(series));
+    }
+
+    [Fact]
+    public async Task SubtitlesGivenAtAddAreTheTitlesOwn()
+    {
+        using ModularrDbContext db = _database.NewContext();
+        CancellationToken ct = TestContext.Current.CancellationToken;
+
+        Movie movie = await Library(db).AddMovieAsync(70981, qualityProfileId: null, version: null, search: false, ct, [Language.German]);
+        Series series = await Library(db).AddSeriesAsync(76885, qualityProfileId: null, version: null, SeriesMonitor.All, seasons: null, search: false, ct, subtitles: [Language.Spanish]);
+
+        Assert.Equal([Language.German], movie.Subtitles);
+        Assert.Equal([Language.Spanish], Settings.Media.WantedSubtitles(series));
+        await Assert.ThrowsAsync<ArgumentException>(() => Library(db).AddMovieAsync(1, null, null, search: false, ct, [Language.German, Language.German]));
     }
 
     [Fact]
@@ -177,6 +192,20 @@ public sealed class LibraryServiceAddTests : IDisposable
     }
 
     [Fact]
+    public void PickedEpisodesAreTheOnlyMonitoredOnesAndMonitorTheirSeason()
+    {
+        SeriesInfo info = FourSeasons() with
+        {
+            Episodes = [.. Enumerable.Range(1, 3).SelectMany(s => Enumerable.Range(1, 3).Select(e => new EpisodeInfo { TvdbId = s * 10 + e, SeasonNumber = s, EpisodeNumber = e }))],
+        };
+
+        Series series = LibraryService.ToSeries(info, 1, Settings.Paths, DateTime.UnixEpoch, SeriesMonitor.Custom, seasons: [], episodes: [new(2, 2), new(3, 1)]);
+
+        Assert.Equal([2, 3], series.Seasons.Where(s => s.Monitored).Select(s => s.Number).Order());
+        Assert.Equal(["2x2", "3x1"], series.Episodes.Where(e => e.Monitored).Select(e => $"{e.SeasonNumber}x{e.EpisodeNumber}").Order());
+    }
+
+    [Fact]
     public void CustomMonitoringNeedsTheSeasons() =>
         Assert.Throws<ArgumentException>(() => LibraryService.ToSeries(FourSeasons(), 1, Settings.Paths, DateTime.UnixEpoch, SeriesMonitor.Custom));
 
@@ -230,7 +259,7 @@ public sealed class LibraryServiceAddTests : IDisposable
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         await using ServiceProvider provider = SearchServices();
-        using SearchRunner searches = new(provider.GetRequiredService<IServiceScopeFactory>());
+        using SearchRunner searches = new(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<SearchRunner>.Instance);
         await searches.StartAsync(ct);
         using ModularrDbContext db = _database.NewContext();
 
@@ -271,7 +300,7 @@ public sealed class LibraryServiceAddTests : IDisposable
             .AddScoped(services =>
             {
                 ModularrDbContext db = services.GetRequiredService<ModularrDbContext>();
-                ReleaseSearch search = new(db, new IndexerCatalogHost(options, null!), new IndexerSearch(null!, null!, options), new FixedOptionsMonitor(Settings));
+                ReleaseSearch search = new(db, new IndexerCatalogHost(new FixedOptionsMonitor(Settings), null!, null!, NullLogger<IndexerCatalogHost>.Instance), new IndexerSearch(null!, null!, options), new FixedOptionsMonitor(Settings));
                 return new AutoSearch(db, search, null!, services.GetRequiredService<ActivityLog>());
             })
             .BuildServiceProvider();
@@ -285,7 +314,7 @@ public sealed class LibraryServiceAddTests : IDisposable
             new SeriesMetadataClient(new HttpClient(_http), metadataOptions),
             new MovieMetadataClient(new HttpClient(_http), metadataOptions),
             new FixedOptionsMonitor(Settings),
-            searches ?? new SearchRunner(null!),
+            searches ?? new SearchRunner(null!, NullLogger<SearchRunner>.Instance),
             new ActivityLog(db, new ActivityFeed()));
     }
 }

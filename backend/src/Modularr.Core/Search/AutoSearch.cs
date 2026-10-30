@@ -98,6 +98,12 @@ public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, Downl
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
+            // Removed from the library while its search ran: the grab failing is expected, nothing to report.
+            if (!await InLibraryAsync(started, cancellationToken).ConfigureAwait(false))
+            {
+                return grabbed;
+            }
+
             try
             {
                 await activities.RecordAsync(Outcome(ActivityKind.SearchFailed, ActivityLevel.Error, ex.Message), cancellationToken).ConfigureAwait(false);
@@ -121,6 +127,10 @@ public sealed class AutoSearch(ModularrDbContext db, ReleaseSearch search, Downl
 
     // The searches for a series' missing episodes, each with the season's missing episodes it may grab. An episode whose file is
     // below the cutoff (belowCutoff holds MediaFile ids) counts as missing.
+    private Task<bool> InLibraryAsync(Activity started, CancellationToken cancellationToken) => started.MovieId is int movieId
+        ? db.Movies.AnyAsync(m => m.Id == movieId, cancellationToken)
+        : db.Series.AnyAsync(s => s.Id == started.SeriesId, cancellationToken);
+
     public static IReadOnlyList<(ReleaseSearchRequest Request, IReadOnlySet<(int Season, int Episode)> Wanted)> Plan(
         Series series, IReadOnlySet<int> downloading, int? season, DateOnly today, IReadOnlySet<int>? belowCutoff = null)
     {

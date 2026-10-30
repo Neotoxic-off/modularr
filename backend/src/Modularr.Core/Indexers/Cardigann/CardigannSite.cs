@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text;
 using Microsoft.AspNetCore.WebUtilities;
@@ -11,18 +12,26 @@ internal sealed class CardigannSite
 {
     static CardigannSite() => Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-    public CardigannSite(CardigannDefinition definition, string? configuredBaseUrl)
+    public CardigannSite(CardigannDefinition definition, string? configuredBaseUrl, IReadOnlyDictionary<string, string>? values = null, CardigannSessions? sessions = null)
     {
         Definition = definition;
+        Values = values ?? new Dictionary<string, string>();
         string baseUrl = definition.ResolveBaseUrl(configuredBaseUrl);
 
         // Paths are resolved against the base URL, so it must end with a slash to keep its own path.
         SiteLink = new Uri(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/");
+        Cookies = sessions?.Jar(definition.Id, SiteLink.Host) ?? new(StringComparer.Ordinal);
         Encoding = Encoding.GetEncoding(definition.Encoding);
         Categories = new CardigannCategoryMap(definition.Caps);
     }
 
     public CardigannDefinition Definition { get; }
+
+    // The user's setting values (Indexers.Settings); a missing one takes the definition default.
+    public IReadOnlyDictionary<string, string> Values { get; }
+
+    // The session cookies sent to this site and updated from its Set-Cookie answers.
+    public ConcurrentDictionary<string, string> Cookies { get; }
     public Uri SiteLink { get; }
     public Encoding Encoding { get; }
     public CardigannCategoryMap Categories { get; }
@@ -40,24 +49,23 @@ internal sealed class CardigannSite
             [".Today.Year"] = DateTime.Today.Year.ToString(CultureInfo.InvariantCulture),
         };
 
-        // shortcut: settings always take their definition defaults (no per-indexer settings yet), add a settings store when the UI edits them.
         foreach (SettingsField setting in Definition.Settings)
         {
             string name = ".Config." + setting.Name;
+            string? value = Values.GetValueOrDefault(setting.Name) ?? setting.Default;
             switch (setting.Type)
             {
                 case "text" or "password":
-                    variables[name] = setting.Default;
+                    variables[name] = value;
                     break;
                 case "checkbox":
-                    variables[name] = bool.TryParse(setting.Default, out bool isChecked) && isChecked ? ".True" : null;
+                    variables[name] = bool.TryParse(value, out bool isChecked) && isChecked ? ".True" : null;
                     break;
                 case "select":
-                    // The default option, or the first one by key (upstream fails without a valid default).
+                    // The chosen option, else the default, else the first one by key (upstream fails without a valid default).
                     IReadOnlyDictionary<string, string> options = setting.Options ?? new Dictionary<string, string>();
-                    variables[name] = setting.Default is not null && options.ContainsKey(setting.Default)
-                        ? setting.Default
-                        : options.Keys.Order(StringComparer.Ordinal).FirstOrDefault();
+                    variables[name] = new[] { Values.GetValueOrDefault(setting.Name), setting.Default }.FirstOrDefault(key => key is not null && options.ContainsKey(key))
+                        ?? options.Keys.Order(StringComparer.Ordinal).FirstOrDefault();
                     break;
                 case "info" or "info_cookie" or "info_flaresolverr" or "info_useragent" or "info_category_8000" or "cardigannCaptcha":
                     break;

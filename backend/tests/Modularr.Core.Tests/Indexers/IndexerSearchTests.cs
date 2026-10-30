@@ -52,11 +52,42 @@ public sealed class IndexerSearchTests
         Assert.Equal(1, health.Health(yts).Failures);
     }
 
+    [Fact]
+    public async Task EveryMirrorIsSearchedAndTheSameReleasesAreNotDoubled()
+    {
+        // Mirrors may carry different catalogues: all are asked, and a release several list appears once.
+        StubHttpHandler handler = new(_ => StubHttpHandler.Fixture("yts-inception.json"));
+        (IndexerSearch search, IndexerDomainHealth health) = Create(handler, TimeSpan.FromSeconds(30));
+        CardigannDefinition yts = CardigannFixtures.Definition("yts.yml");
+
+        IndexerSearchResult result = await search.SearchAsync([yts], Query, TestContext.Current.CancellationToken);
+
+        Assert.True(health.Candidates(yts).Count > 1);
+        Assert.Equal(health.Candidates(yts).Count, handler.Requests.Count);
+        Assert.Equal(3, result.Releases.Count);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public async Task OneMirrorAnsweringIsEnough()
+    {
+        int calls = 0;
+        StubHttpHandler handler = new(_ => Interlocked.Increment(ref calls) == 1
+            ? StubHttpHandler.Fixture("yts-inception.json")
+            : new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        (IndexerSearch search, _) = Create(handler, TimeSpan.FromSeconds(30));
+
+        IndexerSearchResult result = await search.SearchAsync([CardigannFixtures.Definition("yts.yml")], Query, TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, result.Releases.Count);
+        Assert.Empty(result.Errors);
+    }
+
     private static (IndexerSearch Search, IndexerDomainHealth Health) Create(HttpMessageHandler handler, TimeSpan searchTimeout)
     {
         IOptions<ModularrOptions> options = Options.Create(new ModularrOptions { Indexers = new IndexerOptions { SearchTimeout = searchTimeout } });
         IndexerDomainHealth health = new(options);
-        return (new IndexerSearch(new CardigannSearcher(new HttpClient(handler), options), health, options), health);
+        return (new IndexerSearch(new CardigannSearcher(new HttpClient(handler), new Library.FixedOptionsMonitor(options.Value), new CardigannSessions()), health, options), health);
     }
 
     private sealed class SlowHandler : HttpMessageHandler

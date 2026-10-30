@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { api, episodeCode, errorMessage, formatEta, formatRuntime, formatSize, isSeries, isoDay, kindOf, libraryHref } from "@/lib/api";
 import type { Download, Episode, ItemPatch, Kind, LibraryItem, MovieFile, Season, SeriesDetail, SubtitleTarget } from "@/lib/api";
 import { realLanguages, useOptions } from "@/lib/options";
-import { isActive, useActivity, useTitleEvents } from "@/components/Activity";
+import { isActive, titleKey, useActivity, useTitleEvents } from "@/components/Activity";
 import { ActivityTimeline } from "@/components/ActivityFeed";
 import { useSession } from "@/components/AuthGate";
 import { Icon } from "@/components/icons";
@@ -16,7 +16,7 @@ import { useChrome } from "@/components/Shell";
 import { ReleasesDialog } from "@/components/ReleasesDialog";
 import { SubtitleSummary, SubtitlesDialog } from "@/components/SubtitlesDialog";
 import { useToast } from "@/components/Toasts";
-import { Alert, Badge, Button, Checkbox, Empty, Field, Menu, MenuItem, Modal, PickList, Progress, Rating, Segmented, Select, Skeleton, StatusBadge, Switch } from "@/components/ui";
+import { Alert, Badge, Button, ButtonLink, Checkbox, buttonClass, Empty, Field, IconButton, Menu, MenuItem, Modal, PickList, Progress, Rating, Segmented, Select, Skeleton, StatusBadge, Switch, Well, toneDot } from "@/components/ui";
 import type { Status } from "@/components/ui";
 
 type Detail = { item: LibraryItem; file?: MovieFile | null; seasons?: Season[]; episodes?: Episode[] };
@@ -25,8 +25,11 @@ type Tab = "overview" | "content" | "history";
 const libraryName: Record<Kind, string> = { movie: "Movies", series: "Series", anime: "Anime" };
 const mainVersions = ["VO", "VF", "VOSTFR", "MULTi"];
 const SAVED_MS = 2000;
+const reset = "cursor-pointer font-medium text-ink-2 underline underline-offset-2 hover:text-ink";
 
 const formatDay = (iso: string) => new Date(`${iso}T00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+// The live activity toasts use the same key, so a search's result replaces its "Searching" toast.
+const toastKey = (item: LibraryItem) => titleKey(isSeries(item) ? { movieId: null, seriesId: item.id } : { movieId: item.id, seriesId: null }) ?? item.title;
 
 export function TitleView({ type, id, season }: { type: "movie" | "series"; id: number; season: number | null }) {
   const [detail, setDetail] = useState<Detail | null>(null);
@@ -50,10 +53,14 @@ function Loaded({ detail, focusSeason, onDetail, reload }: { detail: Detail; foc
   const { item } = detail;
   const kind = kindOf(item);
   const toast = useToast();
+  const { user, managed } = useSession();
+  const admin = user.role === "Admin";
   const { epoch, progress } = useActivity();
   const [download, setDownload] = useState<Download | null>(null);
-  const [releases, setReleases] = useState<{ season?: number } | null>(null);
+  const [releases, setReleases] = useState<{ season?: number; episode?: number } | null>(null);
   const [subtitles, setSubtitles] = useState<{ target: SubtitleTarget; title: string } | null>(null);
+  // Bumped when the subtitles dialog closes so the file's summary shows what was downloaded there.
+  const [subtitlesClosed, setSubtitlesClosed] = useState(0);
   const [removing, setRemoving] = useState(false);
   const [searching, setSearching] = useState<number | "all" | null>(null);
   const [tab, setTab] = useState<Tab>(focusSeason !== null ? "content" : "overview");
@@ -72,18 +79,27 @@ function Loaded({ detail, focusSeason, onDetail, reload }: { detail: Detail; foc
   useTitleEvents(scope, refresh);
   useChrome({ backdrop: item.backdrop, crumb: { label: libraryName[kind], href: libraryHref[kind], title: item.title } });
 
-  const fail = (e: unknown) => toast({ key: `title:${item.id}`, icon: "alert", tone: "bad", title: item.title, message: errorMessage(e) });
+  const fail = (e: unknown) => toast({ key: toastKey(item), icon: "alert", tone: "bad", title: item.title, message: errorMessage(e) });
 
   async function search(season?: number) {
     setSearching(season ?? "all");
     try {
       await api.autoSearch(kind, item.id, season);
-      toast({ key: `title:${item.id}`, icon: "search", tone: "seek", title: item.title,
+      toast({ key: toastKey(item), icon: "search", tone: "seek", title: item.title,
         message: season === undefined ? "Searching. A release that fits your profile goes to Downloads." : `Searching season ${season}.` });
     } catch (e) {
       fail(e);
     } finally {
       setSearching(null);
+    }
+  }
+
+  async function searchSubtitles() {
+    try {
+      await api.searchMissingSubtitles(kind, item.id);
+      toast({ key: toastKey(item), icon: "subtitles", tone: "seek", title: item.title, message: "Searching the missing subtitles." });
+    } catch (e) {
+      fail(e);
     }
   }
 
@@ -96,12 +112,22 @@ function Loaded({ detail, focusSeason, onDetail, reload }: { detail: Detail; foc
     : isSeries(item) && item.missing === 0 ? (nextAir ? { state: "unreleased", date: nextAir } : undefined)
     : { state: "missing" };
 
+  // linkarr's /go/watch opens the title in the media server by its TMDB (movie) or TVDB (series) id.
+  const watch = managed && (isSeries(item) ? item.episodesWithFile > 0 : item.hasFile)
+    ? `${managed.url.replace(/\/+$/, "")}/go/watch?${isSeries(item) ? `tvdb=${item.tvdbId}` : `tmdb=${item.tmdbId}`}` : null;
   const action = (
-    <PrimaryAction item={item} file={detail.file ?? null} download={download} live={live ?? null} nextAir={nextAir} searching={searching}
-      onSearch={() => search()} onReleases={() => setReleases({})} onSubtitles={() => setSubtitles({ target: movieTarget, title: item.title })}
-      onToggle={() => download && void (download.status === "Paused" ? api.resume(download.id) : api.pause(download.id)).then(loadDownload, fail)} />
+    <div className="space-y-3">
+      <PrimaryAction admin={admin} item={item} file={detail.file ?? null} download={download} live={live ?? null} nextAir={nextAir} searching={searching}
+        onSearch={() => search()} onReleases={() => setReleases({})}
+        onToggle={() => download && void (download.status === "Paused" ? api.resume(download.id) : api.pause(download.id)).then(loadDownload, fail)} />
+      {watch && (
+        <a href={watch} target="_blank" rel="noopener noreferrer" className={`${buttonClass("primary")} w-full`}>
+          <Icon name="play" size={16} />Watch
+        </a>
+      )}
+    </div>
   );
-  const hasAction = !item.hasFile || !isSeries(item) || !!download;
+  const hasAction = !item.hasFile || !isSeries(item) || !!download || !!watch;
   const tabs: readonly { value: Tab; label: string }[] = [
     { value: "overview", label: "Overview" },
     { value: "content", label: isSeries(item) ? "Seasons" : "Files" },
@@ -111,22 +137,24 @@ function Loaded({ detail, focusSeason, onDetail, reload }: { detail: Detail; foc
 
   return (
     <div className={hasAction ? "max-md:pb-20" : ""}>
-      <Hero item={item} status={status} downloading={!!download} />
+      {/* The action panel already states the status, except that the title is unmonitored. */}
+      <Hero item={item} status={hasAction && status?.state !== "unmonitored" ? undefined : status} />
 
       <Segmented label="Sections" value={tab} onChange={setTab} options={tabs} className="mt-4 flex w-full md:hidden [&>button]:flex-1 [&>button]:justify-center" />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
         <div className="min-w-0 space-y-8">
-          {item.overview && <p className={`max-w-[68ch] text-[15px] leading-7 text-ink-2 ${onTab("overview")}`}>{item.overview}</p>}
+          {item.overview && <p className={`max-w-[68ch] text-body leading-7 text-ink-2 ${onTab("overview")}`}>{item.overview}</p>}
           <div className={onTab("content")}>
             {isSeries(item) && detail.seasons && detail.episodes ? (
-              <Seasons series={item} seasons={detail.seasons} episodes={detail.episodes} focus={focusSeason} searching={searching}
-                onSearch={search} onReleases={(season) => setReleases({ season })} onError={fail}
+              <Seasons admin={admin} series={item} seasons={detail.seasons} episodes={detail.episodes} focus={focusSeason} searching={searching}
+                onSearch={search} onReleases={(season, episode) => setReleases({ season, episode })} onError={fail}
                 onDetail={(d) => onDetail({ item: d.series, seasons: d.seasons, episodes: d.episodes })}
                 onEpisode={(e) => onDetail({ ...detail, episodes: detail.episodes?.map((x) => (x.id === e.id ? e : x)) })}
                 onSubtitles={(e) => setSubtitles({ target: { episodeId: e.id }, title: `${item.title} ${episodeCode(e)}` })} />
             ) : (
-              <Files item={item} target={movieTarget} onSubtitles={() => setSubtitles({ target: movieTarget, title: item.title })} />
+              <Files item={item} target={movieTarget} reload={subtitlesClosed} onSubtitles={admin ? () => setSubtitles({ target: movieTarget, title: item.title }) : undefined}
+                onSearchMissing={admin ? searchSubtitles : undefined} />
             )}
           </div>
           <div className={onTab("history")}><ActivityTimeline scope={scope} /></div>
@@ -142,14 +170,14 @@ function Loaded({ detail, focusSeason, onDetail, reload }: { detail: Detail; foc
         <div className="glass fixed inset-x-3 bottom-[calc(88px+env(safe-area-inset-bottom))] z-20 rounded-tile p-3 md:hidden">{action}</div>
       )}
 
-      {releases && <ReleasesDialog item={item} season={releases.season} onClose={() => setReleases(null)} />}
-      {subtitles && <SubtitlesDialog target={subtitles.target} title={subtitles.title} onClose={() => setSubtitles(null)} />}
+      {releases && <ReleasesDialog item={item} season={releases.season} episode={releases.episode} onClose={() => setReleases(null)} />}
+      {subtitles && <SubtitlesDialog target={subtitles.target} title={subtitles.title} onClose={() => { setSubtitles(null); setSubtitlesClosed((n) => n + 1); }} />}
       {removing && <RemoveDialog item={item} kind={kind} onClose={() => setRemoving(false)} />}
     </div>
   );
 }
 
-function Hero({ item, status, downloading }: { item: LibraryItem; status?: Status; downloading: boolean }) {
+function Hero({ item, status }: { item: LibraryItem; status?: Status }) {
   const runtime = formatRuntime(item.runtime);
   const seasons = isSeries(item) ? item.seasons.filter((s) => s.number > 0).length : 0;
   return (
@@ -164,18 +192,22 @@ function Hero({ item, status, downloading }: { item: LibraryItem; status?: Statu
       <div className="relative mt-auto flex w-full items-end gap-6 p-3 sm:p-6 lg:gap-8 lg:p-8">
         <PosterArt src={item.poster} title={item.title} className="w-40 shrink-0 shadow-2xl shadow-black/70 max-md:hidden lg:w-48" />
         {/* On phones the text sits on its own scrim: a bright backdrop must not drop it under 4.5:1. */}
-        <div className="min-w-0 flex-1 animate-rise space-y-3 max-md:rounded-tile max-md:bg-black/55 max-md:p-4">
-          {status && (downloading
-            ? <Link href="/downloads/" className="inline-block rounded-pill"><StatusBadge status={status} /></Link>
-            : <StatusBadge status={status} />)}
+        <div className="min-w-0 flex-1 animate-rise space-y-3 max-md:rounded-tile max-md:bg-veil max-md:p-4">
+          {status && <StatusBadge status={status} />}
           <h1 tabIndex={-1} className="scrim-text font-display text-[clamp(40px,6vw,64px)] leading-none text-balance outline-none">{item.title}</h1>
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-2">
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-2">
             {item.year > 0 && <span className="tabular-nums">{item.year}</span>}
-            <Rating value={item.rating} className="text-[13px]" />
+            <Rating value={item.rating} className="text-meta" />
             {runtime && <span>{runtime}</span>}
             {seasons > 0 && <span>{seasons} {seasons === 1 ? "season" : "seasons"}</span>}
             {item.certification && <span className="rounded-chip px-1.5 ring-1 ring-white/30">{item.certification}</span>}
             {item.genres.length > 0 && <span>{item.genres.slice(0, 3).join(", ")}</span>}
+            {!isSeries(item) && item.collectionTmdbId && (
+              <Link href={`/explore/?saga=${item.collectionTmdbId}`}
+                className="inline-flex items-center gap-1 rounded-pill bg-white/10 px-2.5 py-0.5 font-medium text-ink ring-1 ring-white/20 transition hover:bg-white/20">
+                <Icon name="layers" size={12} />{item.collectionName ?? "Collection"}
+              </Link>
+            )}
           </p>
         </div>
       </div>
@@ -184,7 +216,8 @@ function Hero({ item, status, downloading }: { item: LibraryItem; status?: Statu
 }
 
 // The one thing to do next, by state. Nothing that has a file offers a search or a release: the server refuses those.
-function PrimaryAction({ item, file, download, live, nextAir, searching, onSearch, onReleases, onSubtitles, onToggle }: {
+function PrimaryAction({ admin, item, file, download, live, nextAir, searching, onSearch, onReleases, onToggle }: {
+  admin: boolean;
   item: LibraryItem;
   file: MovieFile | null;
   download: Download | null;
@@ -193,7 +226,6 @@ function PrimaryAction({ item, file, download, live, nextAir, searching, onSearc
   searching: number | "all" | null;
   onSearch: () => void;
   onReleases: () => void;
-  onSubtitles: () => void;
   onToggle: () => void;
 }) {
   if (download) {
@@ -202,7 +234,7 @@ function PrimaryAction({ item, file, download, live, nextAir, searching, onSearc
     const eta = live?.eta ?? download.eta;
     return (
       <div className="space-y-3">
-        <div className="flex items-baseline justify-between gap-3 text-[13px]">
+        <div className="flex items-baseline justify-between gap-3 text-meta">
           <span className="font-semibold text-live">{paused ? "Paused" : "Downloading"}</span>
           <span className="text-ink-2 tabular-nums">
             {!paused && live && `${formatSize(live.rate)}/s · `}{!paused && eta !== null && `${formatEta(eta)} left · `}<span className="text-ink">{Math.round(value * 100)}%</span>
@@ -210,24 +242,23 @@ function PrimaryAction({ item, file, download, live, nextAir, searching, onSearc
         </div>
         <Progress value={value} eta={eta !== null ? formatEta(eta) : null} label="Download progress" />
         <div className="flex gap-2">
-          <Button size="sm" icon={paused ? "play" : "pause"} onClick={onToggle}>{paused ? "Resume" : "Pause"}</Button>
-          <Link href="/downloads/" className="inline-flex h-9 items-center rounded-pill px-4 text-[13px] font-semibold text-ink-2 hover:bg-fill hover:text-ink">View in downloads</Link>
+          {admin && <Button size="sm" icon={paused ? "play" : "pause"} onClick={onToggle}>{paused ? "Resume" : "Pause"}</Button>}
+          <ButtonLink href="/downloads/" variant="ghost" size="sm">View in downloads</ButtonLink>
         </div>
       </div>
     );
   }
   if (item.hasFile) {
+    // Subtitles live in the Files section, the one entry point for them.
     return (
-      <div className="flex items-center gap-3">
-        <span className="flex min-w-0 flex-1 items-center gap-2 text-[13px] font-semibold text-ok"><Icon name="check" size={16} strokeWidth={2.6} />{["Downloaded", file?.quality, file?.version].filter(Boolean).join(" · ")}</span>
-        <Button size="sm" icon="subtitles" onClick={onSubtitles}>Subtitles</Button>
-      </div>
+      <p className="flex min-h-9 items-center gap-2 text-meta font-semibold text-ok"><Icon name="check" size={16} strokeWidth={2.6} />{["Downloaded", file?.quality, file?.version].filter(Boolean).join(" · ")}</p>
     );
   }
   if (isSeries(item) && item.missing === 0) {
-    return <p className="text-[13px] text-ink-2">{nextAir ? `Next episode airs ${formatDay(nextAir)}.` : "Nothing has aired yet."}</p>;
+    return <p className="text-meta text-ink-2">{nextAir ? `Next episode airs ${formatDay(nextAir)}.` : "Nothing has aired yet."}</p>;
   }
   const partly = isSeries(item) && item.episodesWithFile > 0;
+  if (!admin) return <p className="text-meta text-ink-2">{partly ? `${item.missing} missing.` : "Not downloaded yet."}</p>;
   return (
     <div className="flex flex-wrap gap-2 [&>button]:flex-1">
       <Button variant="primary" icon="bolt" loading={searching === "all"} disabled={searching !== null} onClick={onSearch}>
@@ -250,6 +281,7 @@ function YourCopy({ item, kind, action, onChange, onRemove, onScanned, onError }
   const options = useOptions();
   const toast = useToast();
   const { user } = useSession();
+  const admin = user.role === "Admin";
   const [saved, setSaved] = useState(0);
   const [open, setOpen] = useState(false);
 
@@ -271,7 +303,7 @@ function YourCopy({ item, kind, action, onChange, onRemove, onScanned, onError }
   async function rescan() {
     try {
       const result = await api.rescan(kind, item.id);
-      toast({ key: `title:${item.id}`, icon: "folder", tone: "ok", title: item.title, message: result.items === 0
+      toast({ key: toastKey(item), icon: "folder", tone: "ok", title: item.title, message: result.items === 0
         ? "The folder could not be scanned: it is missing, a link, or outside the library folders."
         : `Folder rescanned: ${result.added} found, ${result.removed} gone.` });
       onScanned();
@@ -283,7 +315,7 @@ function YourCopy({ item, kind, action, onChange, onRemove, onScanned, onError }
   async function copyPath() {
     try {
       await navigator.clipboard.writeText(item.path);
-      toast({ key: `title:${item.id}`, icon: "copy", tone: "ok", title: "Folder path copied", message: item.path });
+      toast({ key: toastKey(item), icon: "copy", tone: "ok", title: "Folder path copied", message: item.path });
     } catch (e) {
       onError(e);
     }
@@ -294,41 +326,44 @@ function YourCopy({ item, kind, action, onChange, onRemove, onScanned, onError }
   return (
     <aside aria-labelledby="copy-heading" className="glass space-y-5 rounded-panel p-5">
       <header className="flex min-h-11 items-center gap-3">
-        <h2 id="copy-heading" className="text-[17px] font-semibold max-md:sr-only">Your copy</h2>
-        {/* Phones fold the preferences away under the action. */}
-        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open}
-          className="flex min-h-11 cursor-pointer items-center gap-2 text-[17px] font-semibold md:hidden">
-          Preferences<Icon name="chevronDown" size={18} className={`text-ink-3 transition ${open ? "rotate-180" : ""}`} />
-        </button>
-        {saved > 0 && <span role="status" className="flex animate-fade items-center gap-1 text-[13px] text-ok"><Icon name="check" size={15} />Saved</span>}
+        <h2 id="copy-heading" className="sr-only">Your copy</h2>
+        {/* The preferences fold away under the action: they are set once and rarely touched. Members cannot change them. */}
+        {admin && (
+          <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="copy-preferences"
+            className="flex min-h-11 cursor-pointer items-center gap-2 text-title font-semibold">
+            Preferences<Icon name="chevronDown" size={16} className={`text-ink-3 transition ${open ? "rotate-180" : ""}`} />
+          </button>
+        )}
+        {saved > 0 && <span role="status" className="flex animate-fade items-center gap-1 text-meta text-ok"><Icon name="check" size={16} />Saved</span>}
         <span className="flex-1" />
-        <Menu label={`More actions for ${item.title}`}>
-          <MenuItem icon="refresh" onClick={() => void rescan()}>Rescan folder</MenuItem>
-          <MenuItem icon="copy" onClick={() => void copyPath()}>Copy folder path</MenuItem>
-          {user.role === "Admin" && <MenuItem icon="trash" danger onClick={onRemove}>Delete…</MenuItem>}
-        </Menu>
+        {admin ? (
+          <Menu label={`More actions for ${item.title}`}>
+            <MenuItem icon="refresh" onClick={() => void rescan()}>Rescan folder</MenuItem>
+            <MenuItem icon="copy" onClick={() => void copyPath()}>Copy folder path</MenuItem>
+            <MenuItem icon="trash" danger onClick={onRemove}>Delete…</MenuItem>
+          </Menu>
+        ) : <IconButton variant="ghost" icon="copy" label="Copy folder path" onClick={() => void copyPath()} />}
       </header>
 
       {action && <div className="max-md:hidden">{action}</div>}
 
-      <div className={`space-y-5 ${open ? "" : "max-md:hidden"}`}>
+      {admin && <fieldset id="copy-preferences" className={`space-y-5 ${open ? "" : "hidden"}`}>
         {!options ? <Skeleton className="h-48" /> : (
           <>
             <div className="space-y-2">
-              <p className="text-sm font-medium">Version</p>
+              <p className="text-body font-medium">Version</p>
               <Segmented label="Version" value={item.wantedVersion} onChange={(version) => patch({ version })} options={versions.map((v) => ({ value: v, label: v }))} />
-              <p className="text-[13px] text-ink-3">
-                {item.version
-                  ? <>Set for this title. <button type="button" className="cursor-pointer font-medium text-ink-2 underline underline-offset-2 hover:text-ink" onClick={() => patch({ version: null })}>Reset to {item.policyVersion}</button></>
-                  : `Following default: ${item.policyVersion}`}
-              </p>
             </div>
             <PickList label="Subtitles" values={item.wantedSubtitles} choices={realLanguages(options).map((l) => l.name)} empty="No subtitles wanted"
-              onChange={(subtitles) => patch({ subtitles })}
-              hint={<>Subtitles never change the audio.{item.subtitles && <> <button type="button" className="cursor-pointer font-medium text-ink-2 underline underline-offset-2 hover:text-ink" onClick={() => patch({ subtitles: null })}>Use the {kind} default</button></>}</>} />
+              onChange={(subtitles) => patch({ subtitles })} />
+            {(item.version || item.subtitles) && (
+              <p className="flex flex-wrap gap-x-4 text-meta">
+                {item.version && <button type="button" className={reset} onClick={() => patch({ version: null })}>Reset version to {item.policyVersion}</button>}
+                {item.subtitles && <button type="button" className={reset} onClick={() => patch({ subtitles: null })}>Use the {kind} subtitles</button>}
+              </p>
+            )}
             <div className="border-t border-hair-2 pt-2">
-              <Switch checked={item.monitored} onChange={(monitored) => patch({ monitored })} label="Monitored"
-                description={item.monitored ? "Missing and new releases are grabbed automatically." : "Nothing is grabbed automatically."} />
+              <Switch checked={item.monitored} onChange={(monitored) => patch({ monitored })} label="Monitored" />
             </div>
             <Field label="Quality profile">
               <Select value={item.qualityProfileId} onChange={(e) => patch({ qualityProfileId: Number(e.target.value) })}>
@@ -337,36 +372,43 @@ function YourCopy({ item, kind, action, onChange, onRemove, onScanned, onError }
             </Field>
           </>
         )}
-      </div>
+      </fieldset>}
     </aside>
   );
 }
 
-function Files({ item, target, onSubtitles }: { item: LibraryItem; target: SubtitleTarget; onSubtitles: () => void }) {
+function Files({ item, target, reload, onSubtitles, onSearchMissing }: {
+  item: LibraryItem;
+  target: SubtitleTarget;
+  reload: number;
+  onSubtitles?: () => void;
+  onSearchMissing?: () => Promise<void>;
+}) {
   return (
     <section aria-labelledby="files-heading" className="space-y-4">
-      <h2 id="files-heading" className="text-[17px] font-semibold">Files</h2>
-      <div className="well space-y-4 rounded-[20px] p-4">
-        <p className="flex items-start gap-3 text-sm">
-          <Icon name="folder" size={18} className="mt-0.5 shrink-0 text-ink-3" />
+      <h2 id="files-heading" className="text-title font-semibold">Files</h2>
+      <Well className="space-y-4">
+        <p className="flex items-start gap-3 text-meta">
+          <Icon name="folder" size={16} className="mt-0.5 shrink-0 text-ink-3" />
           <span className="min-w-0 break-all text-ink-2">{item.path}</span>
         </p>
         {item.hasFile
-          ? <SubtitleSummary target={target} onOpen={onSubtitles} />
-          : <p className="text-[13px] text-ink-3">No file yet. Once a release is imported it lands in this folder.</p>}
-      </div>
+          ? <SubtitleSummary target={target} reload={reload} onOpen={onSubtitles} onSearchMissing={onSearchMissing} />
+          : <p className="text-meta text-ink-3">No file yet. Once a release is imported it lands in this folder.</p>}
+      </Well>
     </section>
   );
 }
 
-function Seasons({ series, seasons, episodes, focus, searching, onSearch, onReleases, onDetail, onEpisode, onSubtitles, onError }: {
+function Seasons({ admin, series, seasons, episodes, focus, searching, onSearch, onReleases, onDetail, onEpisode, onSubtitles, onError }: {
+  admin: boolean;
   series: LibraryItem;
   seasons: Season[];
   episodes: Episode[];
   focus: number | null;
   searching: number | "all" | null;
   onSearch: (season: number) => void;
-  onReleases: (season: number) => void;
+  onReleases: (season: number, episode?: number) => void;
   onDetail: (detail: SeriesDetail) => void;
   onEpisode: (episode: Episode) => void;
   onSubtitles: (episode: Episode) => void;
@@ -392,46 +434,43 @@ function Seasons({ series, seasons, episodes, focus, searching, onSearch, onRele
 
   return (
     <section aria-labelledby="seasons-heading" className="space-y-4">
-      <h2 id="seasons-heading" className="text-[17px] font-semibold">Seasons</h2>
+      <h2 id="seasons-heading" className="text-title font-semibold">Seasons</h2>
       <ul className="space-y-3">
         {ordered.map((season) => {
           const expanded = open.has(season.number);
           const panel = `season-${season.number}-episodes`;
           const name = season.number === 0 ? "Specials" : `Season ${season.number}`;
           return (
-            <li key={season.number} id={`season-${season.number}`} className="well scroll-mt-28 overflow-hidden rounded-[20px]">
-              <div className="flex items-center gap-2 py-2 pr-2 pl-1 sm:gap-3 sm:pr-3">
-                <Switch hideLabel checked={season.monitored} onChange={(m) => void monitorSeason(season.number, m)} label={`Monitor ${name}`} />
+            <li key={season.number} id={`season-${season.number}`} className="well scroll-mt-28 overflow-hidden rounded-card">
+              <div className={`flex items-center gap-2 py-2 pr-2 sm:gap-3 sm:pr-3 ${admin ? "pl-1" : "pl-4"}`}>
+                {admin && <Switch hideLabel checked={season.monitored} onChange={(m) => void monitorSeason(season.number, m)} label={`Monitor ${name}`} />}
                 <button aria-expanded={expanded} aria-controls={panel}
                   onClick={() => setOpen((o) => { const n = new Set(o); if (!n.delete(season.number)) n.add(season.number); return n; })}
                   className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-ctl text-left">
                   <span className="min-w-0">
                     <span className={`block font-semibold ${season.monitored ? "" : "text-ink-3"}`}>{name}</span>
-                    <span className="flex items-center gap-2 text-[13px] text-ink-3 tabular-nums">
-                      {season.episodesWithFile}/{season.episodes} on disk
+                    <span className="flex items-center gap-2 text-meta text-ink-3 tabular-nums">
+                      {season.episodesWithFile}/{season.episodes}<span className="sr-only"> on disk</span>
                       <span className="h-1 w-16 overflow-hidden rounded-full bg-fill-2" aria-hidden="true">
                         <span className={`block h-full rounded-full ${season.hasFile ? "bg-ok" : "bg-ink"}`} style={{ width: `${season.episodes ? (season.episodesWithFile / season.episodes) * 100 : 0}%` }} />
                       </span>
                     </span>
                   </span>
-                  <Icon name="chevronDown" size={18} className={`ml-auto shrink-0 text-ink-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
+                  <Icon name="chevronDown" size={16} className={`ml-auto shrink-0 text-ink-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
                 </button>
-                {season.hasFile ? <Badge tone="ok"><Icon name="check" size={12} strokeWidth={2.6} />Complete</Badge>
-                  : season.monitored && season.missing > 0 && (
-                    <>
-                      <Button size="sm" icon="bolt" loading={searching === season.number} disabled={searching !== null} onClick={() => onSearch(season.number)}
-                        aria-label={`Get ${name}`}><span className="max-sm:hidden">Get season</span></Button>
-                      <Menu label={`More for ${name}`} className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-ink-2 hover:bg-fill-2 hover:text-ink">
-                        <MenuItem icon="list" onClick={() => onReleases(season.number)}>Choose a release</MenuItem>
-                      </Menu>
-                    </>
-                  )}
+                {!season.hasFile && admin && season.monitored && season.missing > 0 && (
+                  <>
+                    <Button size="sm" icon="bolt" loading={searching === season.number} disabled={searching !== null} onClick={() => onSearch(season.number)}
+                      aria-label={`Get ${name}`}><span className="max-sm:hidden">Get season</span></Button>
+                    <IconButton variant="ghost" icon="list" label={`Choose a release for ${name}`} onClick={() => onReleases(season.number)} />
+                  </>
+                )}
               </div>
               {expanded && (
-                <ol id={panel} className="animate-fade divide-y divide-hair-2 border-t border-hair-2 bg-black/20">
+                <ol id={panel} className="animate-fade divide-y divide-hair-2 border-t border-hair-2 bg-sunk">
                   {episodes.filter((e) => e.seasonNumber === season.number).map((e) => (
-                    <EpisodeRow key={e.id} episode={e} aired={e.airDate !== null && e.airDate <= today}
-                      onMonitor={(m) => void monitorEpisode(e, m)} onSubtitles={() => onSubtitles(e)} onReleases={() => onReleases(season.number)} />
+                    <EpisodeRow key={e.id} admin={admin} episode={e} aired={e.airDate !== null && e.airDate <= today}
+                      onMonitor={(m) => void monitorEpisode(e, m)} onSubtitles={() => onSubtitles(e)} onReleases={() => onReleases(season.number, e.episodeNumber)} />
                   ))}
                 </ol>
               )}
@@ -443,7 +482,8 @@ function Seasons({ series, seasons, episodes, focus, searching, onSearch, onRele
   );
 }
 
-function EpisodeRow({ episode: e, aired, onMonitor, onSubtitles, onReleases }: {
+function EpisodeRow({ admin, episode: e, aired, onMonitor, onSubtitles, onReleases }: {
+  admin: boolean;
   episode: Episode;
   aired: boolean;
   onMonitor: (monitored: boolean) => void;
@@ -452,35 +492,28 @@ function EpisodeRow({ episode: e, aired, onMonitor, onSubtitles, onReleases }: {
 }) {
   const name = e.title ?? `Episode ${e.episodeNumber}`;
   return (
-    <li className="flex min-h-14 items-center gap-3 py-2 pr-2 pl-4 text-sm sm:pr-3">
-      <span className="w-6 shrink-0 text-[13px] text-ink-3 tabular-nums">{e.episodeNumber}</span>
+    <li className="flex min-h-14 items-center gap-3 py-2 pr-2 pl-4 text-body sm:pr-3">
+      <span className="w-6 shrink-0 text-meta text-ink-3 tabular-nums">{e.episodeNumber}</span>
       <span className="min-w-0 flex-1">
         <span className={`block truncate ${e.monitored || e.hasFile ? "" : "text-ink-3"}`}>{name}</span>
-        <span className="block text-[12px] text-ink-3 tabular-nums">
-          {e.airDate ? formatDay(e.airDate) : "Air date unknown"}
-          {!e.hasFile && aired && <span className={`sm:hidden ${e.monitored ? "text-warn" : ""}`}> · Missing</span>}
-        </span>
+        <span className="block text-meta text-ink-3 tabular-nums">{e.airDate ? formatDay(e.airDate) : "Air date unknown"}</span>
       </span>
       {e.hasFile ? (
         <>
-          <Badge tone="ok"><Icon name="check" size={12} strokeWidth={2.6} />On disk</Badge>
-          <button onClick={onSubtitles} aria-label={`Subtitles for ${name}`} title="Subtitles"
-            className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-ink-2 hover:bg-fill-2 hover:text-ink">
-            <Icon name="subtitles" size={17} />
-          </button>
+          <span role="img" aria-label="On disk" title="On disk" className={`size-2 shrink-0 rounded-full ${toneDot.ok}`} />
+          {admin && <IconButton variant="ghost" icon="subtitles" label={`Subtitles for ${name}`} onClick={onSubtitles} />}
         </>
       ) : aired ? (
         <>
-          <Badge tone={e.monitored ? "warn" : "neutral"} className="max-sm:hidden">Missing</Badge>
-          <label className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full hover:bg-fill-2" title="Monitored">
-            <input type="checkbox" checked={e.monitored} onChange={(ev) => onMonitor(ev.target.checked)} aria-label={`Monitor ${name}`} className="size-4 cursor-pointer accent-white" />
-          </label>
-          <button onClick={onReleases} aria-label={`Choose a release for ${name}`} title="Choose a release"
-            className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-ink-2 hover:bg-fill-2 hover:text-ink">
-            <Icon name="list" size={17} />
-          </button>
+          <Badge tone={e.monitored ? "warn" : "neutral"}>Missing</Badge>
+          {admin && (
+            <label className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full hover:bg-fill-2" title="Monitored">
+              <input type="checkbox" checked={e.monitored} onChange={(ev) => onMonitor(ev.target.checked)} aria-label={`Monitor ${name}`} className="size-4 cursor-pointer accent-white" />
+            </label>
+          )}
+          {admin && <IconButton variant="ghost" icon="list" label={`Choose a release for ${name}`} onClick={onReleases} />}
         </>
-      ) : <span className="pr-2 text-[12px] text-ink-3">Upcoming</span>}
+      ) : <span className="pr-2 text-meta text-ink-3">Upcoming</span>}
     </li>
   );
 }
@@ -524,8 +557,8 @@ function TitleSkeleton() {
         <div className="space-y-3">
           <Skeleton className="h-4 max-w-2xl" />
           <Skeleton className="h-4 max-w-xl" />
-          <Skeleton className="mt-6 h-16 rounded-[20px]" />
-          <Skeleton className="h-16 rounded-[20px]" />
+          <Skeleton className="mt-6 h-16 rounded-card" />
+          <Skeleton className="h-16 rounded-card" />
         </div>
         <Skeleton className="h-80 rounded-panel" />
       </div>

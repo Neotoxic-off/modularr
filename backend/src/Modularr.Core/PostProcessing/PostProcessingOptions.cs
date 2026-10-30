@@ -33,6 +33,12 @@ public sealed record PostProcessingOptions : IValidatableObject
 
     public ImportMode ImportMode { get; init; } = ImportMode.Move;
 
+    // Imported files get a clean "Series - S01E01 - Title [Quality]" or "Movie (Year) [Quality]" name instead of the release's.
+    public bool RenameFiles { get; init; } = true;
+
+    // Files replaced by an upgrade are moved here; empty deletes them.
+    public string RecycleBinPath { get; init; } = "";
+
     public IReadOnlySet<string> VideoExtensions { get; init; } = MediaFileExtensions.VideoExtensions;
 
     public IReadOnlySet<string> SubtitleExtensions { get; init; } = DefaultSubtitleExtensions;

@@ -26,7 +26,7 @@ public sealed class IndexerCatalogTests : IDisposable
     };
 
     [Fact]
-    public void EnablesPublicVideoIndexersAndListsTheOthersDisabled()
+    public void EnablesVideoIndexersThatNeedNoLoginAndListsTheOthersDisabled()
     {
         IndexerCatalog catalog = Load(RealFixtures());
 
@@ -34,9 +34,24 @@ public sealed class IndexerCatalogTests : IDisposable
         Assert.Equal(["1337x", "semivideo", "shakaw"], catalog.Entries.Select(entry => entry.Id));
         Assert.True(catalog.Find("1337x")!.Enabled);
         Assert.False(catalog.Find("shakaw")!.Enabled);
-        Assert.False(catalog.Find("semivideo")!.Enabled);
+
+        // Semi-private, but its templates read no credential: searched like a public site.
+        Assert.True(catalog.Find("semivideo")!.Enabled);
         Assert.Equal(IndexerPrivacy.Private, catalog.Find("shakaw")!.Privacy);
         Assert.Equal(IndexerPrivacy.SemiPrivate, catalog.Find("semivideo")!.Privacy);
+    }
+
+    [Fact]
+    public void ADefinitionWithANullCategoryDoesNotStopTheCatalog()
+    {
+        // Run-2 audit: a null caps.categories value used to throw out of Load and abort startup.
+        string nullCategory = CatalogTestFiles.SemiPrivateVideo
+            .Replace("id: semivideo", "id: nullcat", StringComparison.Ordinal)
+            .Replace("categorymappings:\n    - {id: 1, cat: Movies/HD, desc: \"Films\"}", "categories:\n    \"1\": ~", StringComparison.Ordinal);
+
+        IndexerCatalog catalog = Load(new Dictionary<string, string> { ["a.yml"] = CatalogTestFiles.Fixture("1337x.yml"), ["z.yml"] = nullCategory });
+
+        Assert.NotNull(catalog.Find("1337x"));
     }
 
     [Theory]

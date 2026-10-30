@@ -1,10 +1,13 @@
+using Microsoft.Extensions.Logging.Abstractions;
 // Behavior from Prowlarr IndexerDefinitionUpdateService (no upstream tests exist for it): master/12/package.zip, cache kept on failure.
 using System.Net;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Configuration;
 using Modularr.Core.Indexers;
 using Modularr.Core.Indexers.Catalog;
 using Modularr.Core.Indexers.Definitions;
+using Modularr.Core.Tests.Library;
 
 namespace Modularr.Core.Tests.Indexers.Catalog;
 
@@ -130,25 +133,29 @@ public sealed class IndexerDefinitionSyncTests : IDisposable
     }
 
     [Fact]
-    public async Task HostServesTheCachedCatalogWhileOffline()
+    public async Task HostServesTheCachedCatalogWhileOfflineAndDisablesIndexersThatFailTheirTest()
     {
         CatalogTestFiles.Write(Definitions, new Dictionary<string, string> { ["1337x.yml"] = CatalogTestFiles.Fixture("1337x.yml") });
-        IOptions<ModularrOptions> options = Options.Create(new ModularrOptions { Indexers = new IndexerOptions { DefinitionsDirectory = Definitions } });
-        using IndexerCatalogHost host = new(options, new StubHttpClientFactory(StubHandler.Offline()));
+        FixedOptionsMonitor options = new(new ModularrOptions { Indexers = new IndexerOptions { DefinitionsDirectory = Definitions } });
+        // No IndexerSearch can be resolved: every test fails, like an indexer that does not answer.
+        using IndexerCatalogHost host = new(options, new StubHttpClientFactory(StubHandler.Offline()), new ServiceCollection().BuildServiceProvider(), NullLogger<IndexerCatalogHost>.Instance);
 
         await host.StartAsync(TestContext.Current.CancellationToken);
         Assert.True(Assert.Single(host.Catalog.Entries).Enabled);
-        await WaitUntilAsync(() => host.LastSyncError is not null);
+        await WaitUntilAsync(() => host.LastSyncError is not null && host.IsFailing("1337x"));
         await host.StopAsync(TestContext.Current.CancellationToken);
 
+        // Still listed from the cache, but disabled until a later test (or a manual one) succeeds.
+        Assert.False(Assert.Single(host.Catalog.Entries).Enabled);
+        host.Report("1337x", works: true);
         Assert.True(Assert.Single(host.Catalog.Entries).Enabled);
     }
 
     [Fact]
     public async Task HostLoadsTheDownloadedCatalog()
     {
-        IOptions<ModularrOptions> options = Options.Create(new ModularrOptions { Indexers = new IndexerOptions { DefinitionsDirectory = Definitions } });
-        using IndexerCatalogHost host = new(options, new StubHttpClientFactory(StubHandler.Serving(CatalogTestFiles.Zip(Package))));
+        FixedOptionsMonitor options = new(new ModularrOptions { Indexers = new IndexerOptions { DefinitionsDirectory = Definitions } });
+        using IndexerCatalogHost host = new(options, new StubHttpClientFactory(StubHandler.Serving(CatalogTestFiles.Zip(Package))), new ServiceCollection().BuildServiceProvider(), NullLogger<IndexerCatalogHost>.Instance);
 
         await host.StartAsync(TestContext.Current.CancellationToken);
         await WaitUntilAsync(() => host.Catalog.Entries.Count > 0);

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Modularr.Core.Configuration;
@@ -104,12 +105,22 @@ public sealed class ReleaseSearch(ModularrDbContext db, IndexerCatalogHost catal
             SubtitlesOnlyWhenAudioDiffers = settings.Subtitles.OnlyWhenAudioDiffers,
         };
         Dictionary<int, MediaFile> filesById = files.ToDictionary(f => f.Id);
-        DownloadDecision[] decisions =
-        [
-            .. found.Releases.Select(release => movies
-                ? ReleaseDecisions.ForMovie(release, profile, movie, files, context)
-                : ReleaseDecisions.ForSeries(release, profile, series, filesById, context, request.Season, episodeNumber)),
-        ];
+        // One release an indexer got wrong (a parser timeout, an impossible value) is skipped, it never fails the whole search.
+        DownloadDecision? Decide(ReleaseInfo release)
+        {
+            try
+            {
+                return movies
+                    ? ReleaseDecisions.ForMovie(release, profile, movie, files, context)
+                    : ReleaseDecisions.ForSeries(release, profile, series, filesById, context, request.Season, episodeNumber);
+            }
+            catch (Exception ex) when (ex is RegexMatchTimeoutException or ArgumentException or FormatException or OverflowException or InvalidOperationException)
+            {
+                return null;
+            }
+        }
+
+        DownloadDecision[] decisions = [.. found.Releases.Select(Decide).OfType<DownloadDecision>()];
 
         return new ReleaseSearchResult(
             [.. DownloadDecisionMaker.Prioritize(decisions.Where(d => d.Approved), context), .. DownloadDecisionMaker.Prioritize(decisions.Where(d => !d.Approved), context)],

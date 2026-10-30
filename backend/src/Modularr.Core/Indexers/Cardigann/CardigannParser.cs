@@ -357,7 +357,7 @@ internal static partial class CardigannParser
     }
 
     // Upstream HandleSelector: selector (or the row itself), remove, then case / attribute / text, then filters.
-    private static string? HtmlSelect(CardigannSite site, SelectorBlock block, IElement row, Dictionary<string, object?> variables, bool required)
+    internal static string? HtmlSelect(CardigannSite site, SelectorBlock block, IElement row, Dictionary<string, object?> variables, bool required)
     {
         if (block.Text is not null)
         {
@@ -513,11 +513,14 @@ internal static partial class CardigannParser
         return selector;
     }
 
+    private const int MaxDateHeaderWalk = 200;
+
     // dateheaders: the closest earlier row (or earlier sibling of the parent) that matches holds the date.
     private static DateTime DateFromHeaders(CardigannSite site, SelectorBlock dateHeaders, IElement row, Dictionary<string, object?> variables)
     {
         IElement? previous = row.PreviousElementSibling ?? row.ParentElement?.PreviousElementSibling;
-        while (previous is not null)
+        // Bounded: a page of rows with no header must not cost rows x rows selector runs.
+        for (int walked = 0; previous is not null && walked < MaxDateHeaderWalk; walked++)
         {
             try
             {

@@ -227,10 +227,10 @@ public static partial class DateTimeRoutines
     [GeneratedRegex(@"(?<=^|[^\d])(?'year'\d{2}|\d{4})\s*(?'separator'[\-])\s*(?'month'\d{1,2})\s*\'separator'+\s*(?'day'\d{1,2})(?=$|[^\d])", RegexOptions.IgnoreCase)]
     private static partial Regex IsoDateRegex();
 
-    [GeneratedRegex(@"(?:^|[^\d\w])" + MonthName + @"\s+(?'day'\d{1,2})(?:-?st|-?th|-?rd|-?nd)?\s*,?\s*(?'year'\d{4})(?=$|[^\d\w])", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?:^|[^\d\w])" + MonthName + @"\s+(?'day'\d{1,2})(?:-?st|-?th|-?rd|-?nd)?\s*(?:,\s*)?(?'year'\d{4})(?=$|[^\d\w])", RegexOptions.IgnoreCase)]
     private static partial Regex MonthDayYearRegex();
 
-    [GeneratedRegex(@"(?:^|[^\d\w:])(?'day'\d{1,2})(?:-?st\s+|-?th\s+|-?rd\s+|-?nd\s+|-|\s+)" + MonthName + @"(?:\s*,?\s*|-)'?(?'year'\d{2}|\d{4})(?=$|[^\d\w])", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?:^|[^\d\w:])(?'day'\d{1,2})(?:-?st\s+|-?th\s+|-?rd\s+|-?nd\s+|-|\s+)" + MonthName + @"(?:\s*(?:,\s*)?|-)'?(?'year'\d{2}|\d{4})(?=$|[^\d\w])", RegexOptions.IgnoreCase)]
     private static partial Regex DayMonthYearRegex();
 
     [GeneratedRegex(@"(?:^|[^\d\w])(?'year'\d{4})\s+" + MonthName + @"\s+(?'day'\d{1,2})(?:-?st|-?th|-?rd|-?nd)?(?=$|[^\d\w])", RegexOptions.IgnoreCase)]

@@ -1,15 +1,15 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { api, errorMessage, kindOfDiscovery, titleHref } from "@/lib/api";
-import type { AddOptions, DiscoveryItem, LibraryItem } from "@/lib/api";
+import type { AddOptions, DiscoveryItem, LibraryItem, LookupSeason } from "@/lib/api";
 import { defaultsFor, realLanguages, useOptions } from "@/lib/options";
 import { titleKey } from "@/components/Activity";
 import { Icon } from "@/components/icons";
 import { kindLabel } from "@/components/Poster";
 import { useToast } from "@/components/Toasts";
-import { Alert, Button, Field, Modal, PickList, Rating, Segmented, Select, Spinner, Switch } from "@/components/ui";
+import { Alert, Button, Field, Modal, PickList, Rating, Segmented, Select, Spinner, Switch, WellList } from "@/components/ui";
 
 // libraryId is null when the add was undone.
 export type OnAdded = (item: DiscoveryItem, libraryId: number | null) => void;
@@ -76,7 +76,7 @@ const monitors: readonly { value: NonNullable<AddOptions["monitor"]>; label: str
   { value: "All", label: "All" },
   { value: "Latest", label: "Latest" },
   { value: "Future", label: "Future only" },
-  { value: "First", label: "First" },
+  { value: "Custom", label: "Pick" },
 ];
 
 function AddSheet({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: OnAdded; onClose: () => void }) {
@@ -87,10 +87,21 @@ function AddSheet({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: O
   const [version, setVersion] = useState<string | null>(null);
   const [subtitles, setSubtitles] = useState<string[] | null>(null);
   const [monitor, setMonitor] = useState<NonNullable<AddOptions["monitor"]>>("All");
+  const [seasons, setSeasons] = useState<LookupSeason[] | null>(null);
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [profile, setProfile] = useState("");
   const [searchNow, setSearchNow] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Loaded when the seasons are picked by hand; all of them start ticked.
+  useEffect(() => {
+    if (monitor !== "Custom" || seasons || item.tvdbId === null) return;
+    api.lookupSeasons(item.tvdbId)
+      .then((list) => { setSeasons(list); setPicked(new Set(list.flatMap((s) => s.episodes.map((e) => episodeKey(s.number, e.number))))); })
+      .catch((e: unknown) => setError(errorMessage(e)));
+  }, [monitor, seasons, item.tvdbId]);
+
 
   const defaultVersion = defaults?.version ?? options?.media.defaultVersion ?? "VO";
   const versions = [...new Set([defaultVersion, ...mainVersions])].filter((v) => options?.versions.includes(v));
@@ -100,13 +111,15 @@ function AddSheet({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: O
     setBusy(true);
     setError(null);
     try {
-      const added = await addTitle(item, {
+      await addTitle(item, {
         qualityProfileId: profile ? Number(profile) : null,
         version: version && version !== defaultVersion ? version : null,
+        subtitles,
         searchNow,
-        ...(kind !== "movie" && { monitor }),
+        ...(kind !== "movie" && (monitor === "Custom"
+          ? (picked.size > 0 ? { monitor, seasons: [], episodes: [...picked].map(parseEpisodeKey) } : { monitor: "None" as const })
+          : { monitor })),
       }, onAdded);
-      if (subtitles) await api.update(kind, added.id, { subtitles });
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -125,20 +138,23 @@ function AddSheet({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: O
         {!options || !defaults ? <div className="flex justify-center py-8 text-ink-2"><Spinner /></div> : (
           <>
             <div className="space-y-2">
-              <p className="text-sm font-medium">Version</p>
+              <p className="text-body font-medium">Version</p>
               <Segmented label="Version" value={version ?? defaultVersion} onChange={setVersion} options={versions.map((v) => ({ value: v, label: v }))} />
             </div>
             <PickList label="Subtitles" values={subtitles ?? defaults.subtitles} choices={realLanguages(options).map((l) => l.name)}
-              onChange={setSubtitles} empty="No subtitles" hint="Subtitles never change the audio." />
+              onChange={setSubtitles} empty="No subtitles" />
             {kind !== "movie" && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Seasons</p>
+                <p className="text-body font-medium">Seasons</p>
                 <Segmented label="Seasons to monitor" value={monitor} onChange={setMonitor} options={monitors} />
-                <p className="text-[13px] text-ink-3">Fine-tune single seasons on the title page once it is added.</p>
+                {monitor === "Custom" && (!seasons ? <div className="flex py-2 text-ink-2"><Spinner /></div>
+                  : seasons.length === 0 ? <p className="text-meta text-ink-3">No season is listed yet.</p> : (
+                    <EpisodePicker seasons={seasons} picked={picked} onChange={setPicked} />
+                  ))}
               </div>
             )}
             <details className="group rounded-ctl">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-medium text-ink-2 hover:text-ink">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-body font-medium text-ink-2 hover:text-ink">
                 <Icon name="chevronRight" size={16} className="transition group-open:rotate-90" />More options
               </summary>
               <div className="space-y-4 pt-2">
@@ -156,5 +172,67 @@ function AddSheet({ item, onAdded, onClose }: { item: DiscoveryItem; onAdded?: O
         {error && <Alert>{error}</Alert>}
       </form>
     </Modal>
+  );
+}
+
+const episodeKey = (season: number, episode: number) => `${season}:${episode}`;
+const parseEpisodeKey = (key: string) => {
+  const [season, episode] = key.split(":").map(Number);
+  return { season: season ?? 0, episode: episode ?? 0 };
+};
+
+// One fold per season: its box ticks or clears the whole season (half-ticked when only some episodes are picked), the
+// episodes inside are ticked one by one.
+function EpisodePicker({ seasons, picked, onChange }: {
+  seasons: LookupSeason[];
+  picked: ReadonlySet<string>;
+  onChange: (picked: ReadonlySet<string>) => void;
+}) {
+  const set = (keys: string[], on: boolean) => {
+    const next = new Set(picked);
+    for (const key of keys) {
+      if (on) next.add(key); else next.delete(key);
+    }
+    onChange(next);
+  };
+
+  return (
+    <WellList label="Seasons and episodes">
+      {seasons.map((s) => {
+        const keys = s.episodes.map((e) => episodeKey(s.number, e.number));
+        const count = keys.filter((k) => picked.has(k)).length;
+        const all = keys.length > 0 && count === keys.length;
+        return (
+          <li key={s.number}>
+            <details className="group">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-3.5 py-1.5">
+                <input type="checkbox" aria-label={`Season ${s.number}`} checked={all} disabled={keys.length === 0}
+                  ref={(el) => { if (el) el.indeterminate = count > 0 && !all; }}
+                  onClick={(e) => e.stopPropagation()} onChange={(e) => set(keys, e.target.checked)}
+                  className="size-4 shrink-0 cursor-pointer accent-white" />
+                <span className="flex-1 text-body font-medium">Season {s.number}</span>
+                <span className="text-meta text-ink-3 tabular-nums">{count}/{keys.length}</span>
+                <Icon name="chevronRight" size={16} className="text-ink-3 transition group-open:rotate-90" />
+              </summary>
+              <ul className="pb-2">
+                {s.episodes.map((e) => {
+                  const key = episodeKey(s.number, e.number);
+                  return (
+                    <li key={key}>
+                      <label className="flex min-h-10 cursor-pointer items-center gap-3 py-1.5 pr-3.5 pl-10 text-body hover:bg-fill">
+                        <input type="checkbox" checked={picked.has(key)} onChange={(ev) => set([key], ev.target.checked)} className="size-4 shrink-0 cursor-pointer accent-white" />
+                        <span className="w-8 shrink-0 text-meta text-ink-3 tabular-nums">E{String(e.number).padStart(2, "0")}</span>
+                        <span className="min-w-0 flex-1 truncate">{e.title ?? `Episode ${e.number}`}</span>
+                        {e.airDate && <span className="shrink-0 text-meta text-ink-3 tabular-nums">{e.airDate}</span>}
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
+          </li>
+        );
+      })}
+    </WellList>
   );
 }

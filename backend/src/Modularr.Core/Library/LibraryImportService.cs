@@ -159,6 +159,7 @@ public sealed class LibraryImportService(
                 Message = scan.Added > 0 ? $"{scan.Added} existing file(s) imported from {folder}" : $"No video file recognized in {folder}",
                 SeriesId = seriesId,
                 MovieId = movieId,
+                Path = folder,
             },
             cancellationToken).ConfigureAwait(false);
         return new ImportOutcome(folder, seriesId, movieId, scan.Added, null);
@@ -209,6 +210,12 @@ public sealed class LibraryImportService(
         if (!roots.Any(root => string.Equals(Path.GetDirectoryName(folder), LibraryPaths.Normalize(RootPath(root)), LibraryPaths.Comparison)))
         {
             throw new ArgumentException($"'{folder}' is not a folder of the {string.Join(" or ", roots).ToLowerInvariant()} root.");
+        }
+
+        PathOptions paths = options.CurrentValue.Paths;
+        if (new[] { paths.Series, paths.Movies, paths.Anime, paths.Downloads }.Any(root => LibraryPaths.IsInside(root, folder)))
+        {
+            throw new ArgumentException($"'{folder}' contains a library or downloads folder; import its subfolders instead.");
         }
 
         DirectoryInfo directory = new(folder);

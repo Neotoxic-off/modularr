@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Modularr.Core.Activities;
 using Modularr.Core.Configuration;
 using Modularr.Core.Languages;
+using Modularr.Core.Library;
 using Modularr.Core.MediaFiles;
 using Modularr.Core.Parsing;
 using Modularr.Core.Parsing.Episodes;
@@ -32,10 +33,12 @@ public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activitie
         {
             case PostProcessingVerdict.Accepted accepted:
                 // No video matched an episode of the series: leave it for the user rather than import nothing silently.
-                if (await ImportFilesAsync(download, accepted, cancellationToken).ConfigureAwait(false) is string imported)
+                if (await ImportFilesAsync(download, accepted, cancellationToken).ConfigureAwait(false) is (string imported, string folder))
                 {
                     download.State = TrackedDownloadState.Imported;
-                    activities.Add(Activity.For(download, ActivityKind.Imported, ActivityLevel.Success, imported));
+                    Activity activity = Activity.For(download, ActivityKind.Imported, ActivityLevel.Success, imported);
+                    activity.Path = folder;
+                    activities.Add(activity);
                 }
                 else
                 {
@@ -61,10 +64,14 @@ public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activitie
     }
 
     // Upstream FailedDownloadService.MarkAsFailed: blocklists the release, records the failure and keeps the reason.
-    public async Task FailAsync(TrackedDownload download, string reason, CancellationToken cancellationToken)
+    public async Task FailAsync(TrackedDownload download, string reason, CancellationToken cancellationToken, bool blocklist = true)
     {
         ArgumentNullException.ThrowIfNull(download);
-        await BlocklistAsync(download, reason, cancellationToken).ConfigureAwait(false);
+        if (blocklist)
+        {
+            await BlocklistAsync(download, reason, cancellationToken).ConfigureAwait(false);
+        }
+
         download.State = TrackedDownloadState.Failed;
         download.Message = reason;
         activities.Add(Activity.For(download, ActivityKind.DownloadFailed, ActivityLevel.Error, reason));
@@ -79,11 +86,12 @@ public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activitie
     }
 
     // What was imported ("Imported to <file>" or "<n> files imported to <folder>", "(moved)" after imported in Move mode), null when
-    // nothing was. A file already at the destination is kept, and so is its source.
-    // shortcut: files keep their release file name and replaced files stay on disk, add renaming and the recycle bin later.
-    private async Task<string?> ImportFilesAsync(TrackedDownload download, PostProcessingVerdict.Accepted accepted, CancellationToken cancellationToken)
+    // nothing was, with the title's folder. A file already at the destination is kept, and so is its source. With renaming on, a clean name already taken
+    // keeps the release's name. Files this import replaces leave the library (RemoveReplacedAsync).
+    private async Task<(string Imported, string Folder)?> ImportFilesAsync(TrackedDownload download, PostProcessingVerdict.Accepted accepted, CancellationToken cancellationToken)
     {
         bool move = options.CurrentValue.PostProcessing.ImportMode == ImportMode.Move;
+        bool rename = options.CurrentValue.PostProcessing.RenameFiles;
         void Transfer(string source, string destination)
         {
             if (File.Exists(destination))
@@ -108,6 +116,7 @@ public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activitie
         string? firstDirectory = null;
         string? lastFile = null;
         int imported = 0;
+        List<(string Source, string Destination)> videos = [];
 
         foreach (string video in accepted.VideoFiles)
         {
@@ -121,19 +130,26 @@ public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activitie
             string directory = series is null
                 ? movie!.Path
                 : Path.Combine(series.Path, string.Create(CultureInfo.InvariantCulture, $"Season {episodes[0].SeasonNumber:00}"));
+            QualityModel quality = QualityParser.ParseQuality(fileName) is { Quality.Id: not 0 } fromFile ? fromFile : QualityParser.ParseQuality(download.ReleaseTitle);
             string destination = Path.Combine(directory, fileName);
+            string clean = !rename ? "" : series is null ? FileNamer.ForMovie(movie!, quality.Quality) : FileNamer.ForEpisodes(series, episodes, quality.Quality);
+            if (clean.Length > 0 && Path.Combine(directory, clean + Path.GetExtension(fileName)) is string renamed && !File.Exists(renamed))
+            {
+                destination = renamed;
+            }
+
             firstDirectory ??= directory;
 
             Transfer(video, destination);
             imported++;
             lastFile = destination;
+            videos.Add((video, destination));
 
             if (await db.MediaFiles.AnyAsync(f => f.Path == destination, cancellationToken).ConfigureAwait(false))
             {
                 continue;
             }
 
-            QualityModel quality = QualityParser.ParseQuality(fileName) is { Quality.Id: not 0 } fromFile ? fromFile : QualityParser.ParseQuality(download.ReleaseTitle);
             MediaFile file = new()
             {
                 SeriesId = series?.Id,
@@ -149,10 +165,15 @@ public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activitie
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             _imported.Add(file);
 
+            List<int> replaced = series is null
+                ? await db.MediaFiles.Where(f => f.MovieId == movie!.Id && f.Id != file.Id).Select(f => f.Id).ToListAsync(cancellationToken).ConfigureAwait(false)
+                : [.. episodes.Select(e => e.MediaFileId).OfType<int>()];
             foreach (Episode episode in episodes)
             {
                 episode.MediaFileId = file.Id;
             }
+
+            await RemoveReplacedAsync(download, replaced, series?.Path ?? movie!.Path, cancellationToken).ConfigureAwait(false);
 
             foreach (int? episodeId in episodes.Count == 0 ? [null] : episodes.Select(e => (int?)e.Id))
             {
@@ -160,19 +181,82 @@ public sealed class DownloadImporter(ModularrDbContext db, ActivityLog activitie
             }
         }
 
-        // shortcut: subtitles go next to the first imported video, match them per video when packs carry several.
+        // A sidecar named after a video follows it and its new name ("<name>.en.srt"); any other goes next to the first video, after
+        // the only video's new name when renaming.
         foreach (string subtitle in accepted.SubtitleFiles.Where(_ => firstDirectory is not null))
         {
-            Transfer(subtitle, Path.Combine(firstDirectory!, Path.GetFileName(subtitle)));
+            string name = Path.GetFileName(subtitle);
+            (string Source, string Destination) owner = videos.Find(v => name.StartsWith(Path.GetFileNameWithoutExtension(v.Source) + ".", StringComparison.OrdinalIgnoreCase));
+            string destination = owner.Source is not null
+                ? Path.Combine(Path.GetDirectoryName(owner.Destination)!, Path.GetFileNameWithoutExtension(owner.Destination) + name[Path.GetFileNameWithoutExtension(owner.Source).Length..])
+                : Path.Combine(firstDirectory!, (rename && videos.Count == 1 ? Path.GetFileNameWithoutExtension(videos[0].Destination) + "." : "") + name);
+            Transfer(subtitle, destination);
         }
 
         string how = move ? " (moved)" : "";
+        string titleFolder = series?.Path ?? movie!.Path;
         return imported switch
         {
             0 => null,
-            1 => $"Imported{how} to {lastFile}",
-            _ => $"{imported} files imported{how} to {firstDirectory}",
+            1 => ($"Imported{how} to {lastFile}", titleFolder),
+            _ => ($"{imported} files imported{how} to {firstDirectory}", titleFolder),
         };
+    }
+
+    // Upstream UpgradeMediaFileService: a replaced file no episode uses any more leaves the library with its row. It is deleted (or
+    // moved to the recycle bin) only inside the title's folder, reached through no link and not the path of a file just imported.
+    private async Task RemoveReplacedAsync(TrackedDownload download, List<int> fileIds, string titleFolder, CancellationToken cancellationToken)
+    {
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        foreach (int id in fileIds.Distinct().Where(id => !_imported.Exists(f => f.Id == id)))
+        {
+            if (await db.Episodes.AnyAsync(e => e.MediaFileId == id, cancellationToken).ConfigureAwait(false)
+                || await db.MediaFiles.FindAsync([id], cancellationToken).ConfigureAwait(false) is not MediaFile old)
+            {
+                continue;
+            }
+
+            db.MediaFiles.Remove(old);
+            if (!File.Exists(old.Path))
+            {
+                continue;
+            }
+
+            string? kept = !LibraryPaths.IsInside(old.Path, titleFolder)
+                || LibraryPaths.ScannableRoot(Path.GetDirectoryName(Path.GetFullPath(old.Path))!, options.CurrentValue.Paths) is null
+                || new FileInfo(old.Path).LinkTarget is not null
+                || _imported.Exists(f => string.Equals(LibraryPaths.Normalize(f.Path), LibraryPaths.Normalize(old.Path), LibraryPaths.Comparison))
+                ? "it is not a file of the title's folder" : null;
+            try
+            {
+                if (kept is null)
+                {
+                    Discard(old.Path);
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                kept = ex.Message;
+            }
+
+            if (kept is not null)
+            {
+                activities.Add(Activity.For(download, ActivityKind.Imported, ActivityLevel.Warning, $"Kept the replaced file {old.Path}: {kept}"));
+            }
+        }
+    }
+
+    private void Discard(string path)
+    {
+        string recycleBin = options.CurrentValue.PostProcessing.RecycleBinPath;
+        if (string.IsNullOrWhiteSpace(recycleBin))
+        {
+            File.Delete(path);
+            return;
+        }
+
+        Directory.CreateDirectory(recycleBin);
+        File.Move(path, FileNamer.Unused(Path.Combine(recycleBin, Path.GetFileName(path))));
     }
 
     // After a move: the download's folder and its subfolders once empty, only strictly inside the downloads root and never through a

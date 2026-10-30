@@ -13,17 +13,20 @@ public static class ActivityEndpoints
 
     public static RouteGroupBuilder MapActivityApi(this RouteGroupBuilder api)
     {
-        api.MapGet("/activity", (int? before, int? limit, int? seriesId, int? movieId, ActivityLog activities, CancellationToken ct) =>
-            activities.ListAsync(before, limit ?? 50, seriesId, movieId, ct));
-        api.MapGet("/activity/unread-count", async (ActivityLog activities, CancellationToken ct) => new { count = await activities.UnreadCountAsync(ct) });
-        api.MapPost("/activity/read", async (int? upTo, ActivityLog activities, CancellationToken ct) =>
+        api.MapGet("/activity", (int? before, int? limit, int? seriesId, int? movieId, HttpContext context, ActivityLog activities, CancellationToken ct) =>
+            activities.ListAsync(AuthEndpoints.UserId(context.User), before, limit ?? 50, seriesId, movieId, ct));
+        api.MapGet("/activity/unread-count", async (HttpContext context, ActivityLog activities, CancellationToken ct) =>
+            new { count = await activities.UnreadCountAsync(AuthEndpoints.UserId(context.User), ct) });
+        api.MapPost("/activity/read", async (int? upTo, HttpContext context, ActivityLog activities, CancellationToken ct) =>
         {
-            await activities.MarkReadAsync(upTo, ct);
+            await activities.MarkReadAsync(AuthEndpoints.UserId(context.User), upTo, ct);
             return Results.NoContent();
         });
         api.MapGet("/events", StreamAsync);
         return api;
     }
+
+    private static readonly TimeSpan StreamLifetime = TimeSpan.FromMinutes(5);
 
     // "event: activity|progress" frames with JSON data, and a comment every Heartbeat so proxies keep the connection open.
     private static async Task StreamAsync(
@@ -31,6 +34,9 @@ public static class ActivityEndpoints
     {
         // Ends with the client or with the app, which would otherwise wait for every open stream on shutdown.
         using CancellationTokenSource stream = CancellationTokenSource.CreateLinkedTokenSource(ct, lifetime.ApplicationStopping);
+        // The cookie is only checked when a request starts: ending the stream regularly makes the browser reconnect and be
+        // checked again, so a deleted, demoted or logged-out account stops receiving events within StreamLifetime.
+        stream.CancelAfter(StreamLifetime);
         HttpResponse response = context.Response;
         response.ContentType = "text/event-stream";
         response.Headers.CacheControl = "no-cache";
@@ -38,6 +44,8 @@ public static class ActivityEndpoints
         context.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
         try
         {
+            // Reconnect fast when the stream ends at StreamLifetime, so the UI does not see it as the server going away.
+            await response.WriteAsync("retry: 1000\n\n", stream.Token);
             await response.Body.FlushAsync(stream.Token);
             await foreach (ServerEvent? serverEvent in feed.SubscribeAsync(Heartbeat, stream.Token))
             {

@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using Modularr.Core.Languages;
+using Modularr.Core.Persistence;
 using Modularr.Core.Subtitles;
 
 namespace Modularr.Api;
@@ -26,7 +28,24 @@ public static class SubtitleEndpoints
             SubtitleCandidate candidate = new(request.Provider, request.Id, request.Language, Release: "", request.HearingImpaired, request.Forced, HashMatch: false, Downloads: 0);
             return ToDto(await subtitles.DownloadAsync(request.MovieId, request.EpisodeId, candidate, ct));
         });
+
+        // The library by title (the Subtitles page): coverage per wanted language, then a title's files one by one.
+        api.MapGet("/subtitles/overview", (SubtitleService subtitles, CancellationToken ct) => subtitles.OverviewAsync(ct));
+        api.MapGet("/subtitles/series/{id:int}", async (int id, SubtitleService subtitles, CancellationToken ct) => new { seasons = await subtitles.SeriesAsync(id, ct) });
+        api.MapGet("/subtitles/movies/{id:int}", async (int id, SubtitleService subtitles, CancellationToken ct) => new { languages = await subtitles.MovieAsync(id, ct) });
+
+        // Every file of the title through the runner, which skips those missing nothing.
+        api.MapPost("/subtitles/series/{id:int}/search", async (int id, ModularrDbContext db, SubtitleRunner runner, CancellationToken ct) =>
+            Enqueue(await db.MediaFiles.Where(f => f.SeriesId == id).Select(f => f.Id).ToListAsync(ct), runner));
+        api.MapPost("/subtitles/movies/{id:int}/search", async (int id, ModularrDbContext db, SubtitleRunner runner, CancellationToken ct) =>
+            Enqueue(await db.MediaFiles.Where(f => f.MovieId == id).Select(f => f.Id).ToListAsync(ct), runner));
         return api;
+    }
+
+    private static IResult Enqueue(List<int> files, SubtitleRunner runner)
+    {
+        files.ForEach(id => runner.Enqueue(id, reportMissing: false));
+        return Results.Accepted();
     }
 
     // The file name only: the folder is the title's.

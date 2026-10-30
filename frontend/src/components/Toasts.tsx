@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@/components/icons";
 import type { IconName } from "@/components/icons";
-import { toneText } from "@/components/ui";
+import { IconButton, toneText } from "@/components/ui";
 import type { Tone } from "@/components/ui";
 
 export interface ToastAction {
@@ -81,7 +81,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     return () => pending.forEach(clearTimeout);
   }, []);
 
-  const action = "inline-flex h-9 cursor-pointer items-center rounded-pill px-3.5 text-[13px] font-semibold text-ink hover:bg-fill-2";
+  const action = "inline-flex min-h-11 cursor-pointer items-center rounded-pill px-3.5 text-meta font-semibold text-ink hover:bg-fill-2";
 
   // Portalled out of #app, so toasts stay usable while a dialog makes the page inert.
   return (
@@ -92,16 +92,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           onMouseEnter={pause} onFocus={pause}
           onMouseLeave={(e) => resume(e.currentTarget)}
           onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) resume(e.currentTarget); }}
-          className="pointer-events-none fixed inset-x-3 bottom-[calc(80px+env(safe-area-inset-bottom))] z-[60] flex flex-col items-center gap-2 md:inset-x-auto md:top-[76px] md:right-5 md:bottom-auto md:w-[380px] md:items-end">
+          className="pointer-events-none fixed inset-x-3 top-[calc(64px+env(safe-area-inset-top))] z-[60] flex flex-col items-center gap-2 md:inset-x-auto md:top-[76px] md:right-5 md:w-[380px] md:items-end">
           {toasts.map((t) => (
             <div key={t.id} role={t.tone === "bad" ? "alert" : "status"}
               className="glass-pop pointer-events-auto flex w-full max-w-[420px] animate-rise items-start gap-3 rounded-tile p-3 pr-1.5">
-              <span className={`grid size-9 shrink-0 place-items-center rounded-full bg-fill-2 ${toneText[t.tone]}`}><Icon name={t.icon} size={17} /></span>
+              <span className={`grid size-9 shrink-0 place-items-center rounded-full bg-fill-2 ${toneText[t.tone]}`}><Icon name={t.icon} size={16} /></span>
               <div className="min-w-0 flex-1 py-0.5">
                 {t.href
-                  ? <Link href={t.href} onClick={() => dismiss(t.key)} className="block truncate text-sm font-semibold hover:underline">{t.title}</Link>
-                  : <p className="truncate text-sm font-semibold">{t.title}</p>}
-                {t.message && <p className="mt-0.5 line-clamp-2 text-[13px] leading-relaxed text-ink-2">{t.message}</p>}
+                  ? <Link href={t.href} onClick={() => dismiss(t.key)} className="block truncate text-body font-semibold hover:underline">{t.title}</Link>
+                  : <p className="truncate text-body font-semibold">{t.title}</p>}
+                {t.message && <p className="mt-0.5 line-clamp-2 text-meta leading-relaxed text-ink-2">{t.message}</p>}
                 {t.actions && (
                   <div className="-ml-3.5 mt-1 flex flex-wrap">
                     {t.actions.map((a) => a.href
@@ -110,9 +110,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   </div>
                 )}
               </div>
-              <button onClick={() => dismiss(t.key)} aria-label="Dismiss" className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-ink-3 hover:bg-fill-2 hover:text-ink">
-                <Icon name="x" size={15} />
-              </button>
+              <IconButton variant="ghost" icon="x" label="Dismiss" onClick={() => dismiss(t.key)} />
             </div>
           ))}
         </div>,

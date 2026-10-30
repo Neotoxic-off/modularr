@@ -12,8 +12,10 @@ type Listener = (activity: Activity) => void;
 
 interface ActivityState {
   connected: boolean;
-  // Bumps on every (re)connect so views refetch what they may have missed while the stream was down.
+  // Bumps when the stream comes back after an outage so views refetch what they may have missed.
   epoch: number;
+  // The stream failed, as opposed to still opening behind a burst of page requests.
+  offline: boolean;
   unread: number;
   activeDownloads: number;
   progress: ReadonlyMap<number, DownloadProgress>;
@@ -52,8 +54,8 @@ export const eventLook: Record<ActivityKind, { label: string; tone: Tone }> = {
   Imported: { label: "Imported", tone: "ok" },
   ImportFailed: { label: "Import failed", tone: "bad" },
   Removed: { label: "Removed", tone: "neutral" },
-  SubtitleDownloaded: { label: "Subtitles", tone: "subs" },
-  SubtitlesMissing: { label: "Subtitles missing", tone: "subs" },
+  SubtitleDownloaded: { label: "Subtitles", tone: "ok" },
+  SubtitlesMissing: { label: "Subtitles missing", tone: "warn" },
   ScanCompleted: { label: "Scanned", tone: "neutral" },
 };
 
@@ -70,12 +72,13 @@ export type Scope = { seriesId?: number; movieId?: number };
 const inScope = (a: Activity, { seriesId, movieId }: Scope) =>
   (seriesId === undefined || a.seriesId === seriesId) && (movieId === undefined || a.movieId === movieId);
 
-const toastKinds: ReadonlySet<ActivityKind> = new Set(["Grabbed", "Imported", "NothingFound", "DownloadFailed"]);
+const toastKinds: ReadonlySet<ActivityKind> = new Set(["Grabbed", "Imported", "NothingFound", "DownloadFailed", "SubtitleDownloaded", "SubtitlesMissing"]);
 
 export const isActive = (d: Download) => d.state === "Downloading" || d.state === "ImportPending" || d.state === "Importing";
 
 const RETRY_MAX_MS = 30000;
 const SETTLE_MS = 300;
+const PLANNED_RECONNECT_MS = 3000;
 // Progress frames stop when the last download finishes; older numbers would then look frozen.
 const PROGRESS_STALE_MS = 5000;
 
@@ -92,6 +95,7 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
   const toast = useToast();
   const listeners = useRef(new Set<Listener>());
   const [connected, setConnected] = useState(false);
+  const [offline, setOffline] = useState(false);
   const [epoch, setEpoch] = useState(0);
   const [unread, setUnread] = useState(0);
   const [activeDownloads, setActiveDownloads] = useState(0);
@@ -120,6 +124,8 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
     let retry: ReturnType<typeof setTimeout> | undefined;
     let stale: ReturnType<typeof setTimeout> | undefined;
     let delay = 1000;
+    // When the stream went down; null while it has been up since the first open, 0 when events were surely missed.
+    let lostAt: number | null = null;
 
     const connect = () => {
       if (document.hidden) return;
@@ -127,12 +133,18 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
       source.onopen = () => {
         delay = 1000;
         setConnected(true);
-        setEpoch((e) => e + 1);
+        setOffline(false);
+        // The server recycles the stream every few minutes and the browser reopens it within a second: nothing was missed.
+        if (lostAt !== null && Date.now() - lostAt > PLANNED_RECONNECT_MS) setEpoch((e) => e + 1);
+        lostAt = null;
       };
       source.onerror = () => {
+        lostAt ??= Date.now();
         setConnected(false);
+        setOffline(true);
         // The browser retries a dropped stream by itself but gives up on a refused one (a 401, a restart).
         if (source?.readyState !== EventSource.CLOSED) return;
+        lostAt = 0;
         // The stream cannot report a 401, this call sends an expired session to sign in.
         refreshUnread();
         retry = setTimeout(connect, delay);
@@ -156,7 +168,10 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
       source?.close();
       source = null;
       setConnected(false);
+      setOffline(false);
       delay = 1000;
+      // A hidden tab hears nothing, so coming back refetches.
+      lostAt = 0;
       connect();
     };
 
@@ -187,7 +202,7 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
   }, [subscribe, countActive, toast]);
 
   return (
-    <ActivityContext value={{ connected, epoch, unread, activeDownloads, progress, subscribe, markRead }}>
+    <ActivityContext value={{ connected, epoch, offline, unread, activeDownloads, progress, subscribe, markRead }}>
       {children}
     </ActivityContext>
   );

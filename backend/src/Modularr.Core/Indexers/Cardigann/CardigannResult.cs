@@ -2,8 +2,11 @@ namespace Modularr.Core.Indexers.Cardigann;
 
 public enum CardigannFailureKind
 {
-    // Login, captcha, cookies or a non-public site: out of scope for now.
+    // A login whose settings are not filled in yet, or a definition feature the engine does not port.
     Unsupported,
+
+    // The site refused the login (error selector, login test, captcha) or kept asking for it.
+    LoginFailed,
 
     // Cloudflare or DDoS-Guard served a challenge page (FlareSolverr would be needed).
     CloudflareProtected,

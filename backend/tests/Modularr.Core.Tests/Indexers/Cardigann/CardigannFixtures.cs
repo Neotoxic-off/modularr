@@ -1,8 +1,8 @@
-using Microsoft.Extensions.Options;
 using Modularr.Core.Configuration;
 using Modularr.Core.Indexers;
 using Modularr.Core.Indexers.Cardigann;
 using Modularr.Core.Indexers.Definitions;
+using Modularr.Core.Tests.Library;
 
 namespace Modularr.Core.Tests.Indexers.Cardigann;
 
@@ -15,7 +15,10 @@ internal static class CardigannFixtures
     public static CardigannDefinition Definition(string name) => CardigannDefinitionLoader.Load(Read(name)) with { RequestDelay = null };
 
     public static CardigannSearcher Searcher(HttpMessageHandler handler, TimeSpan? timeout = null) =>
-        new(new HttpClient(handler), Options.Create(new ModularrOptions { Indexers = new IndexerOptions { RequestTimeout = timeout ?? TimeSpan.FromSeconds(30) } }));
+        Searcher(handler, new IndexerOptions { RequestTimeout = timeout ?? TimeSpan.FromSeconds(30) });
+
+    public static CardigannSearcher Searcher(HttpMessageHandler handler, IndexerOptions indexers, CardigannSessions? sessions = null) =>
+        new(new HttpClient(handler), new FixedOptionsMonitor(new ModularrOptions { Indexers = indexers }), sessions ?? new CardigannSessions());
 
     public static IReadOnlyList<ReleaseInfo> Releases(CardigannSearchResult result) =>
         Assert.IsType<CardigannSearchResult.Found>(result).Releases;

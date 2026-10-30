@@ -51,7 +51,8 @@ public sealed class LibraryServiceTests
 
     [Theory]
     [InlineData("/tv/Show (2020)", true)]
-    [InlineData("/elsewhere/Show", true)]
+    [InlineData("/elsewhere/Show", false)] // outside the library
+    [InlineData("/old-tv-root", false)] // a root the title was added under before the roots changed
     [InlineData("/tv", false)]
     [InlineData("/tv/", false)]
     [InlineData("/movies", false)]

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Modularr.Core.Configuration;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,7 +15,7 @@ public sealed record SearchOutcome(DateTime Time, string Result);
 
 // Runs the automatic searches one at a time off the HTTP request: an indexer round can take a minute.
 // shortcut: queued jobs and outcomes live in memory and are lost on restart, persist them if a restart mid-search matters.
-public sealed class SearchRunner(IServiceScopeFactory scopes) : BackgroundService
+public sealed class SearchRunner(IServiceScopeFactory scopes, ILogger<SearchRunner> logger) : BackgroundService
 {
     private readonly Channel<SearchJob> _jobs = Channel.CreateUnbounded<SearchJob>(new UnboundedChannelOptions { SingleReader = true });
     private readonly ConcurrentDictionary<(int?, int?), SearchOutcome> _outcomes = [];
@@ -48,6 +50,7 @@ public sealed class SearchRunner(IServiceScopeFactory scopes) : BackgroundServic
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
+                logger.JobFailed("Search", ex);
                 // One failed search (indexer, torrent link, deleted item) must not stop the queue.
                 result = $"Failed: {ex.Message}";
             }

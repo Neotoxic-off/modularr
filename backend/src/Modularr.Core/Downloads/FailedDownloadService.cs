@@ -17,15 +17,15 @@ public sealed class FailedDownloadService(
     AutoSearch search,
     TorrentEngineHost torrents,
     ActivityLog activities,
-    IOptions<ModularrOptions> options)
+    IOptionsMonitor<ModularrOptions> options)
 {
-    public async Task FailAsync(TrackedDownload download, string reason, CancellationToken cancellationToken)
+    public async Task FailAsync(TrackedDownload download, string reason, CancellationToken cancellationToken, bool blocklist = true)
     {
         ArgumentNullException.ThrowIfNull(download);
 
         // Removed before it is saved Failed: a failed download is never polled again, so a torrent left behind would keep running.
         await torrents.Engine.RemoveAsync(download.InfoHash, deleteData: true).ConfigureAwait(false);
-        await importer.FailAsync(download, reason, cancellationToken).ConfigureAwait(false);
+        await importer.FailAsync(download, reason, cancellationToken, blocklist).ConfigureAwait(false);
         await RegrabAsync(download, cancellationToken).ConfigureAwait(false);
     }
 
@@ -40,7 +40,7 @@ public sealed class FailedDownloadService(
     // shortcut: a search that throws is not retried and the download stays failed, add a pending re-grab flag if indexers fail often.
     private async Task RegrabAsync(TrackedDownload download, CancellationToken cancellationToken)
     {
-        int maxRegrabs = options.Value.Torrents.MaxAutomaticRegrabs;
+        int maxRegrabs = options.CurrentValue.Torrents.MaxAutomaticRegrabs;
         if (await RegrabRequestAsync(db, download, maxRegrabs, cancellationToken).ConfigureAwait(false) is not ReleaseSearchRequest request)
         {
             if (download.Regrabs >= maxRegrabs)

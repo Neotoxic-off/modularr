@@ -37,19 +37,36 @@ public sealed class ActivityLog
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    // Newest first, older than the before id when given.
-    public async Task<IReadOnlyList<Activity>> ListAsync(int? before, int limit, int? seriesId, int? movieId, CancellationToken cancellationToken) =>
-        await _db.Activities.AsNoTracking()
+    // Newest first, older than the before id when given, marked read or not for this user.
+    public async Task<IReadOnlyList<Activity>> ListAsync(int userId, int? before, int limit, int? seriesId, int? movieId, CancellationToken cancellationToken)
+    {
+        int readUpTo = await ReadUpToAsync(userId, cancellationToken).ConfigureAwait(false);
+        List<Activity> activities = await _db.Activities.AsNoTracking()
             .Where(a => (before == null || a.Id < before) && (seriesId == null || a.SeriesId == seriesId) && (movieId == null || a.MovieId == movieId))
             .OrderByDescending(a => a.Id).Take(Math.Clamp(limit, 1, MaxPageSize))
             .ToListAsync(cancellationToken).ConfigureAwait(false);
+        activities.ForEach(a => a.Read = a.Id <= readUpTo);
+        return activities;
+    }
 
-    public Task<int> UnreadCountAsync(CancellationToken cancellationToken) => _db.Activities.CountAsync(a => !a.Read, cancellationToken);
+    public async Task<int> UnreadCountAsync(int userId, CancellationToken cancellationToken)
+    {
+        int readUpTo = await ReadUpToAsync(userId, cancellationToken).ConfigureAwait(false);
+        return await _db.Activities.CountAsync(a => a.Id > readUpTo, cancellationToken).ConfigureAwait(false);
+    }
 
-    // Every activity, or the ones up to an id (the newest the client has shown).
-    public Task<int> MarkReadAsync(int? upTo, CancellationToken cancellationToken) =>
-        _db.Activities.Where(a => !a.Read && (upTo == null || a.Id <= upTo))
-            .ExecuteUpdateAsync(setters => setters.SetProperty(a => a.Read, true), cancellationToken);
+    // Every activity, or the ones up to an id (the newest the client has shown), for this user only. The mark never moves back.
+    public async Task MarkReadAsync(int userId, int? upTo, CancellationToken cancellationToken)
+    {
+        // Never past the newest existing id: a mark set ahead would hide every future activity from this user.
+        int existing = await _db.Activities.MaxAsync(a => (int?)a.Id, cancellationToken).ConfigureAwait(false) ?? 0;
+        int newest = Math.Min(upTo ?? existing, existing);
+        await _db.Users.Where(u => u.Id == userId && u.ReadActivityUpTo < newest)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(u => u.ReadActivityUpTo, newest), cancellationToken).ConfigureAwait(false);
+    }
+
+    private Task<int> ReadUpToAsync(int userId, CancellationToken cancellationToken) =>
+        _db.Users.Where(u => u.Id == userId).Select(u => u.ReadActivityUpTo).FirstOrDefaultAsync(cancellationToken);
 
     // Keeps the Keep newest activities of the last MaxAge.
     public async Task<int> PruneAsync(DateTime now, CancellationToken cancellationToken)

@@ -6,6 +6,22 @@ namespace Modularr.Core.Tests.Indexers.Cardigann;
 
 public sealed class DateTimeUtilTests
 {
+    [Fact]
+    public void OversizedDateTextIsRefusedBeforeAnyRegexRuns()
+    {
+        // Run-2 audit: unbounded scraped date text fed quadratic regexes (time-ago and fuzzy dates).
+        Assert.Throws<FormatException>(() => DateTimeUtil.FromUnknown("ago " + new string('1', 100_000)));
+        Assert.Throws<FormatException>(() => DateTimeUtil.FromTimeAgo(new string('1', 100_000)));
+        Assert.Throws<FormatException>(() => DateTimeUtil.FromFuzzyTime("1 Jan" + new string(' ', 100_000) + "x"));
+    }
+
+    [Theory]
+    [InlineData("1 Jan, 2024")]
+    [InlineData("Jan 1 , 2024")]
+    [InlineData("1 Jan 2024")]
+    public void DayMonthYearStillParsesWithTheLinearSeparator(string text) =>
+        Assert.Equal(new DateTime(2024, 1, 1), DateTimeUtil.FromFuzzyTime(text).Date);
+
     [Theory]
     [InlineData("pt-BR")]
     [InlineData("en-US")]

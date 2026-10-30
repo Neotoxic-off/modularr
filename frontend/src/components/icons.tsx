@@ -36,6 +36,7 @@ const paths = {
   subtitles: "M2 5h20v14H2zM6 11h5M14 11h4M6 15h3M12 15h6",
   copy: "M9 9h11v11H9zM5 15H4V4h11v1",
   alert: "M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z",
+  info: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16v-4M12 8h.01",
   clock: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2",
   disk: "M22 12H2M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6zM6 16h.01M10 16h.01",
   bell: "M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0",
@@ -53,9 +54,10 @@ const paths = {
 
 export type IconName = keyof typeof paths;
 
-export function Icon({ name, size = 18, ...props }: { name: IconName; size?: number } & SVGProps<SVGSVGElement>) {
+// Two weights: 1.8 for everything, bold for small marks (check, plus, more) that would read faint.
+export function Icon({ name, size = 18, bold = false, ...props }: { name: IconName; size?: number; bold?: boolean } & SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={1.8}
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={bold ? 2.4 : 1.8}
       strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
       <path d={paths[name]} />
     </svg>
